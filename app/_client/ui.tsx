@@ -505,7 +505,9 @@ type QueueRowProps = {
 function QueueRow({ t, isNext, dragging, canReorder, expanded, onToggle, onPatch, onRowDragOver, startDrag, clearDrag, onStatus, onEdit, onMenu }: QueueRowProps) {
   // Keep the expansion body mounted through the collapse animation, then unmount.
   const [bodyMounted, setBodyMounted] = React.useState(expanded);
-  React.useEffect(() => { if (expanded) setBodyMounted(true); }, [expanded]);
+  // Two stages: a compact read-only peek first; its Edit button opens the full inline editor.
+  const [mode, setMode] = React.useState<"info" | "edit">("info");
+  React.useEffect(() => { if (expanded) { setBodyMounted(true); setMode("info"); } }, [expanded]);
 
   const headClick = () => {
     if (window.getSelection()?.toString()) return; // copying text shouldn't bounce the row
@@ -555,10 +557,35 @@ function QueueRow({ t, isNext, dragging, canReorder, expanded, onToggle, onPatch
         <div className="lrow-exp-clip">
           {bodyMounted && (
             <div className="lrow-exp-body">
-              <RowExpansion t={t} onPatch={onPatch} />
+              {mode === "edit"
+                ? <RowExpansion t={t} onPatch={onPatch} />
+                : <RowPeek t={t} onEdit={() => setMode("edit")} />}
             </div>
           )}
         </div>
+      </div>
+    </div>
+  );
+}
+
+/* Compact read-only peek shown first when a row expands: the full description plus
+   the details the collapsed row hides, with an Edit button to open the inline editor. */
+function RowPeek({ t, onEdit }: { t: Ticket; onEdit: () => void }) {
+  const who = PEOPLE.find((p) => p.key === (t.assignedTo || "keith"));
+  return (
+    <div className="exp-peek">
+      <div className="peek-desc">{t.desc || <span className="muted">No description</span>}</div>
+      <div className="peek-meta">
+        <span className="peek-item"><Icon name={t.charger ? "plug-zap" : "plug"} />{t.charger ? "Charger in" : "No charger"}</span>
+        <span className="peek-item">
+          <Icon name="wrench" />
+          {t.deviceType === "desktop" ? "Desktop" : t.deviceType === "laptop" ? "Laptop" : "Device not set"}
+        </span>
+        <span className="peek-item"><AvatarChip who={t.assignedTo} />{who ? who.label : "Keith"}</span>
+        <span className="peek-spacer" />
+        <button type="button" className="btn ghost peek-edit" onClick={onEdit}>
+          <Icon name="pencil" />Edit
+        </button>
       </div>
     </div>
   );
