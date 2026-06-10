@@ -5,7 +5,7 @@ import { eq, and, lt } from "drizzle-orm";
 import { db, hasDb } from "./db";
 import { tickets as ticketsTable, counters, type TicketRow } from "./schema";
 import { SEED_TICKETS, SEED_ARCHIVE, SEED_NEXT_ID } from "./seed";
-import { todayISO, daysBetween, cmpDue, sortQueue, POS_STEP, posBetween, type Ticket, type Status } from "./tickets";
+import { todayISO, daysBetween, cmpDue, sortQueue, POS_STEP, posBetween, type Ticket, type Status, type Person } from "./tickets";
 
 export interface AppState {
   tickets: Ticket[]; // active (non-archived)
@@ -18,6 +18,7 @@ export interface NewTicketInput {
   desc: string;
   urgency: number;
   charger: boolean;
+  assignedTo?: Person;
   status?: Status;
   dropoff: string;
   dropoffAmPm?: "AM" | "PM" | null;
@@ -30,6 +31,7 @@ export interface TicketPatch {
   desc?: string;
   urgency?: number;
   charger?: boolean;
+  assignedTo?: Person;
   status?: Status;
   dropoff?: string;
   dropoffAmPm?: "AM" | "PM" | null;
@@ -46,8 +48,8 @@ const g = globalThis as unknown as { __mlx?: MemDb };
 function mem(): MemDb {
   if (!g.__mlx) {
     const rows = [
-      ...SEED_TICKETS.map((t) => ({ ...t, dueAt: t.dueAt ?? null, archivedAt: null })),
-      ...SEED_ARCHIVE.map((t) => ({ ...t, dueAt: t.dueAt ?? null })),
+      ...SEED_TICKETS.map((t) => ({ ...t, assignedTo: t.assignedTo ?? ("keith" as Person), dueAt: t.dueAt ?? null, archivedAt: null })),
+      ...SEED_ARCHIVE.map((t) => ({ ...t, assignedTo: t.assignedTo ?? ("keith" as Person), dueAt: t.dueAt ?? null })),
     ];
     const pos = initialPositions(rows);
     for (const r of rows) r.sortPos = pos.get(r.id) ?? null;
@@ -132,6 +134,7 @@ function rowToTicket(r: TicketRow): Ticket {
     desc: r.desc,
     urgency: r.urgency,
     charger: r.charger,
+    assignedTo: (r.assignedTo as Person) || "keith",
     status: r.status as Status,
     dropoff: r.dropoff,
     dropoffAmPm: r.dropoffAmPm as "AM" | "PM" | null,
@@ -212,6 +215,7 @@ export async function createTicket(input: NewTicketInput): Promise<AppState> {
       desc: input.desc,
       urgency: input.urgency,
       charger: input.charger,
+      assignedTo: input.assignedTo ?? "keith",
       status: input.status ?? "todo",
       dropoff: input.dropoff,
       dropoffAmPm: input.dropoffAmPm ?? null,
@@ -256,6 +260,7 @@ export async function createTicket(input: NewTicketInput): Promise<AppState> {
     desc: input.desc,
     urgency: input.urgency,
     charger: input.charger,
+    assignedTo: input.assignedTo ?? "keith",
     status: input.status ?? "todo",
     dropoff: input.dropoff,
     dropoffAmPm: input.dropoffAmPm ?? null,
@@ -281,6 +286,7 @@ export async function updateTicket(id: string, patch: TicketPatch): Promise<AppS
       if (patch.desc !== undefined) t.desc = patch.desc;
       if (patch.urgency !== undefined) t.urgency = patch.urgency;
       if (patch.charger !== undefined) t.charger = patch.charger;
+      if (patch.assignedTo !== undefined) t.assignedTo = patch.assignedTo;
       if (patch.dropoff !== undefined) t.dropoff = patch.dropoff;
       if (patch.dropoffAmPm !== undefined) t.dropoffAmPm = patch.dropoffAmPm ?? null;
       if (patch.dueAt !== undefined) t.dueAt = patch.dueAt ?? null;
@@ -310,6 +316,7 @@ export async function updateTicket(id: string, patch: TicketPatch): Promise<AppS
   if (patch.desc !== undefined) set.desc = patch.desc;
   if (patch.urgency !== undefined) set.urgency = patch.urgency;
   if (patch.charger !== undefined) set.charger = patch.charger;
+  if (patch.assignedTo !== undefined) set.assignedTo = patch.assignedTo;
   if (patch.dropoff !== undefined) set.dropoff = patch.dropoff;
   if (patch.dropoffAmPm !== undefined) set.dropoffAmPm = patch.dropoffAmPm ?? null;
   if (patch.dueAt !== undefined) set.dueAt = patch.dueAt ? new Date(patch.dueAt) : null;
@@ -393,6 +400,18 @@ export async function moveTicket(
     await dbApplyRenumber(placed.renumber);
     await db.update(ticketsTable).set({ urgency, sortPos: placed.pos }).where(eq(ticketsTable.id, id));
   }
+  return getState();
+}
+
+/* Permanent removal — no archive, no undo. The UI confirms before calling this. */
+export async function deleteTicket(id: string): Promise<AppState> {
+  if (!hasDb) {
+    const m = mem();
+    const i = m.rows.findIndex((x) => x.id === id);
+    if (i !== -1) m.rows.splice(i, 1);
+    return getState();
+  }
+  await db.delete(ticketsTable).where(eq(ticketsTable.id, id));
   return getState();
 }
 

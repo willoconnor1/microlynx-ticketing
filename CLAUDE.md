@@ -31,8 +31,14 @@ Picked Up tickets auto-archive after 3 days into a permanent, searchable **Archi
 
 ## Ticket fields
 `date` (drop-off), `dropoffAmPm` (morning/afternoon drop-off), `dueAt` (optional due date &
-time), `sortPos` (queue position), `name`, `description`, `urgency` (1-5), `phone`,
-`hasCharger` (bool), `status`, `createdAt`, `statusChangedAt`, `archived`.
+time), `sortPos` (queue position), `assignedTo` (keith | garrett | marisa, default keith),
+`name`, `description`, `urgency` (1-5), `phone`, `hasCharger` (bool), `status`, `createdAt`,
+`statusChangedAt`, `archived`.
+
+## Person filter
+All | Keith | Garrett | Marisa tabs filter every view. Manual drag-reordering is disabled
+while a person filter or search is active (hidden rows would get jumped silently and the
+sooner-due confirmation can't see them).
 
 ## UI conventions
 - Will says "native UI" to mean **app-styled** (matching this design system), not browser/OS

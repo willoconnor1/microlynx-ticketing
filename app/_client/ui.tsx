@@ -5,11 +5,11 @@ import {
   Calendar, Phone, Plug, PlugZap, Search, Pencil, EllipsisVertical, Check, X,
   List, SignalHigh, Columns3, Archive, Plus, Menu, Inbox, Wrench, CircleCheck,
   PackageCheck, Clock, Circle, Loader, GripVertical, ChevronLeft, ChevronRight,
-  type LucideIcon,
+  Trash2, type LucideIcon,
 } from "lucide-react";
 import {
-  URGENCY, STATUS, STATUS_ORDER, fmtDate, fmtDateLong, fmtDueAt, sortQueue, cmpDue,
-  sortEntryOrder, type Ticket, type Status,
+  URGENCY, STATUS, STATUS_ORDER, PEOPLE, fmtDate, fmtDateLong, fmtDueAt, sortQueue, cmpDue,
+  sortEntryOrder, type Ticket, type Status, type Person,
 } from "@/lib/tickets";
 
 export type View = "list" | "urgency" | "status" | "archive";
@@ -22,7 +22,7 @@ const ICONS: Record<string, LucideIcon> = {
   "signal-high": SignalHigh, "columns-3": Columns3, archive: Archive, plus: Plus, menu: Menu,
   inbox: Inbox, wrench: Wrench, "circle-check": CircleCheck, "package-check": PackageCheck,
   clock: Clock, circle: Circle, loader: Loader, "grip-vertical": GripVertical,
-  "chevron-left": ChevronLeft, "chevron-right": ChevronRight,
+  "chevron-left": ChevronLeft, "chevron-right": ChevronRight, "trash-2": Trash2,
 };
 
 const pad2 = (n: number) => String(n).padStart(2, "0");
@@ -243,6 +243,12 @@ export function UrgencyChip({ u, lg }: { u: number; lg?: boolean }) {
   return <span className={`uchip ${lg ? "lg" : ""} u${u}`}>{u}</span>;
 }
 
+export function AvatarChip({ who }: { who?: Person }) {
+  const p = who || "keith";
+  const label = PEOPLE.find((x) => x.key === p)?.label || "Keith";
+  return <span className={`avchip ${p}`} title={`Assigned to ${label}`}>{label[0]}</span>;
+}
+
 /* ---------- ticket card ---------- */
 type CardProps = {
   t: Ticket;
@@ -263,6 +269,7 @@ export function TicketCard({ t, variant = "rail", dragging, onDragStart, onDragE
       <div className="tc-footL">
         <span className="meta-mono"><Icon name="calendar" />{fmtDate(t.dropoff)}{t.dropoffAmPm ? ` · ${t.dropoffAmPm}` : ""}</span>
         <Charger yes={t.charger} />
+        <AvatarChip who={t.assignedTo} />
       </div>
       {picked ? <span className="pickchk"><Icon name="check" /></span> : <StatusPill status={t.status} />}
     </div>
@@ -362,8 +369,9 @@ type ListProps = {
   onMoveRequest: (m: PendingMove) => void;
   drag: Drag;
   setDrag: (d: Drag) => void;
+  canReorder: boolean; // off while a person filter or search hides rows
 };
-export function ListView({ tickets, onMenu, onEdit, onStatus, onMoveRequest, drag, setDrag }: ListProps) {
+export function ListView({ tickets, onMenu, onEdit, onStatus, onMoveRequest, drag, setDrag, canReorder }: ListProps) {
   const queue = tickets.filter((t) => t.status === "todo" || t.status === "prog");
   const sorted = [...queue].sort(sortQueue);
   const done = tickets.filter((t) => t.status === "done").sort(sortEntryOrder);
@@ -472,8 +480,11 @@ export function ListView({ tickets, onMenu, onEdit, onStatus, onMoveRequest, dra
                     className={`lrow u${t.urgency} ${isNext ? "next" : ""} ${listDrag && listDrag.id === t.id ? "dragging" : ""}`}
                     onDragOver={(e) => overRow(e, u, i)}
                   >
-                    <span className="grip" title="Drag to reorder" draggable
-                      onDragStart={(e) => startDrag(e, t)} onDragEnd={clearDrag}>
+                    <span className={`grip ${canReorder ? "" : "off"}`}
+                      title={canReorder ? "Drag to reorder" : "Reordering is off while filtering"}
+                      draggable={canReorder}
+                      onDragStart={canReorder ? (e) => startDrag(e, t) : undefined}
+                      onDragEnd={canReorder ? clearDrag : undefined}>
                       <Icon name="grip-vertical" size={15} />
                     </span>
                     <UrgencyChip u={t.urgency} />
@@ -486,6 +497,7 @@ export function ListView({ tickets, onMenu, onEdit, onStatus, onMoveRequest, dra
                       : <span className="meta-mono l-date" title="Dropped off"><Icon name="calendar" />{fmtDate(t.dropoff)}{t.dropoffAmPm ? ` · ${t.dropoffAmPm}` : ""}</span>}
                     <span className="meta-mono l-phone"><Icon name="phone" />{t.phone}</span>
                     <Charger yes={t.charger} />
+                    <AvatarChip who={t.assignedTo} />
                     <StatusPillMenu t={t} onStatus={onStatus} />
                     <span className="acts">
                       <button className="iconbtn tick" title="Mark complete" onClick={() => onStatus(t.id, "done")}><Icon name="check" /></button>
@@ -519,6 +531,7 @@ export function ListView({ tickets, onMenu, onEdit, onStatus, onMoveRequest, dra
               <span className="meta-mono l-date" title="Completed"><Icon name="check" />{t.statusChangedAt ? fmtDueAt(t.statusChangedAt) : "—"}</span>
               <span className="meta-mono l-phone"><Icon name="phone" />{t.phone}</span>
               <Charger yes={t.charger} />
+              <AvatarChip who={t.assignedTo} />
               <StatusPillMenu t={t} onStatus={onStatus} />
               <span className="acts">
                 <button className="btn pickup" onClick={() => onStatus(t.id, "picked")}>
@@ -748,16 +761,17 @@ export function TopNav({ view, setView, onNew, onMobileMenu }: { view: View; set
 
 /* ================= QUICK MENU ================= */
 const STATUS_ICON: Record<Status, string> = { todo: "circle", prog: "loader", done: "circle-check", picked: "package-check" };
-export function QuickMenu({ ctx, onClose, onUrgency, onStatus, onEdit }: {
+export function QuickMenu({ ctx, onClose, onUrgency, onStatus, onEdit, onDelete }: {
   ctx: { x: number; y: number; ticket: Ticket };
   onClose: () => void;
   onUrgency: (id: string, u: number) => void;
   onStatus: (id: string, s: Status) => void;
   onEdit: (t: Ticket) => void;
+  onDelete: (t: Ticket) => void;
 }) {
   const t = ctx.ticket;
   const vw = window.innerWidth, vh = window.innerHeight;
-  const W = 210, H = 360;
+  const W = 210, H = 410;
   const left = Math.max(10, Math.min(ctx.x, vw - W - 10));
   const top = Math.max(10, Math.min(ctx.y, vh - H - 10));
   return (
@@ -783,8 +797,49 @@ export function QuickMenu({ ctx, onClose, onUrgency, onStatus, onEdit }: {
             <Icon name={t.status === s ? "check" : STATUS_ICON[s]} />{STATUS[s].label}
           </button>
         ))}
+        <div className="pop-div" />
+        <button className="pop-item danger" onClick={() => { onDelete(t); onClose(); }}>
+          <Icon name="trash-2" />Delete ticket
+        </button>
       </div>
     </>
+  );
+}
+
+/* ================= CONFIRM DELETE DIALOG ================= */
+export function ConfirmDeleteDialog({ ticket, onCancel, onConfirm }: {
+  ticket: Ticket;
+  onCancel: () => void;
+  onConfirm: () => void;
+}) {
+  React.useEffect(() => {
+    const k = (e: KeyboardEvent) => { if (e.key === "Escape") onCancel(); };
+    window.addEventListener("keydown", k);
+    return () => window.removeEventListener("keydown", k);
+  }, [onCancel]);
+
+  return (
+    <div className="scrim-dark" onMouseDown={onCancel}>
+      <div className="modal confirm" onMouseDown={(e) => e.stopPropagation()}>
+        <div className="modal-head">
+          <div>
+            <div className="eyebrow">{"</"} DELETE TICKET {">"}</div>
+            <h2>Delete {ticket.id}?</h2>
+          </div>
+          <button className="iconbtn" onClick={onCancel} style={{ width: 34, height: 34 }}><Icon name="x" size={18} /></button>
+        </div>
+        <div className="modal-body">
+          <p className="confirm-msg">
+            This permanently removes <b>{ticket.name}</b>&apos;s ticket ({ticket.desc}).
+            It will NOT go to the archive and can&apos;t be brought back.
+          </p>
+        </div>
+        <div className="modal-foot">
+          <button className="btn ghost" onClick={onCancel}>Cancel</button>
+          <button className="btn danger" onClick={onConfirm}><Icon name="trash-2" />Delete ticket</button>
+        </div>
+      </div>
+    </div>
   );
 }
 
@@ -822,6 +877,7 @@ export type FormDraft = {
   dropoff: string;
   dropoffAmPm: "AM" | "PM" | null;
   dueAt: string | null; // ISO timestamp, built from the due date + time fields on submit
+  assignedTo: Person;
 };
 const DEFAULT_DUE_TIME: DueTime = { time: "5:00", ampm: "PM" }; // close of business when no time picked
 
@@ -844,6 +900,7 @@ export function TicketForm({ editing, today, onSave, onClose }: {
     // New tickets default to the current half of the day; old tickets may have none.
     dropoffAmPm: editing?.id ? editing?.dropoffAmPm ?? null : (new Date().getHours() < 12 ? "AM" : "PM"),
     dueAt: editing?.dueAt || null,
+    assignedTo: editing?.assignedTo || "keith",
   }));
   // Due date & time edit as two pieces; staff browsers are Pacific so local time is shop time.
   const [due, setDue] = React.useState<{ date: string; time: DueTime | null }>(() => {
@@ -949,6 +1006,18 @@ export function TicketForm({ editing, today, onSave, onClose }: {
                   <span className="n">{u}</span>
                   <span className="t">{URGENCY[u].short}</span>
                 </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="field">
+            <label className="lbl">Assigned to</label>
+            <div className="toggle people">
+              {PEOPLE.map((p) => (
+                <button key={p.key} type="button" className={`person ${p.key} ${f.assignedTo === p.key ? "on" : ""}`}
+                  onClick={() => set("assignedTo", p.key)}>
+                  <span className={`avchip ${p.key}`}>{p.label[0]}</span>{p.label}
+                </button>
               ))}
             </div>
           </div>

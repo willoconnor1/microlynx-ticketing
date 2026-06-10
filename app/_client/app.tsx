@@ -1,14 +1,15 @@
 "use client";
 
 import React from "react";
-import { todayISO, posBetween, type Ticket, type Status } from "@/lib/tickets";
+import { todayISO, posBetween, PEOPLE, type Ticket, type Status, type Person } from "@/lib/tickets";
 import {
   fetchState, saveTicketAction, setUrgencyAction, setStatusAction, moveTicketAction,
+  deleteTicketAction,
 } from "@/lib/actions";
 import {
   Icon, ListView, UrgencyBoard, StatusBoard, ArchiveView, TopNav, QuickMenu,
-  MobileSheet, TicketForm, ConfirmMoveDialog, type View, type Drag, type FormDraft,
-  type PendingMove,
+  MobileSheet, TicketForm, ConfirmMoveDialog, ConfirmDeleteDialog, type View, type Drag,
+  type FormDraft, type PendingMove,
 } from "./ui";
 import { celebrate } from "./confetti";
 
@@ -31,10 +32,12 @@ export default function App({ initialTickets, initialArchive }: { initialTickets
   const [sheet, setSheet] = React.useState(false);
   const [drag, setDrag] = React.useState<Drag>(null);
   const [pendingMove, setPendingMove] = React.useState<PendingMove | null>(null);
+  const [confirmDelete, setConfirmDelete] = React.useState<Ticket | null>(null);
+  const [who, setWho] = React.useState<"all" | Person>("all");
   const [today] = React.useState(() => todayISO());
 
   const busy = React.useRef(false); // suppress polling while the user is mid-interaction
-  busy.current = !!drag || !!form || !!menu || !!pendingMove;
+  busy.current = !!drag || !!form || !!menu || !!pendingMove || !!confirmDelete;
 
   const apply = (s: { tickets: Ticket[]; archive: Ticket[] }) => {
     setTickets(s.tickets);
@@ -71,8 +74,13 @@ export default function App({ initialTickets, initialArchive }: { initialTickets
     saveTicketAction(data.id, {
       name: data.name, phone: data.phone, desc: data.desc,
       urgency: data.urgency, charger: data.charger, status: data.status, dropoff: data.dropoff,
-      dropoffAmPm: data.dropoffAmPm, dueAt: data.dueAt,
+      dropoffAmPm: data.dropoffAmPm, dueAt: data.dueAt, assignedTo: data.assignedTo,
     }).then(apply);
+  };
+  const doDelete = (t: Ticket) => {
+    setConfirmDelete(null);
+    setTickets((p) => p.filter((x) => x.id !== t.id));
+    deleteTicketAction(t.id).then(apply);
   };
   const commitMove = (m: PendingMove) => {
     // Optimistic: land the row where it was dropped; the server computes the
@@ -93,20 +101,31 @@ export default function App({ initialTickets, initialArchive }: { initialTickets
 
   const [eyebrow, title, sub] = VIEW_META[view];
 
+  // Person filter first, then search on top of it.
+  const byPerson = React.useMemo(
+    () => (who === "all" ? tickets : tickets.filter((x) => (x.assignedTo || "keith") === who)),
+    [tickets, who]
+  );
   const listTickets = React.useMemo(() => {
     const q = search.trim().toLowerCase();
-    if (!q) return tickets;
-    return tickets.filter((x) => x.name.toLowerCase().includes(q) || x.desc.toLowerCase().includes(q) || x.id.toLowerCase().includes(q));
-  }, [tickets, search]);
+    if (!q) return byPerson;
+    return byPerson.filter((x) => x.name.toLowerCase().includes(q) || x.desc.toLowerCase().includes(q) || x.id.toLowerCase().includes(q));
+  }, [byPerson, search]);
+  const visibleArchive = React.useMemo(
+    () => (who === "all" ? archive : archive.filter((x) => (x.assignedTo || "keith") === who)),
+    [archive, who]
+  );
+  // Reordering needs the full list visible — hidden rows would get jumped silently.
+  const canReorder = who === "all" && !search.trim();
 
-  const activeCount = tickets.filter((x) => x.status !== "picked").length;
+  const activeCount = byPerson.filter((x) => x.status !== "picked").length;
   const showSearch = view === "list" || view === "archive";
 
   let body: React.ReactNode;
-  if (view === "list") body = <ListView tickets={listTickets} onMenu={openMenu} onEdit={(tk) => setForm(tk)} onStatus={setStatus} onMoveRequest={requestMove} drag={drag} setDrag={setDrag} />;
-  else if (view === "urgency") body = <UrgencyBoard tickets={tickets} onMenu={openMenu} onOpen={(tk) => setForm(tk)} onUrgency={setUrgency} drag={drag} setDrag={setDrag} />;
-  else if (view === "status") body = <StatusBoard tickets={tickets} onMenu={openMenu} onOpen={(tk) => setForm(tk)} onStatus={setStatus} drag={drag} setDrag={setDrag} />;
-  else body = <ArchiveView archive={archive} search={search} />;
+  if (view === "list") body = <ListView tickets={listTickets} onMenu={openMenu} onEdit={(tk) => setForm(tk)} onStatus={setStatus} onMoveRequest={requestMove} drag={drag} setDrag={setDrag} canReorder={canReorder} />;
+  else if (view === "urgency") body = <UrgencyBoard tickets={byPerson} onMenu={openMenu} onOpen={(tk) => setForm(tk)} onUrgency={setUrgency} drag={drag} setDrag={setDrag} />;
+  else if (view === "status") body = <StatusBoard tickets={byPerson} onMenu={openMenu} onOpen={(tk) => setForm(tk)} onStatus={setStatus} drag={drag} setDrag={setDrag} />;
+  else body = <ArchiveView archive={visibleArchive} search={search} />;
 
   return (
     <>
@@ -120,6 +139,14 @@ export default function App({ initialTickets, initialArchive }: { initialTickets
             <div className="sub">{sub}</div>
           </div>
           <div className="page-tools">
+            <div className="who-tabs">
+              <button className={`who-tab ${who === "all" ? "on" : ""}`} onClick={() => setWho("all")}>All</button>
+              {PEOPLE.map((p) => (
+                <button key={p.key} className={`who-tab ${p.key} ${who === p.key ? "on" : ""}`} onClick={() => setWho(p.key)}>
+                  {p.label}
+                </button>
+              ))}
+            </div>
             {view === "list" && <span className="count-pill">{activeCount} active</span>}
             {showSearch && (
               <div className="searchbox">
@@ -140,7 +167,12 @@ export default function App({ initialTickets, initialArchive }: { initialTickets
           onCancel={() => setPendingMove(null)}
           onConfirm={() => { commitMove(pendingMove); setPendingMove(null); }} />
       )}
-      {menu && <QuickMenu ctx={menu} onClose={() => setMenu(null)} onUrgency={setUrgency} onStatus={setStatus} onEdit={(tk) => setForm(tk)} />}
+      {menu && <QuickMenu ctx={menu} onClose={() => setMenu(null)} onUrgency={setUrgency} onStatus={setStatus} onEdit={(tk) => setForm(tk)} onDelete={(tk) => setConfirmDelete(tk)} />}
+      {confirmDelete && (
+        <ConfirmDeleteDialog ticket={confirmDelete}
+          onCancel={() => setConfirmDelete(null)}
+          onConfirm={() => doDelete(confirmDelete)} />
+      )}
       {sheet && <MobileSheet view={view} setView={setView} onClose={() => setSheet(false)} />}
     </>
   );

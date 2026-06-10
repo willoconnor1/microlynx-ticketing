@@ -5,6 +5,7 @@ import {
   createTicket,
   updateTicket,
   moveTicket,
+  deleteTicket,
   sweepArchive,
   type AppState,
   type NewTicketInput,
@@ -38,6 +39,10 @@ export async function moveTicketAction(
   nextId: string | null
 ): Promise<AppState> {
   return moveTicket(id, urgency, prevId, nextId);
+}
+
+export async function deleteTicketAction(id: string): Promise<AppState> {
+  return deleteTicket(id);
 }
 
 export async function sweepArchiveAction(): Promise<number> {
