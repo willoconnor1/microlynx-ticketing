@@ -8,9 +8,15 @@ import {
   Trash2, type LucideIcon,
 } from "lucide-react";
 import {
-  URGENCY, STATUS, STATUS_ORDER, PEOPLE, fmtDate, fmtDateLong, fmtDueAt, sortQueue, cmpDue,
-  sortEntryOrder, type Ticket, type Status, type Person,
+  URGENCY, STATUS, STATUS_ORDER, PEOPLE, fmtDate, fmtDateLong, fmtDueAt, fmtDueHalf,
+  buildDueAt, dueParts, sortQueue, cmpDue, sortEntryOrder,
+  type Ticket, type Status, type Person, type AmPm,
 } from "@/lib/tickets";
+
+/* Field-level edits the expanded row can save. */
+export type InlinePatch = Partial<Pick<Ticket,
+  "name" | "phone" | "desc" | "urgency" | "charger" | "assignedTo" | "deviceType" |
+  "dropoff" | "dropoffAmPm" | "dueAt">>;
 
 export type View = "list" | "urgency" | "status" | "archive";
 export type Drag = { id: string; from: string; over: string } | null;
@@ -167,75 +173,17 @@ export function DateField({ value, onChange, placeholder, clearable }: {
   );
 }
 
-/* ---------- app-styled time picker ---------- */
-export type DueTime = { time: string; ampm: "AM" | "PM" }; // e.g. { time: "2:30", ampm: "PM" }
-const TIME_PRESETS: DueTime[] = (() => {
-  const out: DueTime[] = [];
-  for (let h = 8; h <= 18; h++) {
-    for (const m of [0, 30]) {
-      if (h === 18 && m === 30) continue;
-      out.push({ time: `${((h + 11) % 12) + 1}:${pad2(m)}`, ampm: h < 12 ? "AM" : "PM" });
-    }
-  }
-  return out;
-})();
-
-function TimePop({ anchor, value, onPick, onClose }: {
-  anchor: DOMRect; value: DueTime | null; onPick: (v: DueTime) => void; onClose: () => void;
+/* ---------- AM/PM toggle (shared by drop-off and due fields) ---------- */
+export function AmPmToggle({ value, onChange, disabled }: {
+  value: AmPm | null; onChange: (v: AmPm) => void; disabled?: boolean;
 }) {
-  const [txt, setTxt] = React.useState(value ? value.time : "");
-  const [ampm, setAmpm] = React.useState<"AM" | "PM">(value ? value.ampm : "PM");
-  const m = txt.trim().match(/^(\d{1,2})(?::(\d{2}))?$/);
-  const okCustom = !!m && +m[1] >= 1 && +m[1] <= 12 && (m[2] === undefined || +m[2] <= 59);
-  const setCustom = () => {
-    if (!okCustom || !m) return;
-    onPick({ time: `${+m[1]}:${pad2(m[2] !== undefined ? +m[2] : 0)}`, ampm });
-  };
   return (
-    <Pop anchor={anchor} width={236} height={306} onClose={onClose} className="timepop">
-      <div className="time-custom">
-        <input className="inp mono" placeholder="2:15" inputMode="numeric" value={txt}
-          onChange={(e) => setTxt(e.target.value)}
-          onKeyDown={(e) => { if (e.key === "Enter") setCustom(); }} />
-        <div className="toggle ampm sm">
-          <button type="button" className={`am ${ampm === "AM" ? "on" : ""}`} onClick={() => setAmpm("AM")}>AM</button>
-          <button type="button" className={`pm ${ampm === "PM" ? "on" : ""}`} onClick={() => setAmpm("PM")}>PM</button>
-        </div>
-        <button type="button" className="btn primary sm" disabled={!okCustom} onClick={setCustom}>Set</button>
-      </div>
-      <div className="pop-div" />
-      <div className="time-list">
-        {TIME_PRESETS.map((p) => {
-          const on = !!value && value.time === p.time && value.ampm === p.ampm;
-          return (
-            <button key={p.time + p.ampm} type="button" className={`pop-item time-opt ${on ? "on" : ""}`}
-              onClick={() => onPick(p)}>
-              {on ? <Icon name="check" /> : <span className="sp" />}{p.time} {p.ampm}
-            </button>
-          );
-        })}
-      </div>
-    </Pop>
-  );
-}
-
-export function TimeField({ value, onChange, disabled, placeholder }: {
-  value: DueTime | null; onChange: (v: DueTime) => void; disabled?: boolean; placeholder?: string;
-}) {
-  const [anchor, setAnchor] = React.useState<DOMRect | null>(null);
-  return (
-    <>
-      <button type="button" disabled={disabled} className={`inp mono pickbtn ${value ? "" : "empty"}`}
-        onClick={(e) => setAnchor(e.currentTarget.getBoundingClientRect())}>
-        <Icon name="clock" />
-        <span className="pv">{value ? `${value.time} ${value.ampm}` : placeholder || "Pick a time"}</span>
-      </button>
-      {anchor && (
-        <TimePop anchor={anchor} value={value}
-          onPick={(v) => { onChange(v); setAnchor(null); }}
-          onClose={() => setAnchor(null)} />
-      )}
-    </>
+    <div className="toggle ampm">
+      <button type="button" disabled={disabled} className={`am ${value === "AM" ? "on" : ""}`}
+        onClick={(e) => { e.stopPropagation(); onChange("AM"); }}>AM</button>
+      <button type="button" disabled={disabled} className={`pm ${value === "PM" ? "on" : ""}`}
+        onClick={(e) => { e.stopPropagation(); onChange("PM"); }}>PM</button>
+    </div>
   );
 }
 
@@ -262,7 +210,7 @@ type CardProps = {
 
 export function TicketCard({ t, variant = "rail", dragging, onDragStart, onDragEnd, onMenu, onOpen }: CardProps) {
   const picked = t.status === "picked";
-  const cls = ["tcard", variant, `u${t.urgency}`, dragging ? "dragging" : "", picked ? "is-picked" : ""].join(" ");
+  const cls = ["tcard", variant, `u${t.urgency}`, dragging ? "dragging" : "", picked ? "is-picked" : "", t.deviceType === "desktop" ? "desktop" : ""].join(" ");
 
   const foot = (
     <div className="tc-foot">
@@ -367,11 +315,14 @@ type ListProps = {
   onEdit: (t: Ticket) => void;
   onStatus: (id: string, s: Status) => void;
   onMoveRequest: (m: PendingMove) => void;
+  onPatch: (id: string, patch: InlinePatch) => void;
+  expandedId: string | null;
+  onToggleExpand: (id: string) => void;
   drag: Drag;
   setDrag: (d: Drag) => void;
   canReorder: boolean; // off while a person filter or search hides rows
 };
-export function ListView({ tickets, onMenu, onEdit, onStatus, onMoveRequest, drag, setDrag, canReorder }: ListProps) {
+export function ListView({ tickets, onMenu, onEdit, onStatus, onMoveRequest, onPatch, expandedId, onToggleExpand, drag, setDrag, canReorder }: ListProps) {
   const queue = tickets.filter((t) => t.status === "todo" || t.status === "prog");
   const sorted = [...queue].sort(sortQueue);
   const done = tickets.filter((t) => t.status === "done").sort(sortEntryOrder);
@@ -388,6 +339,7 @@ export function ListView({ tickets, onMenu, onEdit, onStatus, onMoveRequest, dra
   const clearDrag = () => { setDrag(null); setTarget(null); };
 
   const startDrag = (e: React.DragEvent, t: Ticket) => {
+    if (expandedId) onToggleExpand(expandedId); // collapse so the drop math sees normal-height rows
     try {
       e.dataTransfer.setData("text/plain", t.id);
       e.dataTransfer.effectAllowed = "move";
@@ -471,43 +423,22 @@ export function ListView({ tickets, onMenu, onEdit, onStatus, onMoveRequest, dra
                 drop here
               </div>
             )}
-            {list.map((t, i) => {
-              const isNext = t.id === topId;
-              return (
-                <React.Fragment key={t.id}>
-                  {lineAt === i && <div className="ins-line" />}
-                  <div
-                    className={`lrow u${t.urgency} ${isNext ? "next" : ""} ${listDrag && listDrag.id === t.id ? "dragging" : ""}`}
-                    onDragOver={(e) => overRow(e, u, i)}
-                  >
-                    <span className={`grip ${canReorder ? "" : "off"}`}
-                      title={canReorder ? "Drag to reorder" : "Reordering is off while filtering"}
-                      draggable={canReorder}
-                      onDragStart={canReorder ? (e) => startDrag(e, t) : undefined}
-                      onDragEnd={canReorder ? clearDrag : undefined}>
-                      <Icon name="grip-vertical" size={15} />
-                    </span>
-                    <UrgencyChip u={t.urgency} />
-                    <div style={{ minWidth: 0 }}>
-                      <div className="nm">{t.name}</div>
-                      <div className="ds">{t.desc}</div>
-                    </div>
-                    {t.dueAt
-                      ? <span className="meta-mono l-date due" title="Due"><Icon name="clock" />{fmtDueAt(t.dueAt)}</span>
-                      : <span className="meta-mono l-date" title="Dropped off"><Icon name="calendar" />{fmtDate(t.dropoff)}{t.dropoffAmPm ? ` · ${t.dropoffAmPm}` : ""}</span>}
-                    <span className="meta-mono l-phone"><Icon name="phone" />{t.phone}</span>
-                    <Charger yes={t.charger} />
-                    <AvatarChip who={t.assignedTo} />
-                    <StatusPillMenu t={t} onStatus={onStatus} />
-                    <span className="acts">
-                      <button className="iconbtn tick" title="Mark complete" onClick={() => onStatus(t.id, "done")}><Icon name="check" /></button>
-                      <button className="iconbtn" title="Edit" onClick={() => onEdit(t)}><Icon name="pencil" /></button>
-                      <button className="iconbtn" title="Quick change" onClick={(e) => onMenu(e, t)}><Icon name="ellipsis-vertical" /></button>
-                    </span>
-                  </div>
-                </React.Fragment>
-              );
-            })}
+            {list.map((t, i) => (
+              <React.Fragment key={t.id}>
+                {lineAt === i && <div className="ins-line" />}
+                <QueueRow t={t}
+                  isNext={t.id === topId}
+                  dragging={!!listDrag && listDrag.id === t.id}
+                  canReorder={canReorder}
+                  expanded={expandedId === t.id}
+                  onToggle={onToggleExpand}
+                  onPatch={onPatch}
+                  onRowDragOver={(e) => overRow(e, u, i)}
+                  startDrag={startDrag}
+                  clearDrag={clearDrag}
+                  onStatus={onStatus} onEdit={onEdit} onMenu={onMenu} />
+              </React.Fragment>
+            ))}
             {lineAt >= list.length && list.length > 0 && <div className="ins-line" />}
           </React.Fragment>
         );
@@ -521,23 +452,23 @@ export function ListView({ tickets, onMenu, onEdit, onStatus, onMoveRequest, dra
             <span>{done.length}</span>
           </div>
           {done.map((t) => (
-            <div key={t.id} className={`lrow done-row u${t.urgency}`}>
-              <span className="done-ic"><Icon name="circle-check" size={16} /></span>
-              <UrgencyChip u={t.urgency} />
-              <div style={{ minWidth: 0 }}>
-                <div className="nm">{t.name}</div>
-                <div className="ds">{t.desc}</div>
+            <div key={t.id} className={`lrow done-row u${t.urgency} ${t.deviceType === "desktop" ? "desktop" : ""}`}>
+              <div className="lrow-head static">
+                <span className="done-ic"><Icon name="circle-check" size={16} /></span>
+                <UrgencyChip u={t.urgency} />
+                <div style={{ minWidth: 0 }}>
+                  <div className="nm">{t.name}</div>
+                  <div className="ds">{t.desc}</div>
+                </div>
+                <span className="meta-mono l-date done-at" title="Completed"><Icon name="check" />{t.statusChangedAt ? fmtDueAt(t.statusChangedAt) : "—"}</span>
+                <span className="meta-mono l-phone"><Icon name="phone" />{t.phone}</span>
+                <StatusPillMenu t={t} onStatus={onStatus} />
+                <span className="acts">
+                  <button className="btn pickup" onClick={() => onStatus(t.id, "picked")}>
+                    <Icon name="package-check" />Picked up
+                  </button>
+                </span>
               </div>
-              <span className="meta-mono l-date" title="Completed"><Icon name="check" />{t.statusChangedAt ? fmtDueAt(t.statusChangedAt) : "—"}</span>
-              <span className="meta-mono l-phone"><Icon name="phone" />{t.phone}</span>
-              <Charger yes={t.charger} />
-              <AvatarChip who={t.assignedTo} />
-              <StatusPillMenu t={t} onStatus={onStatus} />
-              <span className="acts">
-                <button className="btn pickup" onClick={() => onStatus(t.id, "picked")}>
-                  <Icon name="package-check" />Picked up
-                </button>
-              </span>
             </div>
           ))}
         </>
@@ -550,6 +481,184 @@ export function ListView({ tickets, onMenu, onEdit, onStatus, onMoveRequest, dra
           <div className="es">Every device is handled. New drop-offs will show up here, most urgent first.</div>
         </div>
       )}
+    </div>
+  );
+}
+
+/* ================= QUEUE ROW (accordion) ================= */
+type QueueRowProps = {
+  t: Ticket;
+  isNext: boolean;
+  dragging: boolean;
+  canReorder: boolean;
+  expanded: boolean;
+  onToggle: (id: string) => void;
+  onPatch: (id: string, patch: InlinePatch) => void;
+  onRowDragOver: (e: React.DragEvent) => void;
+  startDrag: (e: React.DragEvent, t: Ticket) => void;
+  clearDrag: () => void;
+  onStatus: (id: string, s: Status) => void;
+  onEdit: (t: Ticket) => void;
+  onMenu: (e: React.MouseEvent, t: Ticket) => void;
+};
+
+function QueueRow({ t, isNext, dragging, canReorder, expanded, onToggle, onPatch, onRowDragOver, startDrag, clearDrag, onStatus, onEdit, onMenu }: QueueRowProps) {
+  // Keep the expansion body mounted through the collapse animation, then unmount.
+  const [bodyMounted, setBodyMounted] = React.useState(expanded);
+  React.useEffect(() => { if (expanded) setBodyMounted(true); }, [expanded]);
+
+  const headClick = () => {
+    if (window.getSelection()?.toString()) return; // copying text shouldn't bounce the row
+    onToggle(t.id);
+  };
+
+  const cls = [
+    "lrow", `u${t.urgency}`,
+    isNext ? "next" : "",
+    dragging ? "dragging" : "",
+    expanded ? "expanded" : "",
+    t.deviceType === "desktop" ? "desktop" : "",
+  ].join(" ");
+
+  return (
+    <div className={cls} onDragOver={onRowDragOver}>
+      <div className="lrow-head" onClick={headClick}>
+        <span className={`grip ${canReorder ? "" : "off"}`}
+          title={canReorder ? "Drag to reorder" : "Reordering is off while filtering"}
+          draggable={canReorder}
+          onClick={(e) => e.stopPropagation()}
+          onDragStart={canReorder ? (e) => startDrag(e, t) : undefined}
+          onDragEnd={canReorder ? clearDrag : undefined}>
+          <Icon name="grip-vertical" size={15} />
+        </span>
+        <UrgencyChip u={t.urgency} />
+        <div style={{ minWidth: 0 }}>
+          <div className="nm">{t.name}</div>
+          <div className="ds">{t.desc}</div>
+        </div>
+        <span className="meta-mono l-date l-drop" title="Dropped off">
+          <Icon name="calendar" />{fmtDate(t.dropoff)}{t.dropoffAmPm ? ` · ${t.dropoffAmPm}` : ""}
+        </span>
+        {t.dueAt
+          ? <span className="meta-mono l-date due l-due" title="Pickup due"><Icon name="clock" />{fmtDueHalf(t.dueAt)}</span>
+          : <span className="meta-mono l-date l-due nodue">—</span>}
+        <span className="meta-mono l-phone"><Icon name="phone" />{t.phone}</span>
+        <StatusPillMenu t={t} onStatus={onStatus} />
+        <span className="acts">
+          <button className="iconbtn tick" title="Mark complete" onClick={(e) => { e.stopPropagation(); onStatus(t.id, "done"); }}><Icon name="check" /></button>
+          <button className="iconbtn" title="Edit" onClick={(e) => { e.stopPropagation(); onEdit(t); }}><Icon name="pencil" /></button>
+          <button className="iconbtn" title="Quick change" onClick={(e) => { e.stopPropagation(); onMenu(e, t); }}><Icon name="ellipsis-vertical" /></button>
+        </span>
+      </div>
+      <div className="lrow-exp"
+        onTransitionEnd={(e) => { if (e.propertyName === "grid-template-rows" && !expanded) setBodyMounted(false); }}>
+        <div className="lrow-exp-clip">
+          {bodyMounted && (
+            <div className="lrow-exp-body">
+              <RowExpansion t={t} onPatch={onPatch} />
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* Inline editor inside the expanded row. Buttons save instantly; text saves on blur
+   (and on unmount, so collapsing mid-edit never loses typing). */
+function RowExpansion({ t, onPatch }: { t: Ticket; onPatch: (id: string, p: InlinePatch) => void }) {
+  const [draft, setDraft] = React.useState({ name: t.name, phone: t.phone, desc: t.desc });
+  const draftRef = React.useRef(draft); draftRef.current = draft;
+  const tRef = React.useRef(t); tRef.current = t;
+  const onPatchRef = React.useRef(onPatch); onPatchRef.current = onPatch;
+
+  const flush = React.useCallback(() => {
+    const d = draftRef.current, cur = tRef.current;
+    const p: InlinePatch = {};
+    if (d.name.trim() && d.name.trim() !== cur.name) p.name = d.name.trim();
+    if (d.phone.trim() !== cur.phone) p.phone = d.phone.trim();
+    if (d.desc.trim() !== cur.desc) p.desc = d.desc.trim();
+    if (Object.keys(p).length) onPatchRef.current(cur.id, p);
+  }, []);
+  React.useEffect(() => () => flush(), [flush]);
+
+  const due = t.dueAt ? dueParts(t.dueAt) : null;
+  const setDue = (date: string, half: AmPm) => onPatch(t.id, { dueAt: date ? buildDueAt(date, half) : null });
+
+  return (
+    <div className="exp-grid">
+      <div className="exp-field">
+        <label className="lbl">Customer name</label>
+        <input className="inp" value={draft.name} onBlur={flush}
+          onChange={(e) => setDraft((p) => ({ ...p, name: e.target.value }))} />
+      </div>
+      <div className="exp-field">
+        <label className="lbl">Phone</label>
+        <input className="inp mono" type="tel" value={draft.phone} onBlur={flush}
+          onChange={(e) => setDraft((p) => ({ ...p, phone: e.target.value }))} />
+      </div>
+      <div className="exp-field full">
+        <label className="lbl">What&apos;s wrong?</label>
+        <textarea className="ta" value={draft.desc} onBlur={flush}
+          onChange={(e) => setDraft((p) => ({ ...p, desc: e.target.value }))} />
+      </div>
+      <div className="exp-field">
+        <label className="lbl">Drop-off</label>
+        <div className="dropoff-row">
+          <DateField value={t.dropoff} onChange={(v) => onPatch(t.id, { dropoff: v })} />
+          <AmPmToggle value={t.dropoffAmPm ?? null} onChange={(v) => onPatch(t.id, { dropoffAmPm: v })} />
+        </div>
+      </div>
+      <div className="exp-field">
+        <label className="lbl">Pickup due</label>
+        <div className="dropoff-row">
+          <DateField value={due ? due.date : ""} clearable placeholder="No due date"
+            onChange={(v) => setDue(v, due ? due.half : "PM")} />
+          <AmPmToggle value={due ? due.half : null} disabled={!due}
+            onChange={(v) => due && setDue(due.date, v)} />
+        </div>
+      </div>
+      <div className="exp-field">
+        <label className="lbl">Urgency</label>
+        <div className="uselect compact">
+          {[1, 2, 3, 4, 5].map((u) => (
+            <div key={u} className={`opt u${u} ${t.urgency === u ? "on" : ""}`} onClick={() => onPatch(t.id, { urgency: u })}>
+              <span className="n">{u}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+      <div className="exp-field">
+        <label className="lbl">Device</label>
+        <div className="toggle device">
+          <button type="button" className={t.deviceType === "laptop" ? "on" : ""}
+            onClick={() => onPatch(t.id, { deviceType: "laptop" })}>Laptop</button>
+          <button type="button" className={t.deviceType === "desktop" ? "on" : ""}
+            onClick={() => onPatch(t.id, { deviceType: "desktop" })}>Desktop</button>
+        </div>
+      </div>
+      <div className="exp-field">
+        <label className="lbl">Charger</label>
+        <div className="toggle">
+          <button type="button" className={`yes ${t.charger ? "on" : ""}`} onClick={() => onPatch(t.id, { charger: true })}>
+            <Icon name="plug-zap" />Yes
+          </button>
+          <button type="button" className={`no ${!t.charger ? "on" : ""}`} onClick={() => onPatch(t.id, { charger: false })}>
+            <Icon name="plug" />No
+          </button>
+        </div>
+      </div>
+      <div className="exp-field">
+        <label className="lbl">Assigned to</label>
+        <div className="toggle people">
+          {PEOPLE.map((p) => (
+            <button key={p.key} type="button" className={t.assignedTo === p.key ? "on" : ""}
+              onClick={() => onPatch(t.id, { assignedTo: p.key })}>
+              <span className={`avchip ${p.key}`}>{p.label[0]}</span>{p.label}
+            </button>
+          ))}
+        </div>
+      </div>
     </div>
   );
 }
@@ -586,7 +695,7 @@ export function ConfirmMoveDialog({ move, onCancel, onConfirm }: {
               <div key={t.id} className={`confirm-row u${t.urgency}`}>
                 <UrgencyChip u={t.urgency} />
                 <span className="nm">{t.name}</span>
-                <span className="meta-mono"><Icon name="clock" />{t.dueAt ? fmtDueAt(t.dueAt) : "no due date"}</span>
+                <span className="meta-mono"><Icon name="clock" />{t.dueAt ? fmtDueHalf(t.dueAt) : "no due date"}</span>
               </div>
             ))}
           </div>
@@ -875,11 +984,11 @@ export type FormDraft = {
   charger: boolean;
   status: Status;
   dropoff: string;
-  dropoffAmPm: "AM" | "PM" | null;
-  dueAt: string | null; // ISO timestamp, built from the due date + time fields on submit
+  dropoffAmPm: AmPm | null;
+  dueAt: string | null; // ISO timestamp, built from the due date + AM/PM on submit
   assignedTo: Person;
+  deviceType: "desktop" | "laptop" | null;
 };
-const DEFAULT_DUE_TIME: DueTime = { time: "5:00", ampm: "PM" }; // close of business when no time picked
 
 export function TicketForm({ editing, today, onSave, onClose }: {
   editing: Partial<Ticket>;
@@ -901,15 +1010,13 @@ export function TicketForm({ editing, today, onSave, onClose }: {
     dropoffAmPm: editing?.id ? editing?.dropoffAmPm ?? null : (new Date().getHours() < 12 ? "AM" : "PM"),
     dueAt: editing?.dueAt || null,
     assignedTo: editing?.assignedTo || "keith",
+    // New tickets default to Laptop; legacy tickets show neither selected until set.
+    deviceType: editing?.id ? editing?.deviceType ?? null : "laptop",
   }));
-  // Due date & time edit as two pieces; staff browsers are Pacific so local time is shop time.
-  const [due, setDue] = React.useState<{ date: string; time: DueTime | null }>(() => {
-    const d = editing?.dueAt ? new Date(editing.dueAt) : null;
-    return {
-      date: d ? `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}` : "",
-      time: d ? { time: `${((d.getHours() + 11) % 12) + 1}:${pad2(d.getMinutes())}`, ampm: d.getHours() >= 12 ? "PM" : "AM" } : null,
-    };
-  });
+  // Due date is a half-day pickup window ("Thursday AM"); default PM.
+  const [due, setDueState] = React.useState<{ date: string; half: AmPm }>(() =>
+    editing?.dueAt ? dueParts(editing.dueAt) : { date: "", half: "PM" }
+  );
   const [touched, setTouched] = React.useState(false);
   const set = <K extends keyof FormDraft>(k: K, v: FormDraft[K]) => setF((p) => ({ ...p, [k]: v }));
 
@@ -919,18 +1026,13 @@ export function TicketForm({ editing, today, onSave, onClose }: {
   };
   const valid = !errs.name && !errs.desc;
 
-  const buildDueAt = (): string | null => {
-    if (!due.date) return null;
-    const t = due.time || DEFAULT_DUE_TIME;
-    const [h12s, mins] = t.time.split(":");
-    const h24 = (+h12s % 12) + (t.ampm === "PM" ? 12 : 0);
-    return new Date(`${due.date}T${pad2(h24)}:${pad2(mins ? +mins : 0)}:00`).toISOString();
-  };
-
   const submit = () => {
     setTouched(true);
     if (!valid) return;
-    onSave({ ...f, name: f.name.trim(), phone: f.phone.trim(), desc: f.desc.trim(), dueAt: buildDueAt() });
+    onSave({
+      ...f, name: f.name.trim(), phone: f.phone.trim(), desc: f.desc.trim(),
+      dueAt: due.date ? buildDueAt(due.date, due.half) : null,
+    });
   };
 
   React.useEffect(() => {
@@ -956,12 +1058,7 @@ export function TicketForm({ editing, today, onSave, onClose }: {
               <label className="lbl">Drop-off date</label>
               <div className="dropoff-row">
                 <DateField value={f.dropoff} onChange={(v) => set("dropoff", v)} />
-                <div className="toggle ampm">
-                  <button type="button" className={`am ${f.dropoffAmPm === "AM" ? "on" : ""}`}
-                    onClick={() => set("dropoffAmPm", "AM")}>AM</button>
-                  <button type="button" className={`pm ${f.dropoffAmPm === "PM" ? "on" : ""}`}
-                    onClick={() => set("dropoffAmPm", "PM")}>PM</button>
-                </div>
+                <AmPmToggle value={f.dropoffAmPm} onChange={(v) => set("dropoffAmPm", v)} />
               </div>
             </div>
             <div className="field">
@@ -972,14 +1069,22 @@ export function TicketForm({ editing, today, onSave, onClose }: {
 
           <div className="field-grid">
             <div className="field">
-              <label className="lbl">Due date <span className="opt-hint">optional</span></label>
-              <DateField value={due.date} clearable placeholder="No due date"
-                onChange={(v) => setDue((p) => ({ date: v, time: v ? p.time : null }))} />
+              <label className="lbl">Pickup due <span className="opt-hint">optional</span></label>
+              <div className="dropoff-row">
+                <DateField value={due.date} clearable placeholder="No due date"
+                  onChange={(v) => setDueState((p) => ({ ...p, date: v }))} />
+                <AmPmToggle value={due.date ? due.half : null} disabled={!due.date}
+                  onChange={(v) => setDueState((p) => ({ ...p, half: v }))} />
+              </div>
             </div>
             <div className="field">
-              <label className="lbl">Due time</label>
-              <TimeField value={due.time} disabled={!due.date} placeholder={due.date ? "5:00 PM (default)" : "Pick a date first"}
-                onChange={(t) => setDue((p) => ({ ...p, time: t }))} />
+              <label className="lbl">Device</label>
+              <div className="toggle device">
+                <button type="button" className={f.deviceType === "laptop" ? "on" : ""}
+                  onClick={() => set("deviceType", "laptop")}>Laptop</button>
+                <button type="button" className={f.deviceType === "desktop" ? "on" : ""}
+                  onClick={() => set("deviceType", "desktop")}>Desktop</button>
+              </div>
             </div>
           </div>
 

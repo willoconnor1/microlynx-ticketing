@@ -17,6 +17,7 @@ export interface Ticket {
   urgency: number; // 1-5, 1 = most urgent
   charger: boolean;
   assignedTo?: Person; // defaults to keith
+  deviceType?: "desktop" | "laptop" | null; // null on pre-feature tickets
   status: Status;
   dropoff: string; // YYYY-MM-DD
   dropoffAmPm?: "AM" | "PM" | null; // morning vs afternoon drop-off
@@ -67,6 +68,34 @@ export function fmtDueAt(iso: string): string {
   return new Date(iso).toLocaleString("en-US", {
     timeZone: "America/Los_Angeles", month: "short", day: "numeric", hour: "numeric", minute: "2-digit",
   });
+}
+
+/* ---- half-day due dates ---- */
+export type AmPm = "AM" | "PM";
+
+/* Due dates are half-days ("ready Thursday AM"), stored in the dueAt timestamp:
+   AM = 11:00 local, PM = 17:00 local — so AM sorts before PM on the same day and
+   cmpDue's plain ISO compare keeps working. */
+export function buildDueAt(date: string, half: AmPm): string {
+  return new Date(`${date}T${half === "AM" ? "11" : "17"}:00:00`).toISOString();
+}
+
+/* Decode for display/editing, pinned to shop time. Legacy exact-time rows
+   bucket by hour: before noon = AM. */
+export function dueParts(iso: string): { date: string; half: AmPm } {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "America/Los_Angeles", year: "numeric", month: "2-digit", day: "2-digit",
+    hour: "2-digit", hour12: false,
+  }).formatToParts(new Date(iso));
+  const get = (t: string) => parts.find((p) => p.type === t)?.value || "";
+  const hour = +get("hour") % 24; // en-CA can emit "24" for midnight
+  return { date: `${get("year")}-${get("month")}-${get("day")}`, half: hour < 12 ? "AM" : "PM" };
+}
+
+/* "Jun 12 · AM" */
+export function fmtDueHalf(iso: string): string {
+  const { date, half } = dueParts(iso);
+  return `${fmtDate(date)} · ${half}`;
 }
 
 /* ---- sorting ---- */

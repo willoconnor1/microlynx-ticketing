@@ -30,10 +30,18 @@ Picked Up tickets auto-archive after 3 days into a permanent, searchable **Archi
 - Auto-archive: `status = picked_up` AND in that status for more than 3 days.
 
 ## Ticket fields
-`date` (drop-off), `dropoffAmPm` (morning/afternoon drop-off), `dueAt` (optional due date &
-time), `sortPos` (queue position), `assignedTo` (keith | garrett | marisa, default keith),
-`name`, `description`, `urgency` (1-5), `phone`, `hasCharger` (bool), `status`, `createdAt`,
-`statusChangedAt`, `archived`.
+`date` (drop-off), `dropoffAmPm` (morning/afternoon drop-off), `dueAt` (optional half-day
+pickup window — stored as a timestamp where AM = 11:00 and PM = 17:00 Pacific; no exact
+times in the UI), `sortPos` (queue position), `assignedTo` (keith | garrett | marisa,
+default keith), `deviceType` ("desktop" | "laptop" | null — desktops get a cool blue-white
+background tint), `name`, `description`, `urgency` (1-5), `phone`, `hasCharger` (bool),
+`status`, `createdAt`, `statusChangedAt`, `archived`.
+
+## List rows are accordions
+Clicking a queue row expands it inline (one at a time); the expansion edits every field —
+buttons save instantly via `patchTicketAction`, text saves on blur and on collapse. The
+collapsed row shows name/desc, both dates, phone, status, and actions; charger + assignee
+live in the expansion. Rows collapse automatically when a drag starts.
 
 ## Person filter
 All | Keith | Garrett | Marisa tabs filter every view. Manual drag-reordering is disabled

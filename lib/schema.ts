@@ -8,6 +8,7 @@ export const tickets = pgTable("tickets", {
   urgency: integer("urgency").notNull().default(3),
   charger: boolean("charger").notNull().default(false),
   assignedTo: text("assigned_to").notNull().default("keith"), // keith | garrett | marisa
+  deviceType: text("device_type"), // "desktop" | "laptop" | null (pre-feature tickets)
   status: text("status").notNull().default("todo"), // todo | prog | done | picked
   dropoff: text("dropoff").notNull(), // YYYY-MM-DD
   dropoffAmPm: text("dropoff_ampm"), // "AM" | "PM" — morning vs afternoon drop-off
