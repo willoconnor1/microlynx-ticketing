@@ -20,6 +20,7 @@ export interface NewTicketInput {
   charger: boolean;
   status?: Status;
   dropoff: string;
+  dropoffAmPm?: "AM" | "PM" | null;
   dueAt?: string | null;
 }
 
@@ -31,6 +32,7 @@ export interface TicketPatch {
   charger?: boolean;
   status?: Status;
   dropoff?: string;
+  dropoffAmPm?: "AM" | "PM" | null;
   dueAt?: string | null;
 }
 
@@ -132,6 +134,7 @@ function rowToTicket(r: TicketRow): Ticket {
     charger: r.charger,
     status: r.status as Status,
     dropoff: r.dropoff,
+    dropoffAmPm: r.dropoffAmPm as "AM" | "PM" | null,
     dueAt: r.dueAt ? new Date(r.dueAt).toISOString() : null,
     sortPos: r.sortPos,
     pickedAt: r.pickedAt,
@@ -211,6 +214,7 @@ export async function createTicket(input: NewTicketInput): Promise<AppState> {
       charger: input.charger,
       status: input.status ?? "todo",
       dropoff: input.dropoff,
+      dropoffAmPm: input.dropoffAmPm ?? null,
       dueAt,
       sortPos: null,
       pickedAt: input.status === "picked" ? todayISO() : null,
@@ -254,6 +258,7 @@ export async function createTicket(input: NewTicketInput): Promise<AppState> {
     charger: input.charger,
     status: input.status ?? "todo",
     dropoff: input.dropoff,
+    dropoffAmPm: input.dropoffAmPm ?? null,
     dueAt: dueAt ? new Date(dueAt) : null,
     sortPos: placed.pos,
     pickedAt: input.status === "picked" ? todayISO() : null,
@@ -277,6 +282,7 @@ export async function updateTicket(id: string, patch: TicketPatch): Promise<AppS
       if (patch.urgency !== undefined) t.urgency = patch.urgency;
       if (patch.charger !== undefined) t.charger = patch.charger;
       if (patch.dropoff !== undefined) t.dropoff = patch.dropoff;
+      if (patch.dropoffAmPm !== undefined) t.dropoffAmPm = patch.dropoffAmPm ?? null;
       if (patch.dueAt !== undefined) t.dueAt = patch.dueAt ?? null;
       if (statusChanging && patch.status) {
         t.status = patch.status;
@@ -305,6 +311,7 @@ export async function updateTicket(id: string, patch: TicketPatch): Promise<AppS
   if (patch.urgency !== undefined) set.urgency = patch.urgency;
   if (patch.charger !== undefined) set.charger = patch.charger;
   if (patch.dropoff !== undefined) set.dropoff = patch.dropoff;
+  if (patch.dropoffAmPm !== undefined) set.dropoffAmPm = patch.dropoffAmPm ?? null;
   if (patch.dueAt !== undefined) set.dueAt = patch.dueAt ? new Date(patch.dueAt) : null;
   if (statusChanging && patch.status) {
     set.status = patch.status;

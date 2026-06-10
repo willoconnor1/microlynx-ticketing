@@ -30,9 +30,14 @@ Picked Up tickets auto-archive after 3 days into a permanent, searchable **Archi
 - Auto-archive: `status = picked_up` AND in that status for more than 3 days.
 
 ## Ticket fields
-`date` (drop-off), `dueAt` (optional due date & time), `sortPos` (queue position), `name`,
-`description`, `urgency` (1-5), `phone`, `hasCharger` (bool), `status`, `createdAt`,
-`statusChangedAt`, `archived`.
+`date` (drop-off), `dropoffAmPm` (morning/afternoon drop-off), `dueAt` (optional due date &
+time), `sortPos` (queue position), `name`, `description`, `urgency` (1-5), `phone`,
+`hasCharger` (bool), `status`, `createdAt`, `statusChangedAt`, `archived`.
+
+## UI conventions
+- Will says "native UI" to mean **app-styled** (matching this design system), not browser/OS
+  controls. Date, time, and status pickers are custom popovers (`Pop`/`CalendarPop`/`TimePop`/
+  `StatusPillMenu` in `app/_client/ui.tsx`) — never bare `<select>` or `<input type="date">`.
 
 ## Stack
 Next.js App Router + TypeScript, plain CSS design system (from Claude design, in

@@ -9,6 +9,7 @@ export const tickets = pgTable("tickets", {
   charger: boolean("charger").notNull().default(false),
   status: text("status").notNull().default("todo"), // todo | prog | done | picked
   dropoff: text("dropoff").notNull(), // YYYY-MM-DD
+  dropoffAmPm: text("dropoff_ampm"), // "AM" | "PM" — morning vs afternoon drop-off
   dueAt: timestamp("due_at", { withTimezone: true }), // optional promised-by date & time
   sortPos: doublePrecision("sort_pos"), // position within the urgency group; auto-assigned from dueAt, overridden by manual drags
   pickedAt: text("picked_at"), // YYYY-MM-DD, set when status = picked
