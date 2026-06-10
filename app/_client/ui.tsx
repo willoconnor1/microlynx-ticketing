@@ -1049,9 +1049,8 @@ export function TicketForm({ editing, today, onSave, onClose }: {
 
   const errs = {
     name: f.name.trim() ? "" : "Customer name is required",
-    desc: f.desc.trim() ? "" : "Tell us what's wrong with the device",
   };
-  const valid = !errs.name && !errs.desc;
+  const valid = !errs.name;
 
   const submit = () => {
     setTouched(true);
@@ -1123,11 +1122,10 @@ export function TicketForm({ editing, today, onSave, onClose }: {
           </div>
 
           <div className="field">
-            <label className="lbl">What&apos;s wrong?<span className="req">*</span></label>
-            <textarea className={`ta ${touched && errs.desc ? "bad" : ""}`}
+            <label className="lbl">What&apos;s wrong? <span className="opt-hint">optional</span></label>
+            <textarea className="ta"
               placeholder="Device and the problem in plain words — e.g. &ldquo;MacBook Air, liquid spill, won't boot.&rdquo;"
               value={f.desc} onChange={(e) => set("desc", e.target.value)} />
-            {touched && errs.desc && <div className="err">{errs.desc}</div>}
           </div>
 
           <div className="field">
