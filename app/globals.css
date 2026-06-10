@@ -239,7 +239,7 @@ button{font-family:inherit}
 .peek-item{display:inline-flex;align-items:center;gap:7px;font-family:var(--font-mono);font-size:11.5px;color:var(--gray-600)}
 .peek-item i,.peek-item svg{width:14px;height:14px;color:var(--gray-400)}
 .peek-spacer{flex:1}
-.btn.peek-edit{padding:7px 13px;font-size:12.5px}
+.btn.peek-edit{display:none;padding:7px 13px;font-size:12.5px} /* mobile-only: the row pencil is hidden there */
 .exp-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px 20px}
 .exp-field.full{grid-column:1 / -1}
 .exp-field .ta{min-height:64px}
@@ -440,6 +440,7 @@ button{font-family:inherit}
   .lrow.done-row .acts{display:flex}
   .lrow.done-row .spill-sel{display:none}
   .exp-grid{grid-template-columns:1fr}
+  .btn.peek-edit{display:inline-flex}
   .col{min-width:84vw;max-width:90vw}
 }
 @media(max-width:560px){
