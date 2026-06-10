@@ -129,7 +129,7 @@ export default function App({ initialTickets, initialArchive }: { initialTickets
   const showSearch = view === "list" || view === "archive";
 
   let body: React.ReactNode;
-  if (view === "list") body = <ListView tickets={listTickets} onMenu={openMenu} onEdit={(tk) => setForm(tk)} onStatus={setStatus} onMoveRequest={requestMove} onPatch={patchTicket} expandedId={expandedId} onToggleExpand={toggleExpand} drag={drag} setDrag={setDrag} canReorder={canReorder} />;
+  if (view === "list") body = <ListView tickets={listTickets} onMenu={openMenu} onStatus={setStatus} onMoveRequest={requestMove} onPatch={patchTicket} expandedId={expandedId} onToggleExpand={toggleExpand} drag={drag} setDrag={setDrag} canReorder={canReorder} />;
   else if (view === "urgency") body = <UrgencyBoard tickets={byPerson} onMenu={openMenu} onOpen={(tk) => setForm(tk)} onUrgency={setUrgency} drag={drag} setDrag={setDrag} />;
   else if (view === "status") body = <StatusBoard tickets={byPerson} onMenu={openMenu} onOpen={(tk) => setForm(tk)} onStatus={setStatus} drag={drag} setDrag={setDrag} />;
   else body = <ArchiveView archive={visibleArchive} search={search} />;

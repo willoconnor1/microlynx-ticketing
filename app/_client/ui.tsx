@@ -312,7 +312,6 @@ export type PendingMove = {
 type ListProps = {
   tickets: Ticket[];
   onMenu: (e: React.MouseEvent, t: Ticket) => void;
-  onEdit: (t: Ticket) => void;
   onStatus: (id: string, s: Status) => void;
   onMoveRequest: (m: PendingMove) => void;
   onPatch: (id: string, patch: InlinePatch) => void;
@@ -322,7 +321,7 @@ type ListProps = {
   setDrag: (d: Drag) => void;
   canReorder: boolean; // off while a person filter or search hides rows
 };
-export function ListView({ tickets, onMenu, onEdit, onStatus, onMoveRequest, onPatch, expandedId, onToggleExpand, drag, setDrag, canReorder }: ListProps) {
+export function ListView({ tickets, onMenu, onStatus, onMoveRequest, onPatch, expandedId, onToggleExpand, drag, setDrag, canReorder }: ListProps) {
   const queue = tickets.filter((t) => t.status === "todo" || t.status === "prog");
   const sorted = [...queue].sort(sortQueue);
   const done = tickets.filter((t) => t.status === "done").sort(sortEntryOrder);
@@ -436,7 +435,7 @@ export function ListView({ tickets, onMenu, onEdit, onStatus, onMoveRequest, onP
                   onRowDragOver={(e) => overRow(e, u, i)}
                   startDrag={startDrag}
                   clearDrag={clearDrag}
-                  onStatus={onStatus} onEdit={onEdit} onMenu={onMenu} />
+                  onStatus={onStatus} onMenu={onMenu} />
               </React.Fragment>
             ))}
             {lineAt >= list.length && list.length > 0 && <div className="ins-line" />}
@@ -498,16 +497,21 @@ type QueueRowProps = {
   startDrag: (e: React.DragEvent, t: Ticket) => void;
   clearDrag: () => void;
   onStatus: (id: string, s: Status) => void;
-  onEdit: (t: Ticket) => void;
   onMenu: (e: React.MouseEvent, t: Ticket) => void;
 };
 
-function QueueRow({ t, isNext, dragging, canReorder, expanded, onToggle, onPatch, onRowDragOver, startDrag, clearDrag, onStatus, onEdit, onMenu }: QueueRowProps) {
+function QueueRow({ t, isNext, dragging, canReorder, expanded, onToggle, onPatch, onRowDragOver, startDrag, clearDrag, onStatus, onMenu }: QueueRowProps) {
   // Keep the expansion body mounted through the collapse animation, then unmount.
   const [bodyMounted, setBodyMounted] = React.useState(expanded);
-  // Two stages: a compact read-only peek first; its Edit button opens the full inline editor.
+  // Two stages: a compact read-only peek first; the pencil opens the full inline editor.
   const [mode, setMode] = React.useState<"info" | "edit">("info");
-  React.useEffect(() => { if (expanded) { setBodyMounted(true); setMode("info"); } }, [expanded]);
+  React.useEffect(() => { if (expanded) setBodyMounted(true); }, [expanded]);
+
+  const openEditor = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setMode("edit");
+    if (!expanded) onToggle(t.id);
+  };
 
   const headClick = () => {
     if (window.getSelection()?.toString()) return; // copying text shouldn't bounce the row
@@ -548,12 +552,12 @@ function QueueRow({ t, isNext, dragging, canReorder, expanded, onToggle, onPatch
         <StatusPillMenu t={t} onStatus={onStatus} />
         <span className="acts">
           <button className="iconbtn tick" title="Mark complete" onClick={(e) => { e.stopPropagation(); onStatus(t.id, "done"); }}><Icon name="check" /></button>
-          <button className="iconbtn" title="Edit" onClick={(e) => { e.stopPropagation(); onEdit(t); }}><Icon name="pencil" /></button>
+          <button className="iconbtn" title="Edit" onClick={openEditor}><Icon name="pencil" /></button>
           <button className="iconbtn" title="Quick change" onClick={(e) => { e.stopPropagation(); onMenu(e, t); }}><Icon name="ellipsis-vertical" /></button>
         </span>
       </div>
       <div className="lrow-exp"
-        onTransitionEnd={(e) => { if (e.propertyName === "grid-template-rows" && !expanded) setBodyMounted(false); }}>
+        onTransitionEnd={(e) => { if (e.propertyName === "grid-template-rows" && !expanded) { setBodyMounted(false); setMode("info"); } }}>
         <div className="lrow-exp-clip">
           {bodyMounted && (
             <div className="lrow-exp-body">
@@ -583,6 +587,7 @@ function RowPeek({ t, onEdit }: { t: Ticket; onEdit: () => void }) {
         </span>
         <span className="peek-item"><AvatarChip who={t.assignedTo} />{who ? who.label : "Keith"}</span>
         <span className="peek-spacer" />
+        {/* Mobile only — desktop edits via the pencil in the row (CSS hides this above 860px). */}
         <button type="button" className="btn ghost peek-edit" onClick={onEdit}>
           <Icon name="pencil" />Edit
         </button>
