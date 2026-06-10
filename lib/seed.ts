@@ -3,15 +3,15 @@ import type { Ticket } from "./tickets";
 
 export const SEED_TICKETS: Ticket[] = [
   // active
-  { id: "MLX-4821", name: "Dana Whitlock", phone: "(253) 555-0142", desc: "MacBook Air — liquid spill, won't boot", urgency: 1, charger: true, status: "prog", dropoff: "2026-06-01", statusChangedAt: "2026-06-01T09:30:00" },
-  { id: "MLX-4830", name: "Theo Vance", phone: "(253) 555-0119", desc: "Custom desktop — no POST after the storm, suspect PSU", urgency: 1, charger: false, status: "prog", dropoff: "2026-05-30", statusChangedAt: "2026-05-30T11:00:00" },
-  { id: "MLX-4844", name: "Greta Olsen", phone: "(360) 555-0188", desc: "Dell XPS 15 — battery swelling, trackpad lifting", urgency: 1, charger: true, status: "todo", dropoff: "2026-06-03", statusChangedAt: "2026-06-03T08:15:00" },
-  { id: "MLX-4809", name: "Rosa Iqbal", phone: "(253) 555-0167", desc: "iMac 2019 — data recovery from a failing drive", urgency: 1, charger: false, status: "prog", dropoff: "2026-05-28", statusChangedAt: "2026-05-28T13:45:00" },
+  { id: "MLX-4821", name: "Dana Whitlock", phone: "(253) 555-0142", desc: "MacBook Air — liquid spill, won't boot", urgency: 1, charger: true, status: "prog", dropoff: "2026-06-01", dropoffAmPm: "AM", deviceType: "laptop", dueAt: "2026-06-10T18:00:00.000Z", statusChangedAt: "2026-06-01T09:30:00" },
+  { id: "MLX-4830", name: "Theo Vance", phone: "(253) 555-0119", desc: "Custom desktop — no POST after the storm, suspect PSU", urgency: 1, charger: false, status: "prog", dropoff: "2026-05-30", dropoffAmPm: "PM", deviceType: "desktop", statusChangedAt: "2026-05-30T11:00:00" },
+  { id: "MLX-4844", name: "Greta Olsen", phone: "(360) 555-0188", desc: "Dell XPS 15 — battery swelling, trackpad lifting", urgency: 1, charger: true, status: "todo", dropoff: "2026-06-03", dropoffAmPm: "AM", deviceType: "laptop", dueAt: "2026-06-11T00:00:00.000Z", statusChangedAt: "2026-06-03T08:15:00" },
+  { id: "MLX-4809", name: "Rosa Iqbal", phone: "(253) 555-0167", desc: "iMac 2019 — data recovery from a failing drive", urgency: 1, charger: false, status: "prog", dropoff: "2026-05-28", deviceType: "desktop", statusChangedAt: "2026-05-28T13:45:00" },
 
   { id: "MLX-4826", name: "Priya Nair", phone: "(253) 555-0153", desc: "iPhone 13 — cracked screen, touch dead along the bottom", urgency: 2, charger: false, status: "todo", dropoff: "2026-06-02", statusChangedAt: "2026-06-02T10:00:00" },
   { id: "MLX-4822", name: "Sam Rourke", phone: "(360) 555-0174", desc: "ThinkPad T14 — soaked on a kayak trip, corrosion cleanup", urgency: 2, charger: true, status: "prog", dropoff: "2026-06-01", statusChangedAt: "2026-06-01T15:20:00" },
   { id: "MLX-4828", name: "Bianca Cho", phone: "(253) 555-0136", desc: "MacBook Pro 16 — several keys not registering", urgency: 2, charger: true, status: "prog", dropoff: "2026-06-02", statusChangedAt: "2026-06-02T16:00:00" },
-  { id: "MLX-4817", name: "Diego Salas", phone: "(253) 555-0125", desc: "Gaming PC — random shutdowns under load", urgency: 2, charger: false, status: "todo", dropoff: "2026-05-31", statusChangedAt: "2026-05-31T12:30:00" },
+  { id: "MLX-4817", name: "Diego Salas", phone: "(253) 555-0125", desc: "Gaming PC — random shutdowns under load", urgency: 2, charger: false, status: "todo", dropoff: "2026-05-31", dropoffAmPm: "PM", deviceType: "desktop", statusChangedAt: "2026-05-31T12:30:00" },
 
   { id: "MLX-4831", name: "Marcus Bell", phone: "(360) 555-0102", desc: "HP Envy — loud fan and overheating", urgency: 3, charger: false, status: "todo", dropoff: "2026-06-02", statusChangedAt: "2026-06-02T09:00:00" },
   { id: "MLX-4842", name: "Owen Pratt", phone: "(253) 555-0148", desc: "Acer Aspire — sluggish, popups, likely malware", urgency: 3, charger: false, status: "todo", dropoff: "2026-06-03", statusChangedAt: "2026-06-03T11:30:00" },

@@ -45,6 +45,11 @@ export async function deleteTicketAction(id: string): Promise<AppState> {
   return deleteTicket(id);
 }
 
+/* Inline edits from the expanded list row. */
+export async function patchTicketAction(id: string, patch: TicketPatch): Promise<AppState> {
+  return updateTicket(id, patch);
+}
+
 export async function sweepArchiveAction(): Promise<number> {
   return sweepArchive();
 }

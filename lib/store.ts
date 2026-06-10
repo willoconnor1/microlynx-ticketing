@@ -19,6 +19,7 @@ export interface NewTicketInput {
   urgency: number;
   charger: boolean;
   assignedTo?: Person;
+  deviceType?: "desktop" | "laptop" | null;
   status?: Status;
   dropoff: string;
   dropoffAmPm?: "AM" | "PM" | null;
@@ -32,6 +33,7 @@ export interface TicketPatch {
   urgency?: number;
   charger?: boolean;
   assignedTo?: Person;
+  deviceType?: "desktop" | "laptop" | null;
   status?: Status;
   dropoff?: string;
   dropoffAmPm?: "AM" | "PM" | null;
@@ -135,6 +137,7 @@ function rowToTicket(r: TicketRow): Ticket {
     urgency: r.urgency,
     charger: r.charger,
     assignedTo: (r.assignedTo as Person) || "keith",
+    deviceType: (r.deviceType as "desktop" | "laptop" | null) ?? null,
     status: r.status as Status,
     dropoff: r.dropoff,
     dropoffAmPm: r.dropoffAmPm as "AM" | "PM" | null,
@@ -216,6 +219,7 @@ export async function createTicket(input: NewTicketInput): Promise<AppState> {
       urgency: input.urgency,
       charger: input.charger,
       assignedTo: input.assignedTo ?? "keith",
+      deviceType: input.deviceType ?? null,
       status: input.status ?? "todo",
       dropoff: input.dropoff,
       dropoffAmPm: input.dropoffAmPm ?? null,
@@ -261,6 +265,7 @@ export async function createTicket(input: NewTicketInput): Promise<AppState> {
     urgency: input.urgency,
     charger: input.charger,
     assignedTo: input.assignedTo ?? "keith",
+    deviceType: input.deviceType ?? null,
     status: input.status ?? "todo",
     dropoff: input.dropoff,
     dropoffAmPm: input.dropoffAmPm ?? null,
@@ -287,6 +292,7 @@ export async function updateTicket(id: string, patch: TicketPatch): Promise<AppS
       if (patch.urgency !== undefined) t.urgency = patch.urgency;
       if (patch.charger !== undefined) t.charger = patch.charger;
       if (patch.assignedTo !== undefined) t.assignedTo = patch.assignedTo;
+      if (patch.deviceType !== undefined) t.deviceType = patch.deviceType ?? null;
       if (patch.dropoff !== undefined) t.dropoff = patch.dropoff;
       if (patch.dropoffAmPm !== undefined) t.dropoffAmPm = patch.dropoffAmPm ?? null;
       if (patch.dueAt !== undefined) t.dueAt = patch.dueAt ?? null;
@@ -317,6 +323,7 @@ export async function updateTicket(id: string, patch: TicketPatch): Promise<AppS
   if (patch.urgency !== undefined) set.urgency = patch.urgency;
   if (patch.charger !== undefined) set.charger = patch.charger;
   if (patch.assignedTo !== undefined) set.assignedTo = patch.assignedTo;
+  if (patch.deviceType !== undefined) set.deviceType = patch.deviceType ?? null;
   if (patch.dropoff !== undefined) set.dropoff = patch.dropoff;
   if (patch.dropoffAmPm !== undefined) set.dropoffAmPm = patch.dropoffAmPm ?? null;
   if (patch.dueAt !== undefined) set.dueAt = patch.dueAt ? new Date(patch.dueAt) : null;

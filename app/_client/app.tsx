@@ -4,12 +4,12 @@ import React from "react";
 import { todayISO, posBetween, PEOPLE, type Ticket, type Status, type Person } from "@/lib/tickets";
 import {
   fetchState, saveTicketAction, setUrgencyAction, setStatusAction, moveTicketAction,
-  deleteTicketAction,
+  deleteTicketAction, patchTicketAction,
 } from "@/lib/actions";
 import {
   Icon, ListView, UrgencyBoard, StatusBoard, ArchiveView, TopNav, QuickMenu,
   MobileSheet, TicketForm, ConfirmMoveDialog, ConfirmDeleteDialog, type View, type Drag,
-  type FormDraft, type PendingMove,
+  type FormDraft, type PendingMove, type InlinePatch,
 } from "./ui";
 import { celebrate } from "./confetti";
 
@@ -34,10 +34,11 @@ export default function App({ initialTickets, initialArchive }: { initialTickets
   const [pendingMove, setPendingMove] = React.useState<PendingMove | null>(null);
   const [confirmDelete, setConfirmDelete] = React.useState<Ticket | null>(null);
   const [who, setWho] = React.useState<"all" | Person>("all");
+  const [expandedId, setExpandedId] = React.useState<string | null>(null);
   const [today] = React.useState(() => todayISO());
 
   const busy = React.useRef(false); // suppress polling while the user is mid-interaction
-  busy.current = !!drag || !!form || !!menu || !!pendingMove || !!confirmDelete;
+  busy.current = !!drag || !!form || !!menu || !!pendingMove || !!confirmDelete || !!expandedId;
 
   const apply = (s: { tickets: Ticket[]; archive: Ticket[] }) => {
     setTickets(s.tickets);
@@ -75,8 +76,14 @@ export default function App({ initialTickets, initialArchive }: { initialTickets
       name: data.name, phone: data.phone, desc: data.desc,
       urgency: data.urgency, charger: data.charger, status: data.status, dropoff: data.dropoff,
       dropoffAmPm: data.dropoffAmPm, dueAt: data.dueAt, assignedTo: data.assignedTo,
+      deviceType: data.deviceType,
     }).then(apply);
   };
+  const patchTicket = (id: string, patch: InlinePatch) => {
+    setTickets((p) => p.map((x) => (x.id === id ? { ...x, ...patch } : x)));
+    patchTicketAction(id, patch).then(apply);
+  };
+  const toggleExpand = (id: string) => setExpandedId((p) => (p === id ? null : id));
   const doDelete = (t: Ticket) => {
     setConfirmDelete(null);
     setTickets((p) => p.filter((x) => x.id !== t.id));
@@ -122,7 +129,7 @@ export default function App({ initialTickets, initialArchive }: { initialTickets
   const showSearch = view === "list" || view === "archive";
 
   let body: React.ReactNode;
-  if (view === "list") body = <ListView tickets={listTickets} onMenu={openMenu} onEdit={(tk) => setForm(tk)} onStatus={setStatus} onMoveRequest={requestMove} drag={drag} setDrag={setDrag} canReorder={canReorder} />;
+  if (view === "list") body = <ListView tickets={listTickets} onMenu={openMenu} onEdit={(tk) => setForm(tk)} onStatus={setStatus} onMoveRequest={requestMove} onPatch={patchTicket} expandedId={expandedId} onToggleExpand={toggleExpand} drag={drag} setDrag={setDrag} canReorder={canReorder} />;
   else if (view === "urgency") body = <UrgencyBoard tickets={byPerson} onMenu={openMenu} onOpen={(tk) => setForm(tk)} onUrgency={setUrgency} drag={drag} setDrag={setDrag} />;
   else if (view === "status") body = <StatusBoard tickets={byPerson} onMenu={openMenu} onOpen={(tk) => setForm(tk)} onStatus={setStatus} drag={drag} setDrag={setDrag} />;
   else body = <ArchiveView archive={visibleArchive} search={search} />;
