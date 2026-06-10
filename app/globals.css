@@ -71,7 +71,7 @@ button{font-family:inherit}
   --card-name:14.5px; --card-desc:13px;
 
   /* Urgency palette: orange (1) fading to gray (5) — calm, no red. */
-  --u1:#d9530b; --u1-bg:#fbe3d3; --u1-tint:#fdf1e7;
+  --u1:#e8590c; --u1-bg:#ffe4cf; --u1-tint:#fff5ec;
   --u2:#c07c08; --u2-bg:#f9ecd0; --u2-tint:#fcf5e6;
   --u3:#a8860b; --u3-bg:#f6efd0; --u3-tint:#faf6e7;
   --u4:#8a8158; --u4-bg:#edebdd; --u4-tint:#f5f4ec;
@@ -106,6 +106,8 @@ button{font-family:inherit}
 .btn.primary:active{transform:translateY(1px)}
 .btn.ghost{background:#fff;border-color:var(--border-strong);color:var(--ink-800)}
 .btn.ghost:hover{background:var(--acc-soft);border-color:var(--acc)}
+.btn.danger{background:var(--danger);color:#fff}
+.btn.danger:hover{background:#b3352c}
 .btn:focus-visible{outline:3px solid var(--acc-ring);outline-offset:1px}
 .nav-menu-btn{display:none}
 
@@ -127,9 +129,64 @@ button{font-family:inherit}
 .spill{font-family:var(--font-mono);font-size:10.5px;font-weight:600;letter-spacing:.02em;padding:3px 9px;border-radius:var(--radius-pill);display:inline-flex;align-items:center;gap:6px;white-space:nowrap}
 .spill .d{width:6px;height:6px;border-radius:50%}
 .spill.todo{background:var(--danger-bg);color:#b3352c} .spill.todo .d{background:var(--danger)}
-.spill.prog{background:var(--blue-50);color:var(--blue-700)} .spill.prog .d{background:var(--blue-500)}
+.spill.prog{background:var(--blue-50);color:var(--blue-700);position:relative} .spill.prog .d{background:var(--blue-500)}
+/* In Progress pill: trailing dots cycle 0 -> 1 -> 2 -> 3 -> 0. The font is mono so each
+   dot is exactly 1ch; clipping a fixed 3ch box at thirds reveals them with no layout shift. */
+.spill.prog::after{
+  content:"...";
+  display:inline-block;
+  width:3ch;
+  margin-left:-3px;
+  letter-spacing:0;
+  overflow:hidden;
+  clip-path:inset(0 100% 0 0);
+  animation:spill-dots 1.6s steps(4, jump-none) infinite;
+}
+@keyframes spill-dots{
+  from{clip-path:inset(0 100% 0 0)}
+  to{clip-path:inset(0 0 0 0)}
+}
+/* In Progress pill: a light blip orbiting the border. --spill-orbit is ONLY defined via
+   @property: browsers without it treat the background as invalid -> no ring, pill intact. */
+@property --spill-orbit{
+  syntax:"<angle>";
+  inherits:false;
+  initial-value:0deg;
+}
+.spill.prog::before{
+  content:"";
+  position:absolute;
+  inset:0;
+  border-radius:inherit;
+  padding:1.5px;
+  background:conic-gradient(from var(--spill-orbit),
+    transparent 0deg 280deg,
+    color-mix(in srgb, var(--blue-500) 38%, transparent) 320deg,
+    var(--blue-300) 348deg,
+    #fff 356deg,
+    transparent 360deg);
+  -webkit-mask:linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite:xor;
+  mask:linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  mask-composite:exclude;
+  animation:spill-orbit 2.4s linear infinite;
+  pointer-events:none;
+}
+@keyframes spill-orbit{to{--spill-orbit:360deg}}
+@media (prefers-reduced-motion: reduce){
+  .spill.prog::after{animation:none;clip-path:none}
+  .spill.prog::before{display:none}
+}
 .spill.done{background:var(--success-bg);color:#147a44} .spill.done .d{background:var(--success)}
 .spill.picked{background:var(--gray-100);color:var(--gray-500)} .spill.picked .d{background:var(--gray-400)}
+.avchip{width:20px;height:20px;border-radius:50%;font-family:var(--font-mono);font-size:9.5px;font-weight:700;display:inline-flex;align-items:center;justify-content:center;flex:none}
+.avchip.keith{background:var(--blue-100);color:var(--blue-700)}
+.avchip.garrett{background:var(--success-bg);color:#147a44}
+.avchip.marisa{background:var(--ink-800);color:#fff}
+.who-tabs{display:flex;align-items:center;gap:4px;background:var(--gray-100);border-radius:var(--radius-pill);padding:4px}
+.who-tab{border:0;background:none;cursor:pointer;font-size:12.5px;font-weight:600;color:var(--gray-600);padding:6px 13px;border-radius:var(--radius-pill);white-space:nowrap;transition:all .15s ease}
+.who-tab:hover{color:var(--ink-800)}
+.who-tab.on{background:#fff;color:var(--acc);box-shadow:var(--shadow-xs)}
 .chg{display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;border-radius:var(--radius-xs);flex:none}
 .chg.yes{background:var(--blue-50);color:var(--blue-600)}
 .chg.no{color:var(--gray-300)}
@@ -162,7 +219,7 @@ button{font-family:inherit}
 .list-wrap{display:flex;flex-direction:column;gap:var(--gap-cards)}
 .list-group-label{font-family:var(--font-mono);font-size:10.5px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--gray-500);margin:12px 2px 2px;display:flex;align-items:center;gap:9px}
 .list-group-label .ln{flex:1;height:1px;background:var(--border)}
-.lrow{display:grid;grid-template-columns:16px 30px minmax(0,1.7fr) 130px 124px 34px 132px 122px;align-items:center;gap:14px;background:#fff;border:1px solid var(--border);border-left:3px solid var(--uc);border-radius:var(--radius-md);box-shadow:var(--shadow-xs);padding:var(--row-pad-y) var(--row-pad-x);transition:box-shadow .14s ease,border-color .14s ease}
+.lrow{display:grid;grid-template-columns:16px 30px minmax(0,1.7fr) 124px 116px 34px 22px 132px 122px;align-items:center;gap:14px;background:#fff;border:1px solid var(--border);border-left:3px solid var(--uc);border-radius:var(--radius-md);box-shadow:var(--shadow-xs);padding:var(--row-pad-y) var(--row-pad-x);transition:box-shadow .14s ease,border-color .14s ease}
 .lrow:hover{box-shadow:var(--shadow-sm);border-color:var(--acc)}
 .lrow .nm{font-weight:700;color:var(--ink-900);font-size:14.5px;line-height:1.25}
 .lrow .ds{font-size:13px;color:var(--gray-600);margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -174,6 +231,8 @@ button{font-family:inherit}
 .grip{display:inline-flex;align-items:center;justify-content:center;width:16px;height:30px;color:var(--gray-300);cursor:grab;flex:none}
 .grip:hover{color:var(--gray-500)}
 .grip:active{cursor:grabbing}
+.grip.off{opacity:.25;cursor:default}
+.grip.off:hover{color:var(--gray-300)}
 .ins-line{height:3px;border-radius:99px;background:var(--acc);margin:-3px 6px;box-shadow:0 0 0 2px var(--acc-soft)}
 .ins-zone{border:1.5px dashed var(--border-strong);border-radius:var(--radius-md);min-height:46px;display:flex;align-items:center;justify-content:center;color:var(--gray-400);font-family:var(--font-mono);font-size:11px;font-weight:600}
 .ins-zone.on{border-color:var(--acc);background:var(--acc-soft);color:var(--acc)}
@@ -183,7 +242,7 @@ button{font-family:inherit}
 .btn.pickup:hover{background:#147a44}
 .btn.pickup i,.btn.pickup svg{width:14px;height:14px}
 .spill-sel{border:0;cursor:pointer}
-.spill-sel:hover{box-shadow:0 0 0 1.5px currentColor}
+.spill-sel:not(.prog):hover{box-shadow:0 0 0 1.5px currentColor}
 .stat-opt{font-size:13px}
 .stat-opt.on{color:var(--ink-900);font-weight:600}
 .stat-opt .sdot{width:8px;height:8px;border-radius:50%;flex:none}
@@ -230,6 +289,9 @@ button{font-family:inherit}
 .pop-item:hover{background:var(--gray-100)}
 .pop-item i,.pop-item svg{width:16px;height:16px;color:var(--gray-500)}
 .pop-item.on{color:var(--acc);font-weight:600}
+.pop-item.danger{color:var(--danger)}
+.pop-item.danger i,.pop-item.danger svg{color:var(--danger)}
+.pop-item.danger:hover{background:var(--danger-bg)}
 .pop-row{display:flex;gap:6px;padding:4px 9px 8px}
 .pop-row .uopt{flex:1;height:34px;border-radius:var(--radius-sm);border:1px solid var(--ubg);background:var(--ubg);color:var(--uc);font-family:var(--font-mono);font-weight:700;font-size:13px;cursor:pointer;display:flex;align-items:center;justify-content:center}
 .pop-row .uopt.on{outline:2px solid var(--uc);outline-offset:1px}
@@ -273,6 +335,8 @@ button{font-family:inherit}
 .toggle button.on.am,.toggle button.on.pm{background:var(--blue-50);color:var(--blue-700)}
 .toggle button:disabled{opacity:.45;cursor:default}
 .toggle.ampm button{font-family:var(--font-mono);font-size:12.5px;padding:10px 14px}
+.toggle.people button{padding:10px 16px}
+.toggle.people button.on{background:var(--acc-soft);color:var(--acc)}
 .toggle.ampm.sm button{padding:8px 9px;font-size:11px}
 .dropoff-row{display:flex;gap:10px}
 .dropoff-row .pickbtn{flex:1;min-width:0}
@@ -354,7 +418,8 @@ button{font-family:inherit}
   .lrow{grid-template-columns:28px minmax(0,1fr) 36px 118px;gap:12px;row-gap:8px}
   .lrow .l-date,.lrow .l-phone{display:none}
   .lrow .acts{display:none}
-  .lrow .grip,.lrow .done-ic{display:none}
+  .lrow .grip,.lrow .done-ic,.lrow .avchip{display:none}
+  .who-tabs{order:-1}
   .lrow.done-row{grid-template-columns:28px minmax(0,1fr) 36px 118px}
   .lrow.done-row .acts{display:flex}
   .lrow.done-row .spill-sel{display:none}

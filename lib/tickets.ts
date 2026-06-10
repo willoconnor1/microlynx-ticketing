@@ -1,6 +1,13 @@
 /* Shared ticket types, config, and helpers (server + client safe). */
 
 export type Status = "todo" | "prog" | "done" | "picked";
+export type Person = "keith" | "garrett" | "marisa";
+
+export const PEOPLE: { key: Person; label: string }[] = [
+  { key: "keith", label: "Keith" },
+  { key: "garrett", label: "Garrett" },
+  { key: "marisa", label: "Marisa" },
+];
 
 export interface Ticket {
   id: string;
@@ -9,6 +16,7 @@ export interface Ticket {
   desc: string;
   urgency: number; // 1-5, 1 = most urgent
   charger: boolean;
+  assignedTo?: Person; // defaults to keith
   status: Status;
   dropoff: string; // YYYY-MM-DD
   dropoffAmPm?: "AM" | "PM" | null; // morning vs afternoon drop-off
