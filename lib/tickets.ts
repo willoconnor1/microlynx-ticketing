@@ -11,6 +11,7 @@ export interface Ticket {
   charger: boolean;
   status: Status;
   dropoff: string; // YYYY-MM-DD
+  dropoffAmPm?: "AM" | "PM" | null; // morning vs afternoon drop-off
   dueAt?: string | null; // ISO timestamp — optional promised-by date & time
   sortPos?: number | null; // position within the urgency group (auto from dueAt, manual on drag)
   pickedAt?: string | null; // YYYY-MM-DD set when status === 'picked'
@@ -71,6 +72,9 @@ export function cmpDue(a: Ticket, b: Ticket): number {
     return ad.localeCompare(bd);
   }
   if (a.dropoff !== b.dropoff) return a.dropoff.localeCompare(b.dropoff);
+  // Same drop-off day: morning drop-offs ahead of afternoon (unknown sits between).
+  const half = (t: Ticket) => (t.dropoffAmPm === "AM" ? 0 : t.dropoffAmPm === "PM" ? 2 : 1);
+  if (half(a) !== half(b)) return half(a) - half(b);
   return a.id.localeCompare(b.id);
 }
 /* The master queue rule: urgency first (a level-N ticket never sorts above level N-1),

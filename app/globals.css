@@ -182,9 +182,14 @@ button{font-family:inherit}
 .btn.pickup{background:var(--success);color:#fff;padding:7px 11px;font-size:12.5px;box-shadow:none}
 .btn.pickup:hover{background:#147a44}
 .btn.pickup i,.btn.pickup svg{width:14px;height:14px}
-.spill-sel{position:relative;cursor:pointer}
+.spill-sel{border:0;cursor:pointer}
 .spill-sel:hover{box-shadow:0 0 0 1.5px currentColor}
-.spill-sel select{position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer;font-size:13px}
+.stat-opt{font-size:13px}
+.stat-opt.on{color:var(--ink-900);font-weight:600}
+.stat-opt .sdot{width:8px;height:8px;border-radius:50%;flex:none}
+.sdot.todo{background:var(--danger)} .sdot.prog{background:var(--blue-500)}
+.sdot.done{background:var(--success)} .sdot.picked{background:var(--gray-400)}
+.stat-opt .chk{margin-left:auto;color:var(--acc)}
 .done-ic{color:var(--success);display:inline-flex;justify-content:center;width:16px}
 .lrow.done-row{border-left-color:var(--success);background:#fcfdfc}
 .lrow.done-row .nm{color:var(--gray-600)}
@@ -267,10 +272,44 @@ button{font-family:inherit}
 .toggle button.on.no{background:var(--gray-100);color:var(--ink-800)}
 .toggle button.on.am,.toggle button.on.pm{background:var(--blue-50);color:var(--blue-700)}
 .toggle button:disabled{opacity:.45;cursor:default}
-.duetime{display:flex;gap:10px;align-items:stretch}
-.duetime .inp{flex:1;min-width:0}
-.duetime .toggle{flex:none}
-.duetime .toggle button{padding:10px 14px;font-family:var(--font-mono);font-size:12.5px}
+.toggle.ampm button{font-family:var(--font-mono);font-size:12.5px;padding:10px 14px}
+.toggle.ampm.sm button{padding:8px 9px;font-size:11px}
+.dropoff-row{display:flex;gap:10px}
+.dropoff-row .pickbtn{flex:1;min-width:0}
+.dropoff-row .toggle{flex:none}
+
+/* ============ App-styled pickers (date / time / status) ============ */
+.pickbtn{display:flex;align-items:center;gap:8px;cursor:pointer;text-align:left}
+.pickbtn i,.pickbtn svg{width:15px;height:15px;color:var(--gray-400);flex:none}
+.pickbtn .pv{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pickbtn.empty .pv{color:var(--gray-400)}
+.pickbtn:disabled{opacity:.5;cursor:default;background:var(--gray-100)}
+.pickbtn .clr{display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;border-radius:var(--radius-xs);color:var(--gray-400)}
+.pickbtn .clr:hover{background:var(--gray-100);color:var(--ink-700)}
+.pick-scrim{z-index:94}
+.pick-pop{z-index:95;padding:10px}
+.cal-head{display:flex;align-items:center;gap:6px;margin-bottom:8px}
+.cal-title{flex:1;text-align:center;font-family:var(--font-display);font-size:13.5px;font-weight:700;color:var(--ink-900)}
+.cal-grid{display:grid;grid-template-columns:repeat(7,30px);gap:2px;justify-content:center}
+.cal-dow{font-family:var(--font-mono);font-size:9.5px;font-weight:600;color:var(--gray-400);text-transform:uppercase;display:flex;align-items:center;justify-content:center;height:22px}
+.cal-day{width:30px;height:30px;border:0;background:none;border-radius:var(--radius-xs);font-family:var(--font-mono);font-size:12px;color:var(--ink-700);cursor:pointer;display:flex;align-items:center;justify-content:center}
+.cal-day:hover{background:var(--gray-100)}
+.cal-day.out{color:var(--gray-300)}
+.cal-day.today{box-shadow:inset 0 0 0 1.5px var(--acc)}
+.cal-day.sel{background:var(--acc);color:#fff}
+.cal-foot{display:flex;align-items:center;justify-content:space-between;margin-top:9px;padding:0 2px}
+.cal-link{border:0;background:none;cursor:pointer;font-family:var(--font-mono);font-size:11px;font-weight:600;color:var(--acc);padding:4px 6px;border-radius:var(--radius-xs)}
+.cal-link:hover{background:var(--acc-soft)}
+.cal-link.clear{color:var(--gray-500)}
+.time-custom{display:flex;gap:6px;align-items:center}
+.time-custom .inp{padding:8px 9px;font-size:12.5px;flex:1;min-width:0}
+.btn.sm{padding:8px 10px;font-size:12px;box-shadow:none}
+.btn.sm:disabled{opacity:.45;cursor:default}
+.time-list{max-height:212px;overflow-y:auto;margin-top:2px}
+.time-opt{font-family:var(--font-mono);font-size:12.5px;padding:7px 9px}
+.time-opt .sp{width:16px;flex:none}
+.time-opt.on{color:var(--acc);font-weight:600}
+.time-opt.on i,.time-opt.on svg{color:var(--acc)}
 
 /* ============ Confirm move dialog ============ */
 .modal.confirm{max-width:480px}

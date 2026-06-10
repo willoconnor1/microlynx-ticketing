@@ -71,7 +71,7 @@ export default function App({ initialTickets, initialArchive }: { initialTickets
     saveTicketAction(data.id, {
       name: data.name, phone: data.phone, desc: data.desc,
       urgency: data.urgency, charger: data.charger, status: data.status, dropoff: data.dropoff,
-      dueAt: data.dueAt,
+      dropoffAmPm: data.dropoffAmPm, dueAt: data.dueAt,
     }).then(apply);
   };
   const commitMove = (m: PendingMove) => {

@@ -4,10 +4,11 @@ import React from "react";
 import {
   Calendar, Phone, Plug, PlugZap, Search, Pencil, EllipsisVertical, Check, X,
   List, SignalHigh, Columns3, Archive, Plus, Menu, Inbox, Wrench, CircleCheck,
-  PackageCheck, Clock, Circle, Loader, GripVertical, type LucideIcon,
+  PackageCheck, Clock, Circle, Loader, GripVertical, ChevronLeft, ChevronRight,
+  type LucideIcon,
 } from "lucide-react";
 import {
-  URGENCY, STATUS, STATUS_ORDER, fmtDate, fmtDueAt, sortQueue, cmpDue,
+  URGENCY, STATUS, STATUS_ORDER, fmtDate, fmtDateLong, fmtDueAt, sortQueue, cmpDue,
   sortEntryOrder, type Ticket, type Status,
 } from "@/lib/tickets";
 
@@ -21,7 +22,10 @@ const ICONS: Record<string, LucideIcon> = {
   "signal-high": SignalHigh, "columns-3": Columns3, archive: Archive, plus: Plus, menu: Menu,
   inbox: Inbox, wrench: Wrench, "circle-check": CircleCheck, "package-check": PackageCheck,
   clock: Clock, circle: Circle, loader: Loader, "grip-vertical": GripVertical,
+  "chevron-left": ChevronLeft, "chevron-right": ChevronRight,
 };
+
+const pad2 = (n: number) => String(n).padStart(2, "0");
 
 export function Icon({ name, size, className = "", style = {} }: { name: string; size?: number; className?: string; style?: React.CSSProperties }) {
   const C = ICONS[name];
@@ -43,28 +47,195 @@ export function StatusPill({ status }: { status: Status }) {
   return <span className={`spill ${s.cls}`}><span className="d" />{s.label}</span>;
 }
 
-/* Status pill with an invisible native <select> on top — click the pill, get the picker. */
-const STATUS_OPT_COLOR: Record<Status, string> = {
-  todo: "#b3352c", prog: "#1b4488", done: "#147a44", picked: "#767b84",
-};
-export function StatusPillSelect({ t, onStatus }: { t: Ticket; onStatus: (id: string, s: Status) => void }) {
+/* ---------- anchored popover (shared by the pickers below) ---------- */
+/* Fixed-position dropdown pinned to an anchor rect; flips above when there's no
+   room below. Sits above the ticket modal (which is z-index 90). */
+function Pop({ anchor, width, height, onClose, children, className = "" }: {
+  anchor: DOMRect; width: number; height: number;
+  onClose: () => void; children: React.ReactNode; className?: string;
+}) {
+  const vw = window.innerWidth, vh = window.innerHeight;
+  const left = Math.max(10, Math.min(anchor.left, vw - width - 10));
+  const flip = anchor.bottom + 6 + height > vh - 10 && anchor.top - height - 6 > 10;
+  const top = flip ? anchor.top - height - 6 : anchor.bottom + 6;
+  return (
+    <>
+      <div className="scrim pick-scrim" onClick={onClose} />
+      <div className={`pop pick-pop ${className}`} style={{ left, top, width }}>{children}</div>
+    </>
+  );
+}
+
+/* ---------- app-styled status menu (click the pill) ---------- */
+export function StatusPillMenu({ t, onStatus }: { t: Ticket; onStatus: (id: string, s: Status) => void }) {
+  const [anchor, setAnchor] = React.useState<DOMRect | null>(null);
   const s = STATUS[t.status] || STATUS.todo;
   return (
-    <span className={`spill ${s.cls} spill-sel`} title="Change status">
-      <span className="d" />{s.label}
-      <select
-        value={t.status}
-        onClick={(e) => e.stopPropagation()}
-        onChange={(e) => onStatus(t.id, e.target.value as Status)}
-        aria-label="Status"
-      >
-        {STATUS_ORDER.map((k) => (
-          <option key={k} value={k} style={{ color: STATUS_OPT_COLOR[k], fontWeight: 600 }}>
-            {STATUS[k].label}
-          </option>
-        ))}
-      </select>
-    </span>
+    <>
+      <button type="button" className={`spill ${s.cls} spill-sel`} title="Change status"
+        onClick={(e) => { e.stopPropagation(); setAnchor(e.currentTarget.getBoundingClientRect()); }}>
+        <span className="d" />{s.label}
+      </button>
+      {anchor && (
+        <Pop anchor={anchor} width={176} height={172} onClose={() => setAnchor(null)} className="statmenu">
+          {STATUS_ORDER.map((k) => (
+            <button key={k} type="button" className={`pop-item stat-opt ${t.status === k ? "on" : ""}`}
+              onClick={() => { setAnchor(null); if (k !== t.status) onStatus(t.id, k); }}>
+              <span className={`sdot ${k}`} />{STATUS[k].label}
+              {t.status === k && <Icon name="check" className="chk" />}
+            </button>
+          ))}
+        </Pop>
+      )}
+    </>
+  );
+}
+
+/* ---------- app-styled date picker ---------- */
+const DOW = ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"];
+const MONTH_NAMES = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+
+function CalendarPop({ anchor, value, clearable, onPick, onClear, onClose }: {
+  anchor: DOMRect; value: string; clearable?: boolean;
+  onPick: (iso: string) => void; onClear: () => void; onClose: () => void;
+}) {
+  const sel = value ? new Date(value + "T12:00:00") : null;
+  const [view, setView] = React.useState(() => {
+    const d = sel || new Date();
+    return { y: d.getFullYear(), m: d.getMonth() };
+  });
+  const iso = (d: Date) => `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
+  const todayIso = iso(new Date());
+  const start = new Date(view.y, view.m, 1).getDay();
+  const cells = Array.from({ length: 42 }, (_, i) => new Date(view.y, view.m, 1 - start + i));
+  const step = (n: number) => setView((p) => {
+    const d = new Date(p.y, p.m + n, 1);
+    return { y: d.getFullYear(), m: d.getMonth() };
+  });
+
+  return (
+    <Pop anchor={anchor} width={252} height={320} onClose={onClose} className="cal">
+      <div className="cal-head">
+        <button type="button" className="iconbtn" onClick={() => step(-1)}><Icon name="chevron-left" /></button>
+        <span className="cal-title">{MONTH_NAMES[view.m]} {view.y}</span>
+        <button type="button" className="iconbtn" onClick={() => step(1)}><Icon name="chevron-right" /></button>
+      </div>
+      <div className="cal-grid">
+        {DOW.map((d) => <span key={d} className="cal-dow">{d}</span>)}
+        {cells.map((d) => {
+          const v = iso(d);
+          const cls = [
+            "cal-day",
+            d.getMonth() !== view.m ? "out" : "",
+            v === todayIso ? "today" : "",
+            v === value ? "sel" : "",
+          ].join(" ");
+          return <button key={v} type="button" className={cls} onClick={() => onPick(v)}>{d.getDate()}</button>;
+        })}
+      </div>
+      <div className="cal-foot">
+        <button type="button" className="cal-link" onClick={() => onPick(todayIso)}>Today</button>
+        {clearable && value && <button type="button" className="cal-link clear" onClick={onClear}>Clear</button>}
+      </div>
+    </Pop>
+  );
+}
+
+export function DateField({ value, onChange, placeholder, clearable }: {
+  value: string; onChange: (v: string) => void; placeholder?: string; clearable?: boolean;
+}) {
+  const [anchor, setAnchor] = React.useState<DOMRect | null>(null);
+  return (
+    <>
+      <button type="button" className={`inp mono pickbtn ${value ? "" : "empty"}`}
+        onClick={(e) => setAnchor(e.currentTarget.getBoundingClientRect())}>
+        <Icon name="calendar" />
+        <span className="pv">{value ? fmtDateLong(value) : placeholder || "Pick a date"}</span>
+        {clearable && value && (
+          <span className="clr" title="Clear" onClick={(e) => { e.stopPropagation(); onChange(""); }}>
+            <Icon name="x" size={13} />
+          </span>
+        )}
+      </button>
+      {anchor && (
+        <CalendarPop anchor={anchor} value={value} clearable={clearable}
+          onPick={(v) => { onChange(v); setAnchor(null); }}
+          onClear={() => { onChange(""); setAnchor(null); }}
+          onClose={() => setAnchor(null)} />
+      )}
+    </>
+  );
+}
+
+/* ---------- app-styled time picker ---------- */
+export type DueTime = { time: string; ampm: "AM" | "PM" }; // e.g. { time: "2:30", ampm: "PM" }
+const TIME_PRESETS: DueTime[] = (() => {
+  const out: DueTime[] = [];
+  for (let h = 8; h <= 18; h++) {
+    for (const m of [0, 30]) {
+      if (h === 18 && m === 30) continue;
+      out.push({ time: `${((h + 11) % 12) + 1}:${pad2(m)}`, ampm: h < 12 ? "AM" : "PM" });
+    }
+  }
+  return out;
+})();
+
+function TimePop({ anchor, value, onPick, onClose }: {
+  anchor: DOMRect; value: DueTime | null; onPick: (v: DueTime) => void; onClose: () => void;
+}) {
+  const [txt, setTxt] = React.useState(value ? value.time : "");
+  const [ampm, setAmpm] = React.useState<"AM" | "PM">(value ? value.ampm : "PM");
+  const m = txt.trim().match(/^(\d{1,2})(?::(\d{2}))?$/);
+  const okCustom = !!m && +m[1] >= 1 && +m[1] <= 12 && (m[2] === undefined || +m[2] <= 59);
+  const setCustom = () => {
+    if (!okCustom || !m) return;
+    onPick({ time: `${+m[1]}:${pad2(m[2] !== undefined ? +m[2] : 0)}`, ampm });
+  };
+  return (
+    <Pop anchor={anchor} width={236} height={306} onClose={onClose} className="timepop">
+      <div className="time-custom">
+        <input className="inp mono" placeholder="2:15" inputMode="numeric" value={txt}
+          onChange={(e) => setTxt(e.target.value)}
+          onKeyDown={(e) => { if (e.key === "Enter") setCustom(); }} />
+        <div className="toggle ampm sm">
+          <button type="button" className={`am ${ampm === "AM" ? "on" : ""}`} onClick={() => setAmpm("AM")}>AM</button>
+          <button type="button" className={`pm ${ampm === "PM" ? "on" : ""}`} onClick={() => setAmpm("PM")}>PM</button>
+        </div>
+        <button type="button" className="btn primary sm" disabled={!okCustom} onClick={setCustom}>Set</button>
+      </div>
+      <div className="pop-div" />
+      <div className="time-list">
+        {TIME_PRESETS.map((p) => {
+          const on = !!value && value.time === p.time && value.ampm === p.ampm;
+          return (
+            <button key={p.time + p.ampm} type="button" className={`pop-item time-opt ${on ? "on" : ""}`}
+              onClick={() => onPick(p)}>
+              {on ? <Icon name="check" /> : <span className="sp" />}{p.time} {p.ampm}
+            </button>
+          );
+        })}
+      </div>
+    </Pop>
+  );
+}
+
+export function TimeField({ value, onChange, disabled, placeholder }: {
+  value: DueTime | null; onChange: (v: DueTime) => void; disabled?: boolean; placeholder?: string;
+}) {
+  const [anchor, setAnchor] = React.useState<DOMRect | null>(null);
+  return (
+    <>
+      <button type="button" disabled={disabled} className={`inp mono pickbtn ${value ? "" : "empty"}`}
+        onClick={(e) => setAnchor(e.currentTarget.getBoundingClientRect())}>
+        <Icon name="clock" />
+        <span className="pv">{value ? `${value.time} ${value.ampm}` : placeholder || "Pick a time"}</span>
+      </button>
+      {anchor && (
+        <TimePop anchor={anchor} value={value}
+          onPick={(v) => { onChange(v); setAnchor(null); }}
+          onClose={() => setAnchor(null)} />
+      )}
+    </>
   );
 }
 
@@ -90,7 +261,7 @@ export function TicketCard({ t, variant = "rail", dragging, onDragStart, onDragE
   const foot = (
     <div className="tc-foot">
       <div className="tc-footL">
-        <span className="meta-mono"><Icon name="calendar" />{fmtDate(t.dropoff)}</span>
+        <span className="meta-mono"><Icon name="calendar" />{fmtDate(t.dropoff)}{t.dropoffAmPm ? ` · ${t.dropoffAmPm}` : ""}</span>
         <Charger yes={t.charger} />
       </div>
       {picked ? <span className="pickchk"><Icon name="check" /></span> : <StatusPill status={t.status} />}
@@ -312,10 +483,10 @@ export function ListView({ tickets, onMenu, onEdit, onStatus, onMoveRequest, dra
                     </div>
                     {t.dueAt
                       ? <span className="meta-mono l-date due" title="Due"><Icon name="clock" />{fmtDueAt(t.dueAt)}</span>
-                      : <span className="meta-mono l-date" title="Dropped off"><Icon name="calendar" />{fmtDate(t.dropoff)}</span>}
+                      : <span className="meta-mono l-date" title="Dropped off"><Icon name="calendar" />{fmtDate(t.dropoff)}{t.dropoffAmPm ? ` · ${t.dropoffAmPm}` : ""}</span>}
                     <span className="meta-mono l-phone"><Icon name="phone" />{t.phone}</span>
                     <Charger yes={t.charger} />
-                    <StatusPillSelect t={t} onStatus={onStatus} />
+                    <StatusPillMenu t={t} onStatus={onStatus} />
                     <span className="acts">
                       <button className="iconbtn tick" title="Mark complete" onClick={() => onStatus(t.id, "done")}><Icon name="check" /></button>
                       <button className="iconbtn" title="Edit" onClick={() => onEdit(t)}><Icon name="pencil" /></button>
@@ -348,7 +519,7 @@ export function ListView({ tickets, onMenu, onEdit, onStatus, onMoveRequest, dra
               <span className="meta-mono l-date" title="Completed"><Icon name="check" />{t.statusChangedAt ? fmtDueAt(t.statusChangedAt) : "—"}</span>
               <span className="meta-mono l-phone"><Icon name="phone" />{t.phone}</span>
               <Charger yes={t.charger} />
-              <StatusPillSelect t={t} onStatus={onStatus} />
+              <StatusPillMenu t={t} onStatus={onStatus} />
               <span className="acts">
                 <button className="btn pickup" onClick={() => onStatus(t.id, "picked")}>
                   <Icon name="package-check" />Picked up
@@ -526,7 +697,7 @@ export function ArchiveView({ archive, search }: { archive: Ticket[]; search: st
             <div className="ds">{t.desc}</div>
           </div>
           <span className="meta-mono l-phone"><Icon name="phone" />{t.phone}</span>
-          <span className="meta-mono"><Icon name="calendar" />In {fmtDate(t.dropoff)}</span>
+          <span className="meta-mono"><Icon name="calendar" />In {fmtDate(t.dropoff)}{t.dropoffAmPm ? ` · ${t.dropoffAmPm}` : ""}</span>
           <Charger yes={t.charger} />
           <span className="archd"><span className="lbl2">Archived</span>{t.archivedAt ? fmtDate(t.archivedAt) : "—"}</span>
         </div>
@@ -649,10 +820,10 @@ export type FormDraft = {
   charger: boolean;
   status: Status;
   dropoff: string;
-  dueAt: string | null; // ISO timestamp, built from the three due fields on submit
+  dropoffAmPm: "AM" | "PM" | null;
+  dueAt: string | null; // ISO timestamp, built from the due date + time fields on submit
 };
-const DEFAULT_DUE_HOUR = { h: 5, ampm: "PM" as const }; // close of business when no time given
-const pad2 = (n: number) => String(n).padStart(2, "0");
+const DEFAULT_DUE_TIME: DueTime = { time: "5:00", ampm: "PM" }; // close of business when no time picked
 
 export function TicketForm({ editing, today, onSave, onClose }: {
   editing: Partial<Ticket>;
@@ -670,41 +841,33 @@ export function TicketForm({ editing, today, onSave, onClose }: {
     charger: editing?.charger ?? false,
     status: editing?.status || "todo",
     dropoff: editing?.dropoff || today,
+    // New tickets default to the current half of the day; old tickets may have none.
+    dropoffAmPm: editing?.id ? editing?.dropoffAmPm ?? null : (new Date().getHours() < 12 ? "AM" : "PM"),
     dueAt: editing?.dueAt || null,
   }));
-  // Due date & time are edited as three pieces; staff browsers are Pacific so
-  // local time is shop time.
-  const [due, setDue] = React.useState(() => {
+  // Due date & time edit as two pieces; staff browsers are Pacific so local time is shop time.
+  const [due, setDue] = React.useState<{ date: string; time: DueTime | null }>(() => {
     const d = editing?.dueAt ? new Date(editing.dueAt) : null;
     return {
       date: d ? `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}` : "",
-      time: d ? `${((d.getHours() + 11) % 12) + 1}:${pad2(d.getMinutes())}` : "",
-      ampm: d ? (d.getHours() >= 12 ? "PM" : "AM") : ("PM" as "AM" | "PM"),
+      time: d ? { time: `${((d.getHours() + 11) % 12) + 1}:${pad2(d.getMinutes())}`, ampm: d.getHours() >= 12 ? "PM" : "AM" } : null,
     };
   });
   const [touched, setTouched] = React.useState(false);
   const set = <K extends keyof FormDraft>(k: K, v: FormDraft[K]) => setF((p) => ({ ...p, [k]: v }));
 
-  const timeMatch = due.time.trim() ? due.time.trim().match(/^(\d{1,2})(?::(\d{2}))?$/) : null;
-  const timeBad = !!due.time.trim() && (!timeMatch || +timeMatch[1] < 1 || +timeMatch[1] > 12 || (timeMatch[2] !== undefined && +timeMatch[2] > 59));
-
   const errs = {
     name: f.name.trim() ? "" : "Customer name is required",
     desc: f.desc.trim() ? "" : "Tell us what's wrong with the device",
-    due: timeBad ? "Time looks off — try something like 2:30" : "",
   };
-  const valid = !errs.name && !errs.desc && !errs.due;
+  const valid = !errs.name && !errs.desc;
 
   const buildDueAt = (): string | null => {
     if (!due.date) return null;
-    let h12 = DEFAULT_DUE_HOUR.h, min = 0, ampm: "AM" | "PM" = DEFAULT_DUE_HOUR.ampm;
-    if (timeMatch) {
-      h12 = +timeMatch[1];
-      min = timeMatch[2] !== undefined ? +timeMatch[2] : 0;
-      ampm = due.ampm;
-    }
-    const h24 = (h12 % 12) + (ampm === "PM" ? 12 : 0);
-    return new Date(`${due.date}T${pad2(h24)}:${pad2(min)}:00`).toISOString();
+    const t = due.time || DEFAULT_DUE_TIME;
+    const [h12s, mins] = t.time.split(":");
+    const h24 = (+h12s % 12) + (t.ampm === "PM" ? 12 : 0);
+    return new Date(`${due.date}T${pad2(h24)}:${pad2(mins ? +mins : 0)}:00`).toISOString();
   };
 
   const submit = () => {
@@ -734,7 +897,15 @@ export function TicketForm({ editing, today, onSave, onClose }: {
           <div className="field-grid">
             <div className="field">
               <label className="lbl">Drop-off date</label>
-              <input className="inp mono" type="date" value={f.dropoff} onChange={(e) => set("dropoff", e.target.value)} />
+              <div className="dropoff-row">
+                <DateField value={f.dropoff} onChange={(v) => set("dropoff", v)} />
+                <div className="toggle ampm">
+                  <button type="button" className={`am ${f.dropoffAmPm === "AM" ? "on" : ""}`}
+                    onClick={() => set("dropoffAmPm", "AM")}>AM</button>
+                  <button type="button" className={`pm ${f.dropoffAmPm === "PM" ? "on" : ""}`}
+                    onClick={() => set("dropoffAmPm", "PM")}>PM</button>
+                </div>
+              </div>
             </div>
             <div className="field">
               <label className="lbl">Phone</label>
@@ -745,23 +916,13 @@ export function TicketForm({ editing, today, onSave, onClose }: {
           <div className="field-grid">
             <div className="field">
               <label className="lbl">Due date <span className="opt-hint">optional</span></label>
-              <input className="inp mono" type="date" value={due.date}
-                onChange={(e) => setDue((p) => ({ ...p, date: e.target.value }))} />
+              <DateField value={due.date} clearable placeholder="No due date"
+                onChange={(v) => setDue((p) => ({ date: v, time: v ? p.time : null }))} />
             </div>
             <div className="field">
               <label className="lbl">Due time</label>
-              <div className="duetime">
-                <input className={`inp mono ${touched && errs.due ? "bad" : ""}`} placeholder="5:00"
-                  inputMode="numeric" value={due.time} disabled={!due.date}
-                  onChange={(e) => setDue((p) => ({ ...p, time: e.target.value }))} />
-                <div className="toggle ampm">
-                  <button type="button" className={`am ${due.ampm === "AM" ? "on" : ""}`} disabled={!due.date}
-                    onClick={() => setDue((p) => ({ ...p, ampm: "AM" }))}>AM</button>
-                  <button type="button" className={`pm ${due.ampm === "PM" ? "on" : ""}`} disabled={!due.date}
-                    onClick={() => setDue((p) => ({ ...p, ampm: "PM" }))}>PM</button>
-                </div>
-              </div>
-              {touched && errs.due && <div className="err">{errs.due}</div>}
+              <TimeField value={due.time} disabled={!due.date} placeholder={due.date ? "5:00 PM (default)" : "Pick a date first"}
+                onChange={(t) => setDue((p) => ({ ...p, time: t }))} />
             </div>
           </div>
 
