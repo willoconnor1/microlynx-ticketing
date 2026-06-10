@@ -14,8 +14,14 @@ each level. Three views over the same data:
 Picked Up tickets auto-archive after 3 days into a permanent, searchable **Archive**.
 
 ## The ranking rule (do not break this)
-- Default order: **urgency ASC, then date ASC** (oldest drop-off first).
+- Default order: **urgency ASC, then `sortPos` ASC**. `sortPos` is assigned automatically
+  from the due date & time (soonest due first, no due date last) whenever a ticket is
+  created or its urgency/due date changes; dragging a row in the List overrides it manually
+  and the override persists until urgency or due date changes again.
 - A level-N ticket never sorts above any level-(N-1) ticket.
+- The **List** shows To Do + In Progress grouped by urgency, then a **Completed** section
+  (entry order) with a Picked Up button. Drag rows by the grip to reorder; moving a ticket
+  ahead of sooner-due tickets asks for confirmation.
 - **To Do** and **In Progress** columns use the default order.
 - **Complete** and **Picked Up** columns order by `statusChangedAt` (the moment they entered
   that column), NOT urgency.
@@ -24,8 +30,9 @@ Picked Up tickets auto-archive after 3 days into a permanent, searchable **Archi
 - Auto-archive: `status = picked_up` AND in that status for more than 3 days.
 
 ## Ticket fields
-`date` (drop-off), `name`, `description`, `urgency` (1-5), `phone`, `hasCharger` (bool),
-`status`, `createdAt`, `statusChangedAt`, `archived`.
+`date` (drop-off), `dueAt` (optional due date & time), `sortPos` (queue position), `name`,
+`description`, `urgency` (1-5), `phone`, `hasCharger` (bool), `status`, `createdAt`,
+`statusChangedAt`, `archived`.
 
 ## Stack
 Next.js App Router + TypeScript, plain CSS design system (from Claude design, in

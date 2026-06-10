@@ -4,10 +4,10 @@ import React from "react";
 import {
   Calendar, Phone, Plug, PlugZap, Search, Pencil, EllipsisVertical, Check, X,
   List, SignalHigh, Columns3, Archive, Plus, Menu, Inbox, Wrench, CircleCheck,
-  PackageCheck, Clock, Circle, Loader, type LucideIcon,
+  PackageCheck, Clock, Circle, Loader, GripVertical, type LucideIcon,
 } from "lucide-react";
 import {
-  URGENCY, STATUS, STATUS_ORDER, fmtDate, sortUrgencyOldest, sortOldest,
+  URGENCY, STATUS, STATUS_ORDER, fmtDate, fmtDueAt, sortQueue, cmpDue,
   sortEntryOrder, type Ticket, type Status,
 } from "@/lib/tickets";
 
@@ -20,7 +20,7 @@ const ICONS: Record<string, LucideIcon> = {
   pencil: Pencil, "ellipsis-vertical": EllipsisVertical, check: Check, x: X, list: List,
   "signal-high": SignalHigh, "columns-3": Columns3, archive: Archive, plus: Plus, menu: Menu,
   inbox: Inbox, wrench: Wrench, "circle-check": CircleCheck, "package-check": PackageCheck,
-  clock: Clock, circle: Circle, loader: Loader,
+  clock: Clock, circle: Circle, loader: Loader, "grip-vertical": GripVertical,
 };
 
 export function Icon({ name, size, className = "", style = {} }: { name: string; size?: number; className?: string; style?: React.CSSProperties }) {
@@ -41,6 +41,31 @@ export function Charger({ yes }: { yes: boolean }) {
 export function StatusPill({ status }: { status: Status }) {
   const s = STATUS[status] || STATUS.todo;
   return <span className={`spill ${s.cls}`}><span className="d" />{s.label}</span>;
+}
+
+/* Status pill with an invisible native <select> on top — click the pill, get the picker. */
+const STATUS_OPT_COLOR: Record<Status, string> = {
+  todo: "#b3352c", prog: "#1b4488", done: "#147a44", picked: "#767b84",
+};
+export function StatusPillSelect({ t, onStatus }: { t: Ticket; onStatus: (id: string, s: Status) => void }) {
+  const s = STATUS[t.status] || STATUS.todo;
+  return (
+    <span className={`spill ${s.cls} spill-sel`} title="Change status">
+      <span className="d" />{s.label}
+      <select
+        value={t.status}
+        onClick={(e) => e.stopPropagation()}
+        onChange={(e) => onStatus(t.id, e.target.value as Status)}
+        aria-label="Status"
+      >
+        {STATUS_ORDER.map((k) => (
+          <option key={k} value={k} style={{ color: STATUS_OPT_COLOR[k], fontWeight: 600 }}>
+            {STATUS[k].label}
+          </option>
+        ))}
+      </select>
+    </span>
+  );
 }
 
 export function UrgencyChip({ u, lg }: { u: number; lg?: boolean }) {
@@ -150,55 +175,243 @@ function BoardColumn({ className, header, footNote, items, variant, colKey, comp
 }
 
 /* ================= LIST VIEW ================= */
+export type PendingMove = {
+  ticket: Ticket;
+  urgency: number;
+  prevId: string | null;
+  nextId: string | null;
+  jumped: Ticket[]; // sooner-due tickets this move would jump ahead of
+};
+
 type ListProps = {
   tickets: Ticket[];
   onMenu: (e: React.MouseEvent, t: Ticket) => void;
   onEdit: (t: Ticket) => void;
+  onStatus: (id: string, s: Status) => void;
+  onMoveRequest: (m: PendingMove) => void;
+  drag: Drag;
+  setDrag: (d: Drag) => void;
 };
-export function ListView({ tickets, onMenu, onEdit }: ListProps) {
-  const active = tickets.filter((t) => t.status !== "picked");
-  const sorted = [...active].sort(sortUrgencyOldest);
-  const groups = [1, 2, 3, 4, 5].map((u) => [u, sorted.filter((t) => t.urgency === u)] as const).filter(([, l]) => l.length);
+export function ListView({ tickets, onMenu, onEdit, onStatus, onMoveRequest, drag, setDrag }: ListProps) {
+  const queue = tickets.filter((t) => t.status === "todo" || t.status === "prog");
+  const sorted = [...queue].sort(sortQueue);
+  const done = tickets.filter((t) => t.status === "done").sort(sortEntryOrder);
   const topId = sorted[0] && sorted[0].id;
 
+  const listDrag = drag && drag.from === "list" ? drag : null;
+  const dragged = listDrag ? sorted.find((t) => t.id === listDrag.id) || null : null;
+  // Where the dragged row would land: urgency group + index among that group's rows.
+  const [target, setTarget] = React.useState<{ u: number; index: number } | null>(null);
+
+  const byU = new Map<number, Ticket[]>();
+  for (const u of [1, 2, 3, 4, 5]) byU.set(u, sorted.filter((t) => t.urgency === u));
+
+  const clearDrag = () => { setDrag(null); setTarget(null); };
+
+  const startDrag = (e: React.DragEvent, t: Ticket) => {
+    try {
+      e.dataTransfer.setData("text/plain", t.id);
+      e.dataTransfer.effectAllowed = "move";
+      const row = (e.currentTarget as HTMLElement).closest(".lrow");
+      if (row) e.dataTransfer.setDragImage(row as HTMLElement, 24, 24);
+    } catch {}
+    setDrag({ id: t.id, from: "list", over: "list" });
+  };
+
+  const overRow = (e: React.DragEvent, u: number, index: number) => {
+    if (!dragged) return;
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "move";
+    const r = (e.currentTarget as HTMLElement).getBoundingClientRect();
+    const idx = index + (e.clientY < r.top + r.height / 2 ? 0 : 1);
+    setTarget((p) => (p && p.u === u && p.index === idx ? p : { u, index: idx }));
+  };
+
+  const overTop = (e: React.DragEvent, u: number) => {
+    if (!dragged) return;
+    e.preventDefault();
+    setTarget((p) => (p && p.u === u && p.index === 0 ? p : { u, index: 0 }));
+  };
+
+  // Native drag doesn't auto-scroll the page in Firefox/Safari — nudge it near the edges.
+  const overList = (e: React.DragEvent) => {
+    if (!dragged) return;
+    e.preventDefault();
+    if (e.clientY < 90) window.scrollBy(0, -14);
+    else if (e.clientY > window.innerHeight - 90) window.scrollBy(0, 14);
+  };
+
+  const commitDrop = () => {
+    if (!dragged || !target) { clearDrag(); return; }
+    const grp = byU.get(target.u) || [];
+    const beforeItems = grp.slice(0, target.index).filter((t) => t.id !== dragged.id);
+    const afterItems = grp.slice(target.index).filter((t) => t.id !== dragged.id);
+    const prevId = beforeItems.length ? beforeItems[beforeItems.length - 1].id : null;
+    const nextId = afterItems.length ? afterItems[0].id : null;
+
+    // Simulate the new order to find which sooner-due tickets get jumped.
+    const moved = { ...dragged, urgency: target.u };
+    const newOrder: Ticket[] = [];
+    for (const u of [1, 2, 3, 4, 5]) {
+      const arr = (byU.get(u) || []).filter((t) => t.id !== dragged.id);
+      if (u === target.u) {
+        const at = nextId ? arr.findIndex((t) => t.id === nextId) : arr.length;
+        arr.splice(at === -1 ? arr.length : at, 0, moved);
+      }
+      newOrder.push(...arr);
+    }
+    const oldIdx = sorted.findIndex((t) => t.id === dragged.id);
+    const newIdx = newOrder.findIndex((t) => t.id === dragged.id);
+    const newPos = new Map(newOrder.map((t, i) => [t.id, i] as const));
+    const jumped = sorted.filter((t, i) =>
+      t.id !== dragged.id &&
+      i < oldIdx && (newPos.get(t.id) ?? 0) > newIdx &&
+      !!t.dueAt && (!dragged.dueAt || (t.dueAt as string) < (dragged.dueAt as string))
+    );
+
+    clearDrag();
+    if (newIdx === oldIdx && dragged.urgency === target.u) return; // dropped where it started
+    onMoveRequest({ ticket: dragged, urgency: target.u, prevId, nextId, jumped });
+  };
+
   return (
-    <div className="list-wrap">
-      {groups.map(([u, list]) => (
-        <React.Fragment key={u}>
-          <div className="list-group-label">
-            <span>Urgency {u} · {URGENCY[u].label}</span>
-            <span className="ln" />
-            <span>{list.length}</span>
-          </div>
-          {list.map((t) => {
-            const isNext = t.id === topId;
-            return (
-              <div key={t.id} className={`lrow u${t.urgency} ${isNext ? "next" : ""}`}>
-                <UrgencyChip u={t.urgency} />
-                <div style={{ minWidth: 0 }}>
-                  <div className="nm">{t.name}</div>
-                  <div className="ds">{t.desc}</div>
-                </div>
-                <span className="meta-mono l-date"><Icon name="calendar" />{fmtDate(t.dropoff)}</span>
-                <span className="meta-mono l-phone"><Icon name="phone" />{t.phone}</span>
-                <Charger yes={t.charger} />
-                <StatusPill status={t.status} />
-                <span className="acts">
-                  <button className="iconbtn" title="Edit" onClick={() => onEdit(t)}><Icon name="pencil" /></button>
-                  <button className="iconbtn" title="Quick change" onClick={(e) => onMenu(e, t)}><Icon name="ellipsis-vertical" /></button>
-                </span>
+    <div className="list-wrap" onDragOver={overList} onDrop={(e) => { e.preventDefault(); commitDrop(); }}>
+      {[1, 2, 3, 4, 5].map((u) => {
+        const list = byU.get(u) || [];
+        if (!list.length && !dragged) return null;
+        const lineAt = dragged && target && target.u === u ? target.index : -1;
+        return (
+          <React.Fragment key={u}>
+            <div className="list-group-label" onDragOver={(e) => overTop(e, u)}>
+              <span>Urgency {u} · {URGENCY[u].label}</span>
+              <span className="ln" />
+              <span>{list.length}</span>
+            </div>
+            {list.length === 0 && dragged && (
+              <div className={`ins-zone ${lineAt === 0 ? "on" : ""}`} onDragOver={(e) => overTop(e, u)}>
+                drop here
               </div>
-            );
-          })}
-        </React.Fragment>
-      ))}
-      {sorted.length === 0 && (
+            )}
+            {list.map((t, i) => {
+              const isNext = t.id === topId;
+              return (
+                <React.Fragment key={t.id}>
+                  {lineAt === i && <div className="ins-line" />}
+                  <div
+                    className={`lrow u${t.urgency} ${isNext ? "next" : ""} ${listDrag && listDrag.id === t.id ? "dragging" : ""}`}
+                    onDragOver={(e) => overRow(e, u, i)}
+                  >
+                    <span className="grip" title="Drag to reorder" draggable
+                      onDragStart={(e) => startDrag(e, t)} onDragEnd={clearDrag}>
+                      <Icon name="grip-vertical" size={15} />
+                    </span>
+                    <UrgencyChip u={t.urgency} />
+                    <div style={{ minWidth: 0 }}>
+                      <div className="nm">{t.name}</div>
+                      <div className="ds">{t.desc}</div>
+                    </div>
+                    {t.dueAt
+                      ? <span className="meta-mono l-date due" title="Due"><Icon name="clock" />{fmtDueAt(t.dueAt)}</span>
+                      : <span className="meta-mono l-date" title="Dropped off"><Icon name="calendar" />{fmtDate(t.dropoff)}</span>}
+                    <span className="meta-mono l-phone"><Icon name="phone" />{t.phone}</span>
+                    <Charger yes={t.charger} />
+                    <StatusPillSelect t={t} onStatus={onStatus} />
+                    <span className="acts">
+                      <button className="iconbtn tick" title="Mark complete" onClick={() => onStatus(t.id, "done")}><Icon name="check" /></button>
+                      <button className="iconbtn" title="Edit" onClick={() => onEdit(t)}><Icon name="pencil" /></button>
+                      <button className="iconbtn" title="Quick change" onClick={(e) => onMenu(e, t)}><Icon name="ellipsis-vertical" /></button>
+                    </span>
+                  </div>
+                </React.Fragment>
+              );
+            })}
+            {lineAt >= list.length && list.length > 0 && <div className="ins-line" />}
+          </React.Fragment>
+        );
+      })}
+
+      {done.length > 0 && (
+        <>
+          <div className="list-group-label done-label">
+            <span>Completed · ready for pickup</span>
+            <span className="ln" />
+            <span>{done.length}</span>
+          </div>
+          {done.map((t) => (
+            <div key={t.id} className={`lrow done-row u${t.urgency}`}>
+              <span className="done-ic"><Icon name="circle-check" size={16} /></span>
+              <UrgencyChip u={t.urgency} />
+              <div style={{ minWidth: 0 }}>
+                <div className="nm">{t.name}</div>
+                <div className="ds">{t.desc}</div>
+              </div>
+              <span className="meta-mono l-date" title="Completed"><Icon name="check" />{t.statusChangedAt ? fmtDueAt(t.statusChangedAt) : "—"}</span>
+              <span className="meta-mono l-phone"><Icon name="phone" />{t.phone}</span>
+              <Charger yes={t.charger} />
+              <StatusPillSelect t={t} onStatus={onStatus} />
+              <span className="acts">
+                <button className="btn pickup" onClick={() => onStatus(t.id, "picked")}>
+                  <Icon name="package-check" />Picked up
+                </button>
+              </span>
+            </div>
+          ))}
+        </>
+      )}
+
+      {sorted.length === 0 && done.length === 0 && (
         <div className="empty">
           <div className="mark">{"<"}<b>/</b>{">"}</div>
           <div className="et">No active tickets</div>
           <div className="es">Every device is handled. New drop-offs will show up here, most urgent first.</div>
         </div>
       )}
+    </div>
+  );
+}
+
+/* ================= CONFIRM MOVE DIALOG ================= */
+export function ConfirmMoveDialog({ move, onCancel, onConfirm }: {
+  move: PendingMove;
+  onCancel: () => void;
+  onConfirm: () => void;
+}) {
+  React.useEffect(() => {
+    const k = (e: KeyboardEvent) => { if (e.key === "Escape") onCancel(); };
+    window.addEventListener("keydown", k);
+    return () => window.removeEventListener("keydown", k);
+  }, [onCancel]);
+
+  return (
+    <div className="scrim-dark" onMouseDown={onCancel}>
+      <div className="modal confirm" onMouseDown={(e) => e.stopPropagation()}>
+        <div className="modal-head">
+          <div>
+            <div className="eyebrow">{"</"} HOLD ON {">"}</div>
+            <h2>Move ahead of sooner due dates?</h2>
+          </div>
+          <button className="iconbtn" onClick={onCancel} style={{ width: 34, height: 34 }}><Icon name="x" size={18} /></button>
+        </div>
+        <div className="modal-body">
+          <p className="confirm-msg">
+            You are moving <b>{move.ticket.name}</b> in front of tickets that are due sooner.
+            Here are the tickets you will override:
+          </p>
+          <div className="confirm-list">
+            {move.jumped.map((t) => (
+              <div key={t.id} className={`confirm-row u${t.urgency}`}>
+                <UrgencyChip u={t.urgency} />
+                <span className="nm">{t.name}</span>
+                <span className="meta-mono"><Icon name="clock" />{t.dueAt ? fmtDueAt(t.dueAt) : "no due date"}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+        <div className="modal-foot">
+          <button className="btn ghost" onClick={onCancel}>Cancel</button>
+          <button className="btn primary" onClick={onConfirm}><Icon name="check" />Confirm move</button>
+        </div>
+      </div>
     </div>
   );
 }
@@ -219,10 +432,10 @@ export function UrgencyBoard({ tickets, onMenu, onOpen, onUrgency, drag, setDrag
   return (
     <div className="board">
       {[1, 2, 3, 4, 5].map((u) => {
-        const list = active.filter((t) => t.urgency === u).sort(sortOldest);
+        const list = active.filter((t) => t.urgency === u).sort(sortQueue);
         return (
           <BoardColumn key={u} className={`urg u${u}`} colKey={String(u)} variant="rail"
-            items={list} comparator={sortOldest}
+            items={list} comparator={cmpDue}
             drag={drag} setDrag={setDrag} draggedTicket={draggedTicket}
             onDropCard={(id, col) => onUrgency(id, Number(col))}
             onMenu={onMenu} onOpen={onOpen}
@@ -230,7 +443,7 @@ export function UrgencyBoard({ tickets, onMenu, onOpen, onUrgency, drag, setDrag
             header={
               <div className="col-head">
                 <span className="ch-num">{u}</span>
-                <span className="ch-lab">{URGENCY[u].label}<span className="sm">{u === 1 ? "grab these first" : "oldest first"}</span></span>
+                <span className="ch-lab">{URGENCY[u].label}<span className="sm">{u === 1 ? "grab these first" : "soonest due first"}</span></span>
                 <span className="ch-count">{list.length}</span>
               </div>
             } />
@@ -254,7 +467,7 @@ export function StatusBoard({ tickets, onMenu, onOpen, onStatus, drag, setDrag }
   const draggedTicket = drag ? (() => { const t = tickets.find((x) => x.id === drag.id); return t ? { ...t, _col: t.status } : null; })() : null;
   // To do / In progress use the master rule; Complete / Picked Up use entry order.
   const cmpFor: Record<Status, (a: Ticket, b: Ticket) => number> = {
-    todo: sortUrgencyOldest, prog: sortUrgencyOldest, done: sortEntryOrder, picked: sortEntryOrder,
+    todo: sortQueue, prog: sortQueue, done: sortEntryOrder, picked: sortEntryOrder,
   };
 
   return (
@@ -436,7 +649,11 @@ export type FormDraft = {
   charger: boolean;
   status: Status;
   dropoff: string;
+  dueAt: string | null; // ISO timestamp, built from the three due fields on submit
 };
+const DEFAULT_DUE_HOUR = { h: 5, ampm: "PM" as const }; // close of business when no time given
+const pad2 = (n: number) => String(n).padStart(2, "0");
+
 export function TicketForm({ editing, today, onSave, onClose }: {
   editing: Partial<Ticket>;
   today: string;
@@ -453,20 +670,47 @@ export function TicketForm({ editing, today, onSave, onClose }: {
     charger: editing?.charger ?? false,
     status: editing?.status || "todo",
     dropoff: editing?.dropoff || today,
+    dueAt: editing?.dueAt || null,
   }));
+  // Due date & time are edited as three pieces; staff browsers are Pacific so
+  // local time is shop time.
+  const [due, setDue] = React.useState(() => {
+    const d = editing?.dueAt ? new Date(editing.dueAt) : null;
+    return {
+      date: d ? `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}` : "",
+      time: d ? `${((d.getHours() + 11) % 12) + 1}:${pad2(d.getMinutes())}` : "",
+      ampm: d ? (d.getHours() >= 12 ? "PM" : "AM") : ("PM" as "AM" | "PM"),
+    };
+  });
   const [touched, setTouched] = React.useState(false);
   const set = <K extends keyof FormDraft>(k: K, v: FormDraft[K]) => setF((p) => ({ ...p, [k]: v }));
+
+  const timeMatch = due.time.trim() ? due.time.trim().match(/^(\d{1,2})(?::(\d{2}))?$/) : null;
+  const timeBad = !!due.time.trim() && (!timeMatch || +timeMatch[1] < 1 || +timeMatch[1] > 12 || (timeMatch[2] !== undefined && +timeMatch[2] > 59));
 
   const errs = {
     name: f.name.trim() ? "" : "Customer name is required",
     desc: f.desc.trim() ? "" : "Tell us what's wrong with the device",
+    due: timeBad ? "Time looks off — try something like 2:30" : "",
   };
-  const valid = !errs.name && !errs.desc;
+  const valid = !errs.name && !errs.desc && !errs.due;
+
+  const buildDueAt = (): string | null => {
+    if (!due.date) return null;
+    let h12 = DEFAULT_DUE_HOUR.h, min = 0, ampm: "AM" | "PM" = DEFAULT_DUE_HOUR.ampm;
+    if (timeMatch) {
+      h12 = +timeMatch[1];
+      min = timeMatch[2] !== undefined ? +timeMatch[2] : 0;
+      ampm = due.ampm;
+    }
+    const h24 = (h12 % 12) + (ampm === "PM" ? 12 : 0);
+    return new Date(`${due.date}T${pad2(h24)}:${pad2(min)}:00`).toISOString();
+  };
 
   const submit = () => {
     setTouched(true);
     if (!valid) return;
-    onSave({ ...f, name: f.name.trim(), phone: f.phone.trim(), desc: f.desc.trim() });
+    onSave({ ...f, name: f.name.trim(), phone: f.phone.trim(), desc: f.desc.trim(), dueAt: buildDueAt() });
   };
 
   React.useEffect(() => {
@@ -495,6 +739,29 @@ export function TicketForm({ editing, today, onSave, onClose }: {
             <div className="field">
               <label className="lbl">Phone</label>
               <input className="inp mono" type="tel" placeholder="(253) 555-0000" value={f.phone} onChange={(e) => set("phone", e.target.value)} />
+            </div>
+          </div>
+
+          <div className="field-grid">
+            <div className="field">
+              <label className="lbl">Due date <span className="opt-hint">optional</span></label>
+              <input className="inp mono" type="date" value={due.date}
+                onChange={(e) => setDue((p) => ({ ...p, date: e.target.value }))} />
+            </div>
+            <div className="field">
+              <label className="lbl">Due time</label>
+              <div className="duetime">
+                <input className={`inp mono ${touched && errs.due ? "bad" : ""}`} placeholder="5:00"
+                  inputMode="numeric" value={due.time} disabled={!due.date}
+                  onChange={(e) => setDue((p) => ({ ...p, time: e.target.value }))} />
+                <div className="toggle ampm">
+                  <button type="button" className={`am ${due.ampm === "AM" ? "on" : ""}`} disabled={!due.date}
+                    onClick={() => setDue((p) => ({ ...p, ampm: "AM" }))}>AM</button>
+                  <button type="button" className={`pm ${due.ampm === "PM" ? "on" : ""}`} disabled={!due.date}
+                    onClick={() => setDue((p) => ({ ...p, ampm: "PM" }))}>PM</button>
+                </div>
+              </div>
+              {touched && errs.due && <div className="err">{errs.due}</div>}
             </div>
           </div>
 

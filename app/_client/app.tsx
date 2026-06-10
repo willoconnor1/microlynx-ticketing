@@ -1,17 +1,19 @@
 "use client";
 
 import React from "react";
-import { todayISO, type Ticket, type Status } from "@/lib/tickets";
+import { todayISO, posBetween, type Ticket, type Status } from "@/lib/tickets";
 import {
-  fetchState, saveTicketAction, setUrgencyAction, setStatusAction,
+  fetchState, saveTicketAction, setUrgencyAction, setStatusAction, moveTicketAction,
 } from "@/lib/actions";
 import {
   Icon, ListView, UrgencyBoard, StatusBoard, ArchiveView, TopNav, QuickMenu,
-  MobileSheet, TicketForm, type View, type Drag, type FormDraft,
+  MobileSheet, TicketForm, ConfirmMoveDialog, type View, type Drag, type FormDraft,
+  type PendingMove,
 } from "./ui";
+import { celebrate } from "./confetti";
 
 const VIEW_META: Record<View, [string, string, string]> = {
-  list: ["ACTIVE QUEUE", "Repair tickets", "Most urgent first, then oldest — grab the top of the list."],
+  list: ["ACTIVE QUEUE", "Repair tickets", "Most urgent first, then soonest due — grab the top of the list."],
   urgency: ["URGENCY BOARD", "Triage by urgency", "Drag a card between columns to change its urgency. 1 is most urgent."],
   status: ["STATUS BOARD", "Move repairs along", "Drag a card to move a device through the repair flow."],
   archive: ["RECORDS VAULT", "Archive", "Picked-up tickets, kept on file. Read-only."],
@@ -28,10 +30,11 @@ export default function App({ initialTickets, initialArchive }: { initialTickets
   const [menu, setMenu] = React.useState<MenuCtx>(null);
   const [sheet, setSheet] = React.useState(false);
   const [drag, setDrag] = React.useState<Drag>(null);
+  const [pendingMove, setPendingMove] = React.useState<PendingMove | null>(null);
   const [today] = React.useState(() => todayISO());
 
   const busy = React.useRef(false); // suppress polling while the user is mid-interaction
-  busy.current = !!drag || !!form || !!menu;
+  busy.current = !!drag || !!form || !!menu || !!pendingMove;
 
   const apply = (s: { tickets: Ticket[]; archive: Ticket[] }) => {
     setTickets(s.tickets);
@@ -54,6 +57,7 @@ export default function App({ initialTickets, initialArchive }: { initialTickets
     setUrgencyAction(id, u).then(apply);
   };
   const setStatus = (id: string, s: Status) => {
+    if (s === "done" && tickets.find((x) => x.id === id)?.status !== "done") celebrate();
     setTickets((p) => p.map((x) => {
       if (x.id !== id) return x;
       const next: Ticket = { ...x, status: s, statusChangedAt: new Date().toISOString() };
@@ -67,7 +71,23 @@ export default function App({ initialTickets, initialArchive }: { initialTickets
     saveTicketAction(data.id, {
       name: data.name, phone: data.phone, desc: data.desc,
       urgency: data.urgency, charger: data.charger, status: data.status, dropoff: data.dropoff,
+      dueAt: data.dueAt,
     }).then(apply);
+  };
+  const commitMove = (m: PendingMove) => {
+    // Optimistic: land the row where it was dropped; the server computes the
+    // authoritative position from the neighbor ids and reconciles via apply().
+    setTickets((p) => {
+      const prev = m.prevId ? p.find((x) => x.id === m.prevId)?.sortPos : null;
+      const next = m.nextId ? p.find((x) => x.id === m.nextId)?.sortPos : null;
+      const pos = posBetween(prev ?? null, next ?? null);
+      return p.map((x) => (x.id === m.ticket.id ? { ...x, urgency: m.urgency, sortPos: pos } : x));
+    });
+    moveTicketAction(m.ticket.id, m.urgency, m.prevId, m.nextId).then(apply);
+  };
+  const requestMove = (m: PendingMove) => {
+    if (m.jumped.length) setPendingMove(m);
+    else commitMove(m);
   };
   const openMenu = (e: React.MouseEvent, ticket: Ticket) => setMenu({ x: e.clientX, y: e.clientY, ticket });
 
@@ -83,7 +103,7 @@ export default function App({ initialTickets, initialArchive }: { initialTickets
   const showSearch = view === "list" || view === "archive";
 
   let body: React.ReactNode;
-  if (view === "list") body = <ListView tickets={listTickets} onMenu={openMenu} onEdit={(tk) => setForm(tk)} />;
+  if (view === "list") body = <ListView tickets={listTickets} onMenu={openMenu} onEdit={(tk) => setForm(tk)} onStatus={setStatus} onMoveRequest={requestMove} drag={drag} setDrag={setDrag} />;
   else if (view === "urgency") body = <UrgencyBoard tickets={tickets} onMenu={openMenu} onOpen={(tk) => setForm(tk)} onUrgency={setUrgency} drag={drag} setDrag={setDrag} />;
   else if (view === "status") body = <StatusBoard tickets={tickets} onMenu={openMenu} onOpen={(tk) => setForm(tk)} onStatus={setStatus} drag={drag} setDrag={setDrag} />;
   else body = <ArchiveView archive={archive} search={search} />;
@@ -115,6 +135,11 @@ export default function App({ initialTickets, initialArchive }: { initialTickets
       </main>
 
       {form && <TicketForm editing={form} today={today} onSave={saveTicket} onClose={() => setForm(null)} />}
+      {pendingMove && (
+        <ConfirmMoveDialog move={pendingMove}
+          onCancel={() => setPendingMove(null)}
+          onConfirm={() => { commitMove(pendingMove); setPendingMove(null); }} />
+      )}
       {menu && <QuickMenu ctx={menu} onClose={() => setMenu(null)} onUrgency={setUrgency} onStatus={setStatus} onEdit={(tk) => setForm(tk)} />}
       {sheet && <MobileSheet view={view} setView={setView} onClose={() => setSheet(false)} />}
     </>
