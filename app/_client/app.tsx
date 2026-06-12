@@ -1,13 +1,13 @@
 "use client";
 
 import React from "react";
-import { todayISO, posBetween, PEOPLE, DEVICE_TYPES, type Ticket, type Status, type Person } from "@/lib/tickets";
+import { todayISO, posBetween, PEOPLE, DEVICE_TYPES, assignees, type Ticket, type Status, type Person } from "@/lib/tickets";
 import {
   fetchState, saveTicketAction, setUrgencyAction, setStatusAction, moveTicketAction,
   deleteTicketAction, patchTicketAction,
 } from "@/lib/actions";
 import {
-  Icon, ListView, UrgencyBoard, StatusBoard, ArchiveView, TopNav, QuickMenu,
+  Icon, ListView, PartsView, ArchiveView, TopNav, QuickMenu,
   MobileSheet, TicketForm, ConfirmMoveDialog, ConfirmDeleteDialog, type View, type Drag,
   type FormDraft, type PendingMove, type InlinePatch,
 } from "./ui";
@@ -15,9 +15,8 @@ import { celebrate } from "./confetti";
 
 const VIEW_META: Record<View, [string, string, string]> = {
   list: ["ACTIVE QUEUE", "Repair tickets", "Most urgent first, then soonest due — grab the top of the list."],
-  urgency: ["URGENCY BOARD", "Triage by urgency", "Drag a card between columns to change its urgency. 1 is most urgent."],
-  status: ["STATUS BOARD", "Move repairs along", "Drag a card to move a device through the repair flow."],
-  archive: ["RECORDS VAULT", "Archive", "Picked-up tickets, kept on file. Read-only."],
+  parts: ["ON HOLD", "Waiting on parts", "Parked until parts arrive — set a ticket's status to bring it back to the queue."],
+  archive: ["RECORDS VAULT", "Archive", "Picked-up tickets from the last 7 days. Search to find older records."],
 };
 
 type MenuCtx = { x: number; y: number; ticket: Ticket } | null;
@@ -108,9 +107,10 @@ export default function App({ initialTickets, initialArchive }: { initialTickets
 
   const [eyebrow, title, sub] = VIEW_META[view];
 
-  // Person filter first, then search on top of it.
+  // Person filter first, then search on top of it. A multi-assigned ticket
+  // shows under EACH of its people's tabs.
   const byPerson = React.useMemo(
-    () => (who === "all" ? tickets : tickets.filter((x) => (x.assignedTo || "keith") === who)),
+    () => (who === "all" ? tickets : tickets.filter((x) => assignees(x).includes(who))),
     [tickets, who]
   );
   const listTickets = React.useMemo(() => {
@@ -119,30 +119,32 @@ export default function App({ initialTickets, initialArchive }: { initialTickets
     return byPerson.filter((x) => x.name.toLowerCase().includes(q) || x.desc.toLowerCase().includes(q) || x.id.toLowerCase().includes(q));
   }, [byPerson, search]);
   const visibleArchive = React.useMemo(
-    () => (who === "all" ? archive : archive.filter((x) => (x.assignedTo || "keith") === who)),
+    () => (who === "all" ? archive : archive.filter((x) => assignees(x).includes(who))),
     [archive, who]
   );
   // Reordering needs the full list visible — hidden rows would get jumped silently.
   const canReorder = who === "all" && !search.trim();
 
-  const activeCount = byPerson.filter((x) => x.status !== "picked").length;
+  // "Active" = actually in the working queue: not picked up, not parked for parts.
+  const activeCount = byPerson.filter((x) => x.status !== "picked" && x.status !== "parts").length;
   const deviceCounts = React.useMemo(() => {
-    const active = byPerson.filter((x) => x.status !== "picked");
+    const active = byPerson.filter((x) => x.status !== "picked" && x.status !== "parts");
     return DEVICE_TYPES
       .map((d) => ({ ...d, n: active.filter((x) => x.deviceType === d.key).length }))
       .filter((d) => d.n > 0);
   }, [byPerson]);
+  // The tab badge reflects the whole shop, ignoring the person filter.
+  const partsCount = tickets.filter((t) => t.status === "parts").length;
   const showSearch = view === "list" || view === "archive";
 
   let body: React.ReactNode;
   if (view === "list") body = <ListView tickets={listTickets} onMenu={openMenu} onStatus={setStatus} onMoveRequest={requestMove} onPatch={patchTicket} expandedId={expandedId} onToggleExpand={toggleExpand} drag={drag} setDrag={setDrag} canReorder={canReorder} />;
-  else if (view === "urgency") body = <UrgencyBoard tickets={byPerson} onMenu={openMenu} onOpen={(tk) => setForm(tk)} onUrgency={setUrgency} drag={drag} setDrag={setDrag} />;
-  else if (view === "status") body = <StatusBoard tickets={byPerson} onMenu={openMenu} onOpen={(tk) => setForm(tk)} onStatus={setStatus} drag={drag} setDrag={setDrag} />;
-  else body = <ArchiveView archive={visibleArchive} search={search} />;
+  else if (view === "parts") body = <PartsView tickets={byPerson} onStatus={setStatus} onMenu={openMenu} />;
+  else body = <ArchiveView archive={visibleArchive} search={search} onStatus={setStatus} />;
 
   return (
     <>
-      <TopNav view={view} setView={setView} onNew={() => setForm({})} onMobileMenu={() => setSheet(true)} />
+      <TopNav view={view} setView={setView} onNew={() => setForm({})} onMobileMenu={() => setSheet(true)} partsCount={partsCount} />
 
       <main className="page">
         <div className="page-head">
@@ -191,7 +193,7 @@ export default function App({ initialTickets, initialArchive }: { initialTickets
           onCancel={() => setConfirmDelete(null)}
           onConfirm={() => doDelete(confirmDelete)} />
       )}
-      {sheet && <MobileSheet view={view} setView={setView} onClose={() => setSheet(false)} />}
+      {sheet && <MobileSheet view={view} setView={setView} onClose={() => setSheet(false)} partsCount={partsCount} />}
     </>
   );
 }

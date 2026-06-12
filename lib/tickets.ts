@@ -1,6 +1,6 @@
 /* Shared ticket types, config, and helpers (server + client safe). */
 
-export type Status = "todo" | "prog" | "done" | "picked";
+export type Status = "todo" | "prog" | "parts" | "done" | "picked";
 export type Person = "keith" | "garrett" | "marisa";
 export type DeviceType = "desktop" | "laptop" | "printer" | "misc";
 export type ServiceTag = "expedite" | "contract";
@@ -31,7 +31,7 @@ export interface Ticket {
   desc: string;
   urgency: number; // 1-5, 1 = most urgent
   charger: boolean;
-  assignedTo?: Person; // defaults to keith
+  assignedTo?: Person[]; // one or more; defaults to [keith]
   deviceType?: DeviceType | null; // null on pre-feature tickets
   serviceTag?: ServiceTag | null; // expedite | contract | null (neither)
   status: Status;
@@ -56,11 +56,17 @@ export const URGENCY: Record<number, { label: string; short: string }> = {
 export const STATUS: Record<Status, { label: string; cls: string }> = {
   todo: { label: "To do", cls: "todo" },
   prog: { label: "In progress", cls: "prog" },
+  parts: { label: "Waiting on parts", cls: "parts" },
   done: { label: "Complete", cls: "done" },
   picked: { label: "Picked up", cls: "picked" },
 };
 
-export const STATUS_ORDER: Status[] = ["todo", "prog", "done", "picked"];
+export const STATUS_ORDER: Status[] = ["todo", "prog", "parts", "done", "picked"];
+
+/* Single source for the "default Keith" rule: every ticket has at least one assignee. */
+export function assignees(t: { assignedTo?: Person[] | null }): Person[] {
+  return t.assignedTo && t.assignedTo.length ? t.assignedTo : ["keith"];
+}
 
 /* ---- date helpers ---- */
 export function fmtDate(iso: string): string {
