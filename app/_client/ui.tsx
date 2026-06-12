@@ -505,6 +505,11 @@ function RowPeek({ t, onEdit }: { t: Ticket; onEdit: () => void }) {
         </span>
         <span className="peek-item"><AvatarStack who={t.assignedTo} />{assigneeLabel(t.assignedTo)}</span>
         {t.serviceTag && <span className="peek-item"><SvcTag tag={t.serviceTag} /></span>}
+        {t.status === "parts" && (
+          <span className="peek-item">
+            <Icon name="package-search" />Waiting since {t.statusChangedAt ? fmtDueAt(t.statusChangedAt) : "—"}
+          </span>
+        )}
         <span className="peek-spacer" />
         {/* Mobile only — desktop edits via the pencil in the row (CSS hides this above 860px). */}
         <button type="button" className="btn ghost peek-edit" onClick={onEdit}>
@@ -702,76 +707,21 @@ export function PartsView({ tickets, onStatus, onMenu, onPatch, expandedId, onTo
     );
   }
 
+  // Rows are the same QueueRow the List uses (dates, phone, pill, actions, accordion);
+  // only drag-reordering is off — the tab keeps longest-waiting-first order.
   return (
-    <div className="list-wrap">
+    <div className="list-wrap parts-list">
       <div className="list-group-label">
         <span>Waiting on parts · longest first</span>
         <span className="ln" />
         <span>{list.length}</span>
       </div>
       {list.map((t) => (
-        <PartsRow key={t.id} t={t} expanded={expandedId === t.id} onToggle={onToggleExpand}
-          onPatch={onPatch} onStatus={onStatus} onMenu={onMenu} />
+        <QueueRow key={t.id} t={t} isNext={false} dragging={false} canReorder={false}
+          expanded={expandedId === t.id} onToggle={onToggleExpand} onPatch={onPatch}
+          onRowDragOver={() => {}} startDrag={() => {}} clearDrag={() => {}}
+          onStatus={onStatus} onMenu={onMenu} />
       ))}
-    </div>
-  );
-}
-
-/* Same accordion behavior as the queue rows: click for the read-only peek,
-   pencil for the full inline editor. */
-function PartsRow({ t, expanded, onToggle, onPatch, onStatus, onMenu }: {
-  t: Ticket;
-  expanded: boolean;
-  onToggle: (id: string) => void;
-  onPatch: (id: string, patch: InlinePatch) => void;
-  onStatus: (id: string, s: Status) => void;
-  onMenu: (e: React.MouseEvent, t: Ticket) => void;
-}) {
-  const [bodyMounted, setBodyMounted] = React.useState(expanded);
-  const [mode, setMode] = React.useState<"info" | "edit">("info");
-  React.useEffect(() => { if (expanded) setBodyMounted(true); }, [expanded]);
-
-  const openEditor = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    setMode("edit");
-    if (!expanded) onToggle(t.id);
-  };
-  const headClick = () => {
-    if (window.getSelection()?.toString()) return;
-    onToggle(t.id);
-  };
-
-  return (
-    <div className={`lrow parts-row u${t.urgency} ${expanded ? "expanded" : ""} ${t.deviceType ?? ""}`}>
-      <div className="lrow-head" onClick={headClick}>
-        <span className="done-ic parts-ic"><Icon name="package-search" size={16} /></span>
-        <UrgencyChip u={t.urgency} />
-        <div style={{ minWidth: 0 }}>
-          <div className="nm">{t.name}<SvcTag tag={t.serviceTag} /></div>
-          <div className="ds">{t.desc}</div>
-        </div>
-        <span className="meta-mono l-date done-at" title="Waiting since">
-          <Icon name="clock" />{t.statusChangedAt ? fmtDueAt(t.statusChangedAt) : "—"}
-        </span>
-        <span className="meta-mono l-phone">{t.phone && <><Icon name="phone" />{t.phone}</>}</span>
-        <StatusPillMenu t={t} onStatus={onStatus} />
-        <span className="acts">
-          <button className="iconbtn" title="Edit" onClick={openEditor}><Icon name="pencil" /></button>
-          <button className="iconbtn" title="Quick change" onClick={(e) => { e.stopPropagation(); onMenu(e, t); }}><Icon name="ellipsis-vertical" /></button>
-        </span>
-      </div>
-      <div className="lrow-exp"
-        onTransitionEnd={(e) => { if (e.propertyName === "grid-template-rows" && !expanded) { setBodyMounted(false); setMode("info"); } }}>
-        <div className="lrow-exp-clip">
-          {bodyMounted && (
-            <div className="lrow-exp-body">
-              {mode === "edit"
-                ? <RowExpansion t={t} onPatch={onPatch} />
-                : <RowPeek t={t} onEdit={() => setMode("edit")} />}
-            </div>
-          )}
-        </div>
-      </div>
     </div>
   );
 }
