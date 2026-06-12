@@ -1,6 +1,6 @@
 /* Shared ticket types, config, and helpers (server + client safe). */
 
-export type Status = "todo" | "prog" | "done" | "picked";
+export type Status = "todo" | "prog" | "parts" | "done" | "picked";
 export type Person = "keith" | "garrett" | "marisa";
 export type DeviceType = "desktop" | "laptop" | "printer" | "misc";
 export type ServiceTag = "expedite" | "contract";
@@ -56,11 +56,12 @@ export const URGENCY: Record<number, { label: string; short: string }> = {
 export const STATUS: Record<Status, { label: string; cls: string }> = {
   todo: { label: "To do", cls: "todo" },
   prog: { label: "In progress", cls: "prog" },
+  parts: { label: "Waiting on parts", cls: "parts" },
   done: { label: "Complete", cls: "done" },
   picked: { label: "Picked up", cls: "picked" },
 };
 
-export const STATUS_ORDER: Status[] = ["todo", "prog", "done", "picked"];
+export const STATUS_ORDER: Status[] = ["todo", "prog", "parts", "done", "picked"];
 
 /* ---- date helpers ---- */
 export function fmtDate(iso: string): string {

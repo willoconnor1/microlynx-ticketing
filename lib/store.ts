@@ -1,11 +1,11 @@
 /* Data layer — the single source of truth for tickets.
    Uses Neon Postgres when DATABASE_URL is set; otherwise an in-memory
    fallback so the app runs locally before the database is provisioned. */
-import { eq, and, lt } from "drizzle-orm";
+import { eq, and } from "drizzle-orm";
 import { db, hasDb } from "./db";
 import { tickets as ticketsTable, counters, type TicketRow } from "./schema";
 import { SEED_TICKETS, SEED_ARCHIVE, SEED_NEXT_ID } from "./seed";
-import { todayISO, daysBetween, cmpDue, sortQueue, POS_STEP, posBetween, type Ticket, type Status, type Person, type DeviceType, type ServiceTag } from "./tickets";
+import { todayISO, cmpDue, sortQueue, POS_STEP, posBetween, type Ticket, type Status, type Person, type DeviceType, type ServiceTag } from "./tickets";
 
 export interface AppState {
   tickets: Ticket[]; // active (non-archived)
@@ -41,8 +41,6 @@ export interface TicketPatch {
   dropoffAmPm?: "AM" | "PM" | null;
   dueAt?: string | null;
 }
-
-const ARCHIVE_AFTER_DAYS = 3;
 
 /* ============================================================
    In-memory fallback (no DATABASE_URL)
@@ -306,6 +304,8 @@ export async function updateTicket(id: string, patch: TicketPatch): Promise<AppS
         t.status = patch.status;
         t.statusChangedAt = new Date().toISOString();
         t.pickedAt = patch.status === "picked" ? t.pickedAt || todayISO() : null;
+        // Picked up = archived immediately; any other status pulls it back out.
+        t.archivedAt = patch.status === "picked" ? t.archivedAt || todayISO() : null;
       }
       if (reslot) {
         // Urgency or due date changed — the ticket re-enters the automatic order
@@ -340,8 +340,14 @@ export async function updateTicket(id: string, patch: TicketPatch): Promise<AppS
     if (patch.status === "picked") {
       const [cur] = await db.select().from(ticketsTable).where(eq(ticketsTable.id, id)).limit(1);
       set.pickedAt = cur?.pickedAt || todayISO();
+      // Picked up = archived immediately.
+      set.archived = true;
+      set.archivedAt = cur?.archivedAt || todayISO();
     } else {
       set.pickedAt = null;
+      // Any other status pulls the ticket back out of the archive.
+      set.archived = false;
+      set.archivedAt = null;
     }
   }
 
@@ -429,6 +435,9 @@ export async function deleteTicket(id: string): Promise<AppState> {
   return getState();
 }
 
+/* Backstop only: picked-up tickets archive the moment their status changes (see
+   updateTicket). This catches rows picked before that rule existed, or any edge
+   case that slipped through. "parts" tickets are never touched — only "picked". */
 export async function sweepArchive(): Promise<number> {
   const today = todayISO();
 
@@ -436,7 +445,7 @@ export async function sweepArchive(): Promise<number> {
     const m = mem();
     let n = 0;
     for (const t of m.rows) {
-      if (t.status === "picked" && !t.archivedAt && t.pickedAt && daysBetween(t.pickedAt, today) > ARCHIVE_AFTER_DAYS) {
+      if (t.status === "picked" && !t.archivedAt) {
         t.archivedAt = today;
         n++;
       }
@@ -444,11 +453,10 @@ export async function sweepArchive(): Promise<number> {
     return n;
   }
 
-  const cutoff = new Date(Date.now() - ARCHIVE_AFTER_DAYS * 86400000).toISOString().slice(0, 10);
   const res = await db
     .update(ticketsTable)
     .set({ archived: true, archivedAt: today })
-    .where(and(eq(ticketsTable.status, "picked"), eq(ticketsTable.archived, false), lt(ticketsTable.pickedAt, cutoff)))
+    .where(and(eq(ticketsTable.status, "picked"), eq(ticketsTable.archived, false)))
     .returning({ id: ticketsTable.id });
   return res.length;
 }
