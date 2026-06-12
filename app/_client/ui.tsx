@@ -157,7 +157,8 @@ export function DateField({ value, onChange, placeholder, clearable }: {
   const [anchor, setAnchor] = React.useState<DOMRect | null>(null);
   return (
     <>
-      <button type="button" className={`inp mono pickbtn ${value ? "" : "empty"}`}
+      {/* "blank", not "empty" — the global .empty empty-state class would balloon the button */}
+      <button type="button" className={`inp mono pickbtn ${value ? "" : "blank"}`}
         onClick={(e) => setAnchor(e.currentTarget.getBoundingClientRect())}>
         <Icon name="calendar" />
         <span className="pv">{value ? fmtDateLong(value) : placeholder || "Pick a date"}</span>
