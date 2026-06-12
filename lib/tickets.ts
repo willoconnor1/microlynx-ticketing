@@ -31,7 +31,7 @@ export interface Ticket {
   desc: string;
   urgency: number; // 1-5, 1 = most urgent
   charger: boolean;
-  assignedTo?: Person; // defaults to keith
+  assignedTo?: Person[]; // one or more; defaults to [keith]
   deviceType?: DeviceType | null; // null on pre-feature tickets
   serviceTag?: ServiceTag | null; // expedite | contract | null (neither)
   status: Status;
@@ -62,6 +62,11 @@ export const STATUS: Record<Status, { label: string; cls: string }> = {
 };
 
 export const STATUS_ORDER: Status[] = ["todo", "prog", "parts", "done", "picked"];
+
+/* Single source for the "default Keith" rule: every ticket has at least one assignee. */
+export function assignees(t: { assignedTo?: Person[] | null }): Person[] {
+  return t.assignedTo && t.assignedTo.length ? t.assignedTo : ["keith"];
+}
 
 /* ---- date helpers ---- */
 export function fmtDate(iso: string): string {

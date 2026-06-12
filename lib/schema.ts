@@ -7,7 +7,7 @@ export const tickets = pgTable("tickets", {
   desc: text("description").notNull(),
   urgency: integer("urgency").notNull().default(3),
   charger: boolean("charger").notNull().default(false),
-  assignedTo: text("assigned_to").notNull().default("keith"), // keith | garrett | marisa
+  assignedTo: text("assigned_to").array().notNull().default(["keith"]), // one or more of keith | garrett | marisa
   deviceType: text("device_type"), // "desktop" | "laptop" | "printer" | "misc" | null (pre-feature tickets)
   serviceTag: text("service_tag"), // "expedite" | "contract" | null (neither)
   status: text("status").notNull().default("todo"), // todo | prog | done | picked

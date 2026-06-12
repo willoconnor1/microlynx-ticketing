@@ -18,7 +18,7 @@ export interface NewTicketInput {
   desc: string;
   urgency: number;
   charger: boolean;
-  assignedTo?: Person;
+  assignedTo?: Person[];
   deviceType?: DeviceType | null;
   serviceTag?: ServiceTag | null;
   status?: Status;
@@ -33,7 +33,7 @@ export interface TicketPatch {
   desc?: string;
   urgency?: number;
   charger?: boolean;
-  assignedTo?: Person;
+  assignedTo?: Person[];
   deviceType?: DeviceType | null;
   serviceTag?: ServiceTag | null;
   status?: Status;
@@ -50,8 +50,8 @@ const g = globalThis as unknown as { __mlx?: MemDb };
 function mem(): MemDb {
   if (!g.__mlx) {
     const rows = [
-      ...SEED_TICKETS.map((t) => ({ ...t, assignedTo: t.assignedTo ?? ("keith" as Person), dueAt: t.dueAt ?? null, archivedAt: null })),
-      ...SEED_ARCHIVE.map((t) => ({ ...t, assignedTo: t.assignedTo ?? ("keith" as Person), dueAt: t.dueAt ?? null })),
+      ...SEED_TICKETS.map((t) => ({ ...t, assignedTo: t.assignedTo ?? (["keith"] as Person[]), dueAt: t.dueAt ?? null, archivedAt: null })),
+      ...SEED_ARCHIVE.map((t) => ({ ...t, assignedTo: t.assignedTo ?? (["keith"] as Person[]), dueAt: t.dueAt ?? null })),
     ];
     const pos = initialPositions(rows);
     for (const r of rows) r.sortPos = pos.get(r.id) ?? null;
@@ -136,7 +136,10 @@ function rowToTicket(r: TicketRow): Ticket {
     desc: r.desc,
     urgency: r.urgency,
     charger: r.charger,
-    assignedTo: (r.assignedTo as Person) || "keith",
+    // Defensive: tolerate a legacy single-string value during the text -> text[] cutover.
+    assignedTo: Array.isArray(r.assignedTo)
+      ? ((r.assignedTo.length ? r.assignedTo : ["keith"]) as Person[])
+      : [((r.assignedTo as unknown as Person) || "keith")],
     deviceType: (r.deviceType as DeviceType | null) ?? null,
     serviceTag: (r.serviceTag as ServiceTag | null) ?? null,
     status: r.status as Status,
@@ -219,7 +222,7 @@ export async function createTicket(input: NewTicketInput): Promise<AppState> {
       desc: input.desc,
       urgency: input.urgency,
       charger: input.charger,
-      assignedTo: input.assignedTo ?? "keith",
+      assignedTo: input.assignedTo?.length ? input.assignedTo : ["keith"],
       deviceType: input.deviceType ?? null,
       serviceTag: input.serviceTag ?? null,
       status: input.status ?? "todo",
@@ -266,7 +269,7 @@ export async function createTicket(input: NewTicketInput): Promise<AppState> {
     desc: input.desc,
     urgency: input.urgency,
     charger: input.charger,
-    assignedTo: input.assignedTo ?? "keith",
+    assignedTo: input.assignedTo?.length ? input.assignedTo : ["keith"],
     deviceType: input.deviceType ?? null,
     serviceTag: input.serviceTag ?? null,
     status: input.status ?? "todo",
@@ -294,7 +297,7 @@ export async function updateTicket(id: string, patch: TicketPatch): Promise<AppS
       if (patch.desc !== undefined) t.desc = patch.desc;
       if (patch.urgency !== undefined) t.urgency = patch.urgency;
       if (patch.charger !== undefined) t.charger = patch.charger;
-      if (patch.assignedTo !== undefined) t.assignedTo = patch.assignedTo;
+      if (patch.assignedTo !== undefined) t.assignedTo = patch.assignedTo.length ? [...patch.assignedTo] : ["keith"];
       if (patch.deviceType !== undefined) t.deviceType = patch.deviceType ?? null;
       if (patch.serviceTag !== undefined) t.serviceTag = patch.serviceTag ?? null;
       if (patch.dropoff !== undefined) t.dropoff = patch.dropoff;
@@ -328,7 +331,7 @@ export async function updateTicket(id: string, patch: TicketPatch): Promise<AppS
   if (patch.desc !== undefined) set.desc = patch.desc;
   if (patch.urgency !== undefined) set.urgency = patch.urgency;
   if (patch.charger !== undefined) set.charger = patch.charger;
-  if (patch.assignedTo !== undefined) set.assignedTo = patch.assignedTo;
+  if (patch.assignedTo !== undefined) set.assignedTo = patch.assignedTo.length ? patch.assignedTo : ["keith"];
   if (patch.deviceType !== undefined) set.deviceType = patch.deviceType ?? null;
   if (patch.serviceTag !== undefined) set.serviceTag = patch.serviceTag ?? null;
   if (patch.dropoff !== undefined) set.dropoff = patch.dropoff;
