@@ -39,8 +39,9 @@ to Completed.
 ## Ticket fields
 `date` (drop-off), `dropoffAmPm` (morning/afternoon drop-off), `dueAt` (optional half-day
 pickup window — stored as a timestamp where AM = 11:00 and PM = 17:00 Pacific; no exact
-times in the UI), `sortPos` (queue position), `assignedTo` (keith | garrett | marisa,
-default keith), `deviceType` ("desktop" | "laptop" | "printer" | "misc" | null — desktops
+times in the UI), `sortPos` (queue position), `assignedTo` (ARRAY of one or more of
+keith | garrett | marisa, default [keith] — `assignees()` in lib/tickets.ts is the single
+source of the default rule; the DB column is Postgres `text[]`), `deviceType` ("desktop" | "laptop" | "printer" | "misc" | null — desktops
 get a cool blue-white background tint), `serviceTag` ("expedite" | "contract" | null —
 mutually exclusive, purely visual chip, does NOT affect sorting), `name`, `description`,
 `urgency` (1-5), `phone`, `hasCharger` (bool), `status` (todo | prog | parts | done |
@@ -53,9 +54,10 @@ collapsed row shows name/desc, both dates, phone, status, and actions; charger +
 live in the expansion. Rows collapse automatically when a drag starts.
 
 ## Person filter
-All | Keith | Garrett | Marisa tabs filter every view. Manual drag-reordering is disabled
-while a person filter or search is active (hidden rows would get jumped silently and the
-sooner-due confirmation can't see them).
+All | Keith | Garrett | Marisa tabs filter every view. A multi-assigned ticket shows under
+EACH of its people's tabs. Manual drag-reordering is disabled while a person filter or
+search is active (hidden rows would get jumped silently and the sooner-due confirmation
+can't see them).
 
 ## UI conventions
 - Will says "native UI" to mean **app-styled** (matching this design system), not browser/OS

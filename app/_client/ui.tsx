@@ -10,7 +10,7 @@ import {
 import {
   URGENCY, STATUS, STATUS_ORDER, PEOPLE, DEVICE_TYPES, SERVICE_TAGS,
   fmtDate, fmtDateLong, fmtDueAt, fmtDueHalf,
-  buildDueAt, dueParts, sortQueue, sortEntryOrder, todayISO, daysBetween,
+  buildDueAt, dueParts, sortQueue, sortEntryOrder, todayISO, daysBetween, assignees,
   type Ticket, type Status, type Person, type AmPm, type DeviceType, type ServiceTag,
 } from "@/lib/tickets";
 
@@ -199,6 +199,22 @@ export function AvatarChip({ who }: { who?: Person }) {
   const p = who || "keith";
   const label = PEOPLE.find((x) => x.key === p)?.label || "Keith";
   return <span className={`avchip ${p}`} title={`Assigned to ${label}`}>{label[0]}</span>;
+}
+
+/* Overlapping chips for tickets assigned to more than one person. */
+export function AvatarStack({ who }: { who?: Person[] }) {
+  return (
+    <span className="av-stack">
+      {assignees({ assignedTo: who }).map((p) => <AvatarChip key={p} who={p} />)}
+    </span>
+  );
+}
+
+/* "Keith + Garrett" in PEOPLE order. */
+export function assigneeLabel(who?: Person[]): string {
+  return assignees({ assignedTo: who })
+    .map((p) => PEOPLE.find((x) => x.key === p)?.label || p)
+    .join(" + ");
 }
 
 /* ================= LIST VIEW ================= */
@@ -477,7 +493,6 @@ function QueueRow({ t, isNext, dragging, canReorder, expanded, onToggle, onPatch
 /* Compact read-only peek shown first when a row expands: the full description plus
    the details the collapsed row hides, with an Edit button to open the inline editor. */
 function RowPeek({ t, onEdit }: { t: Ticket; onEdit: () => void }) {
-  const who = PEOPLE.find((p) => p.key === (t.assignedTo || "keith"));
   return (
     <div className="exp-peek">
       <div className="peek-desc">{t.desc || <span className="muted">No description</span>}</div>
@@ -487,7 +502,7 @@ function RowPeek({ t, onEdit }: { t: Ticket; onEdit: () => void }) {
           <Icon name="wrench" />
           {DEVICE_TYPES.find((d) => d.key === t.deviceType)?.label || "Device not set"}
         </span>
-        <span className="peek-item"><AvatarChip who={t.assignedTo} />{who ? who.label : "Keith"}</span>
+        <span className="peek-item"><AvatarStack who={t.assignedTo} />{assigneeLabel(t.assignedTo)}</span>
         {t.serviceTag && <span className="peek-item"><SvcTag tag={t.serviceTag} /></span>}
         <span className="peek-spacer" />
         {/* Mobile only — desktop edits via the pencil in the row (CSS hides this above 860px). */}
@@ -597,12 +612,20 @@ function RowExpansion({ t, onPatch }: { t: Ticket; onPatch: (id: string, p: Inli
       <div className="exp-field">
         <label className="lbl">Assigned to</label>
         <div className="toggle people">
-          {PEOPLE.map((p) => (
-            <button key={p.key} type="button" className={t.assignedTo === p.key ? "on" : ""}
-              onClick={() => onPatch(t.id, { assignedTo: p.key })}>
-              <span className={`avchip ${p.key}`}>{p.label[0]}</span>{p.label}
-            </button>
-          ))}
+          {PEOPLE.map((p) => {
+            const cur = assignees(t);
+            const on = cur.includes(p.key);
+            return (
+              <button key={p.key} type="button" className={on ? "on" : ""}
+                onClick={() => {
+                  // Toggle membership in PEOPLE order; never allow zero assignees.
+                  const next = PEOPLE.map((x) => x.key).filter((k) => (k === p.key ? !on : cur.includes(k)));
+                  if (next.length) onPatch(t.id, { assignedTo: next });
+                }}>
+                <span className={`avchip ${p.key}`}>{p.label[0]}</span>{p.label}
+              </button>
+            );
+          })}
         </div>
       </div>
     </div>
@@ -921,7 +944,7 @@ export type FormDraft = {
   dropoff: string;
   dropoffAmPm: AmPm | null;
   dueAt: string | null; // ISO timestamp, built from the due date + AM/PM on submit
-  assignedTo: Person;
+  assignedTo: Person[];
   deviceType: DeviceType | null;
   serviceTag: ServiceTag | null;
 };
@@ -945,7 +968,7 @@ export function TicketForm({ editing, today, onSave, onClose }: {
     // New tickets default to the current half of the day; old tickets may have none.
     dropoffAmPm: editing?.id ? editing?.dropoffAmPm ?? null : (new Date().getHours() < 12 ? "AM" : "PM"),
     dueAt: editing?.dueAt || null,
-    assignedTo: editing?.assignedTo || "keith",
+    assignedTo: assignees({ assignedTo: editing?.assignedTo }),
     // New tickets default to Laptop; legacy tickets show neither selected until set.
     deviceType: editing?.id ? editing?.deviceType ?? null : "laptop",
     serviceTag: editing?.serviceTag ?? null,
@@ -1069,14 +1092,20 @@ export function TicketForm({ editing, today, onSave, onClose }: {
           </div>
 
           <div className="field">
-            <label className="lbl">Assigned to</label>
+            <label className="lbl">Assigned to <span className="opt-hint">tap to add or remove people</span></label>
             <div className="toggle people">
-              {PEOPLE.map((p) => (
-                <button key={p.key} type="button" className={`person ${p.key} ${f.assignedTo === p.key ? "on" : ""}`}
-                  onClick={() => set("assignedTo", p.key)}>
-                  <span className={`avchip ${p.key}`}>{p.label[0]}</span>{p.label}
-                </button>
-              ))}
+              {PEOPLE.map((p) => {
+                const on = f.assignedTo.includes(p.key);
+                return (
+                  <button key={p.key} type="button" className={`person ${p.key} ${on ? "on" : ""}`}
+                    onClick={() => {
+                      const next = PEOPLE.map((x) => x.key).filter((k) => (k === p.key ? !on : f.assignedTo.includes(k)));
+                      if (next.length) set("assignedTo", next);
+                    }}>
+                    <span className={`avchip ${p.key}`}>{p.label[0]}</span>{p.label}
+                  </button>
+                );
+              })}
             </div>
           </div>
 

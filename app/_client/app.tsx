@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { todayISO, posBetween, PEOPLE, DEVICE_TYPES, type Ticket, type Status, type Person } from "@/lib/tickets";
+import { todayISO, posBetween, PEOPLE, DEVICE_TYPES, assignees, type Ticket, type Status, type Person } from "@/lib/tickets";
 import {
   fetchState, saveTicketAction, setUrgencyAction, setStatusAction, moveTicketAction,
   deleteTicketAction, patchTicketAction,
@@ -107,9 +107,10 @@ export default function App({ initialTickets, initialArchive }: { initialTickets
 
   const [eyebrow, title, sub] = VIEW_META[view];
 
-  // Person filter first, then search on top of it.
+  // Person filter first, then search on top of it. A multi-assigned ticket
+  // shows under EACH of its people's tabs.
   const byPerson = React.useMemo(
-    () => (who === "all" ? tickets : tickets.filter((x) => (x.assignedTo || "keith") === who)),
+    () => (who === "all" ? tickets : tickets.filter((x) => assignees(x).includes(who))),
     [tickets, who]
   );
   const listTickets = React.useMemo(() => {
@@ -118,7 +119,7 @@ export default function App({ initialTickets, initialArchive }: { initialTickets
     return byPerson.filter((x) => x.name.toLowerCase().includes(q) || x.desc.toLowerCase().includes(q) || x.id.toLowerCase().includes(q));
   }, [byPerson, search]);
   const visibleArchive = React.useMemo(
-    () => (who === "all" ? archive : archive.filter((x) => (x.assignedTo || "keith") === who)),
+    () => (who === "all" ? archive : archive.filter((x) => assignees(x).includes(who))),
     [archive, who]
   );
   // Reordering needs the full list visible — hidden rows would get jumped silently.
