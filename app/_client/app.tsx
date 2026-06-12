@@ -39,10 +39,13 @@ export default function App({ initialTickets, initialArchive }: { initialTickets
   const busy = React.useRef(false); // suppress polling while the user is mid-interaction
   busy.current = !!drag || !!form || !!menu || !!pendingMove || !!confirmDelete || !!expandedId;
 
-  const apply = (s: { tickets: Ticket[]; archive: Ticket[] }) => {
+  // Stable identities: these reach the memoized list rows, so recreating them
+  // every render would defeat the memo and repaint all rows on any state change.
+  const apply = React.useCallback((s: { tickets: Ticket[]; archive: Ticket[] }) => {
     setTickets(s.tickets);
     setArchive(s.archive);
-  };
+  }, []);
+  const ticketsRef = React.useRef(tickets); ticketsRef.current = tickets;
 
   /* keep the board fresh across devices: poll + refetch on focus */
   React.useEffect(() => {
@@ -55,12 +58,12 @@ export default function App({ initialTickets, initialArchive }: { initialTickets
   React.useEffect(() => { setSearch(""); }, [view]);
 
   /* ---- mutations (optimistic, then reconcile with the server) ---- */
-  const setUrgency = (id: string, u: number) => {
+  const setUrgency = React.useCallback((id: string, u: number) => {
     setTickets((p) => p.map((x) => (x.id === id ? { ...x, urgency: u } : x)));
     setUrgencyAction(id, u).then(apply);
-  };
-  const setStatus = (id: string, s: Status) => {
-    if (s === "done" && tickets.find((x) => x.id === id)?.status !== "done") celebrate();
+  }, [apply]);
+  const setStatus = React.useCallback((id: string, s: Status) => {
+    if (s === "done" && ticketsRef.current.find((x) => x.id === id)?.status !== "done") celebrate();
     setTickets((p) => p.map((x) => {
       if (x.id !== id) return x;
       const next: Ticket = { ...x, status: s, statusChangedAt: new Date().toISOString() };
@@ -68,7 +71,7 @@ export default function App({ initialTickets, initialArchive }: { initialTickets
       return next;
     }));
     setStatusAction(id, s).then(apply);
-  };
+  }, [apply, today]);
   const saveTicket = (data: FormDraft) => {
     setForm(null);
     saveTicketAction(data.id, {
@@ -78,11 +81,11 @@ export default function App({ initialTickets, initialArchive }: { initialTickets
       deviceType: data.deviceType, serviceTag: data.serviceTag,
     }).then(apply);
   };
-  const patchTicket = (id: string, patch: InlinePatch) => {
+  const patchTicket = React.useCallback((id: string, patch: InlinePatch) => {
     setTickets((p) => p.map((x) => (x.id === id ? { ...x, ...patch } : x)));
     patchTicketAction(id, patch).then(apply);
-  };
-  const toggleExpand = (id: string) => setExpandedId((p) => (p === id ? null : id));
+  }, [apply]);
+  const toggleExpand = React.useCallback((id: string) => setExpandedId((p) => (p === id ? null : id)), []);
   const doDelete = (t: Ticket) => {
     setConfirmDelete(null);
     setTickets((p) => p.filter((x) => x.id !== t.id));
@@ -103,7 +106,7 @@ export default function App({ initialTickets, initialArchive }: { initialTickets
     if (m.jumped.length) setPendingMove(m);
     else commitMove(m);
   };
-  const openMenu = (e: React.MouseEvent, ticket: Ticket) => setMenu({ x: e.clientX, y: e.clientY, ticket });
+  const openMenu = React.useCallback((e: React.MouseEvent, ticket: Ticket) => setMenu({ x: e.clientX, y: e.clientY, ticket }), []);
 
   const [eyebrow, title, sub] = VIEW_META[view];
 

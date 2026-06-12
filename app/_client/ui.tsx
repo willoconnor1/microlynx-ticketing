@@ -240,9 +240,19 @@ type ListProps = {
   canReorder: boolean; // off while a person filter or search hides rows
 };
 export function ListView({ tickets, onMenu, onStatus, onMoveRequest, onPatch, expandedId, onToggleExpand, drag, setDrag, canReorder }: ListProps) {
-  const queue = tickets.filter((t) => t.status === "todo" || t.status === "prog");
-  const sorted = [...queue].sort(sortQueue);
-  const done = tickets.filter((t) => t.status === "done").sort(sortEntryOrder);
+  const sorted = React.useMemo(
+    () => tickets.filter((t) => t.status === "todo" || t.status === "prog").sort(sortQueue),
+    [tickets]
+  );
+  const done = React.useMemo(
+    () => tickets.filter((t) => t.status === "done").sort(sortEntryOrder),
+    [tickets]
+  );
+  const byU = React.useMemo(() => {
+    const m = new Map<number, Ticket[]>();
+    for (const u of [1, 2, 3, 4, 5]) m.set(u, sorted.filter((t) => t.urgency === u));
+    return m;
+  }, [sorted]);
   const topId = sorted[0] && sorted[0].id;
 
   const listDrag = drag && drag.from === "list" ? drag : null;
@@ -250,13 +260,32 @@ export function ListView({ tickets, onMenu, onStatus, onMoveRequest, onPatch, ex
   // Where the dragged row would land: urgency group + index among that group's rows.
   const [target, setTarget] = React.useState<{ u: number; index: number } | null>(null);
 
-  const byU = new Map<number, Ticket[]>();
-  for (const u of [1, 2, 3, 4, 5]) byU.set(u, sorted.filter((t) => t.urgency === u));
+  const draggedRef = React.useRef(dragged); draggedRef.current = dragged;
+  const expandedIdRef = React.useRef(expandedId); expandedIdRef.current = expandedId;
 
-  const clearDrag = () => { setDrag(null); setTarget(null); };
+  // dragover fires much faster than the screen refreshes; buffer the latest
+  // candidate and commit at most one target update per animation frame.
+  const pendingTarget = React.useRef<{ u: number; index: number } | null>(null);
+  const targetRaf = React.useRef(0);
+  const queueTarget = React.useCallback((u: number, index: number) => {
+    pendingTarget.current = { u, index };
+    if (targetRaf.current) return;
+    targetRaf.current = requestAnimationFrame(() => {
+      targetRaf.current = 0;
+      const t = pendingTarget.current;
+      setTarget((p) => (p && t && p.u === t.u && p.index === t.index ? p : t));
+    });
+  }, []);
+  React.useEffect(() => () => { if (targetRaf.current) cancelAnimationFrame(targetRaf.current); }, []);
 
-  const startDrag = (e: React.DragEvent, t: Ticket) => {
-    if (expandedId) onToggleExpand(expandedId); // collapse so the drop math sees normal-height rows
+  const clearDrag = React.useCallback(() => {
+    setDrag(null);
+    pendingTarget.current = null;
+    setTarget(null);
+  }, [setDrag]);
+
+  const startDrag = React.useCallback((e: React.DragEvent, t: Ticket) => {
+    if (expandedIdRef.current) onToggleExpand(expandedIdRef.current); // collapse so the drop math sees normal-height rows
     try {
       e.dataTransfer.setData("text/plain", t.id);
       e.dataTransfer.effectAllowed = "move";
@@ -264,45 +293,61 @@ export function ListView({ tickets, onMenu, onStatus, onMoveRequest, onPatch, ex
       if (row) e.dataTransfer.setDragImage(row as HTMLElement, 24, 24);
     } catch {}
     setDrag({ id: t.id, from: "list", over: "list" });
-  };
+  }, [onToggleExpand, setDrag]);
 
-  const overRow = (e: React.DragEvent, u: number, index: number) => {
-    if (!dragged) return;
+  const overRow = React.useCallback((e: React.DragEvent, u: number, index: number) => {
+    if (!draggedRef.current) return;
     e.preventDefault();
     e.dataTransfer.dropEffect = "move";
     const r = (e.currentTarget as HTMLElement).getBoundingClientRect();
-    const idx = index + (e.clientY < r.top + r.height / 2 ? 0 : 1);
-    setTarget((p) => (p && p.u === u && p.index === idx ? p : { u, index: idx }));
-  };
+    queueTarget(u, index + (e.clientY < r.top + r.height / 2 ? 0 : 1));
+  }, [queueTarget]);
 
-  const overTop = (e: React.DragEvent, u: number) => {
-    if (!dragged) return;
+  const overTop = React.useCallback((e: React.DragEvent, u: number) => {
+    if (!draggedRef.current) return;
     e.preventDefault();
-    setTarget((p) => (p && p.u === u && p.index === 0 ? p : { u, index: 0 }));
-  };
+    queueTarget(u, 0);
+  }, [queueTarget]);
 
-  // Native drag doesn't auto-scroll the page in Firefox/Safari — nudge it near the edges.
-  const overList = (e: React.DragEvent) => {
-    if (!dragged) return;
+  // Native drag doesn't auto-scroll the page in Firefox/Safari — nudge it near
+  // the edges. dragover only records the pointer; a per-frame loop does the
+  // scrolling so the speed is steady and the hot event handler stays cheap.
+  const pointerY = React.useRef(-1);
+  const overList = React.useCallback((e: React.DragEvent) => {
+    if (!draggedRef.current) return;
     e.preventDefault();
-    if (e.clientY < 90) window.scrollBy(0, -14);
-    else if (e.clientY > window.innerHeight - 90) window.scrollBy(0, 14);
-  };
+    pointerY.current = e.clientY;
+  }, []);
+  const isDragging = !!dragged;
+  React.useEffect(() => {
+    if (!isDragging) return;
+    let raf = requestAnimationFrame(function tick() {
+      const y = pointerY.current;
+      if (y >= 0) {
+        if (y < 90) window.scrollBy(0, -10);
+        else if (y > window.innerHeight - 90) window.scrollBy(0, 10);
+      }
+      raf = requestAnimationFrame(tick);
+    });
+    return () => { cancelAnimationFrame(raf); pointerY.current = -1; };
+  }, [isDragging]);
 
   const commitDrop = () => {
-    if (!dragged || !target) { clearDrag(); return; }
-    const grp = byU.get(target.u) || [];
-    const beforeItems = grp.slice(0, target.index).filter((t) => t.id !== dragged.id);
-    const afterItems = grp.slice(target.index).filter((t) => t.id !== dragged.id);
+    // pendingTarget may hold a frame not yet flushed to state — trust it first.
+    const tgt = pendingTarget.current || target;
+    if (!dragged || !tgt) { clearDrag(); return; }
+    const grp = byU.get(tgt.u) || [];
+    const beforeItems = grp.slice(0, tgt.index).filter((t) => t.id !== dragged.id);
+    const afterItems = grp.slice(tgt.index).filter((t) => t.id !== dragged.id);
     const prevId = beforeItems.length ? beforeItems[beforeItems.length - 1].id : null;
     const nextId = afterItems.length ? afterItems[0].id : null;
 
     // Simulate the new order to find which sooner-due tickets get jumped.
-    const moved = { ...dragged, urgency: target.u };
+    const moved = { ...dragged, urgency: tgt.u };
     const newOrder: Ticket[] = [];
     for (const u of [1, 2, 3, 4, 5]) {
       const arr = (byU.get(u) || []).filter((t) => t.id !== dragged.id);
-      if (u === target.u) {
+      if (u === tgt.u) {
         const at = nextId ? arr.findIndex((t) => t.id === nextId) : arr.length;
         arr.splice(at === -1 ? arr.length : at, 0, moved);
       }
@@ -318,8 +363,8 @@ export function ListView({ tickets, onMenu, onStatus, onMoveRequest, onPatch, ex
     );
 
     clearDrag();
-    if (newIdx === oldIdx && dragged.urgency === target.u) return; // dropped where it started
-    onMoveRequest({ ticket: dragged, urgency: target.u, prevId, nextId, jumped });
+    if (newIdx === oldIdx && dragged.urgency === tgt.u) return; // dropped where it started
+    onMoveRequest({ ticket: dragged, urgency: tgt.u, prevId, nextId, jumped });
   };
 
   return (
@@ -341,22 +386,21 @@ export function ListView({ tickets, onMenu, onStatus, onMoveRequest, onPatch, ex
               </div>
             )}
             {list.map((t, i) => (
-              <React.Fragment key={t.id}>
-                {lineAt === i && <div className="ins-line" />}
-                <QueueRow t={t}
-                  isNext={t.id === topId}
-                  dragging={!!listDrag && listDrag.id === t.id}
-                  canReorder={canReorder}
-                  expanded={expandedId === t.id}
-                  onToggle={onToggleExpand}
-                  onPatch={onPatch}
-                  onRowDragOver={(e) => overRow(e, u, i)}
-                  startDrag={startDrag}
-                  clearDrag={clearDrag}
-                  onStatus={onStatus} onMenu={onMenu} />
-              </React.Fragment>
+              <QueueRow key={t.id} t={t}
+                isNext={t.id === topId}
+                dragging={!!listDrag && listDrag.id === t.id}
+                canReorder={canReorder}
+                expanded={expandedId === t.id}
+                dropBefore={lineAt === i}
+                dropAfter={lineAt === list.length && i === list.length - 1}
+                groupU={u} index={i}
+                onToggle={onToggleExpand}
+                onPatch={onPatch}
+                onRowOver={overRow}
+                startDrag={startDrag}
+                clearDrag={clearDrag}
+                onStatus={onStatus} onMenu={onMenu} />
             ))}
-            {lineAt >= list.length && list.length > 0 && <div className="ins-line" />}
           </React.Fragment>
         );
       })}
@@ -368,26 +412,7 @@ export function ListView({ tickets, onMenu, onStatus, onMoveRequest, onPatch, ex
             <span className="ln" />
             <span>{done.length}</span>
           </div>
-          {done.map((t) => (
-            <div key={t.id} className={`lrow done-row u${t.urgency} ${t.deviceType ?? ""}`}>
-              <div className="lrow-head static">
-                <span className="done-ic"><Icon name="circle-check" size={16} /></span>
-                <UrgencyChip u={t.urgency} />
-                <div style={{ minWidth: 0 }}>
-                  <div className="nm">{t.name}</div>
-                  <div className="ds">{t.desc}</div>
-                </div>
-                <span className="meta-mono l-date done-at" title="Completed"><Icon name="check" />{t.statusChangedAt ? fmtDueAt(t.statusChangedAt) : "—"}</span>
-                <span className="meta-mono l-phone"><Icon name="phone" />{t.phone}</span>
-                <StatusPillMenu t={t} onStatus={onStatus} />
-                <span className="acts">
-                  <button className="btn pickup" onClick={() => onStatus(t.id, "picked")}>
-                    <Icon name="package-check" />Picked up
-                  </button>
-                </span>
-              </div>
-            </div>
-          ))}
+          {done.map((t) => <DoneRow key={t.id} t={t} onStatus={onStatus} />)}
         </>
       )}
 
@@ -409,16 +434,22 @@ type QueueRowProps = {
   dragging: boolean;
   canReorder: boolean;
   expanded: boolean;
+  dropBefore: boolean; // paint the drop indicator above this row
+  dropAfter: boolean; // ...or below it (end of an urgency group)
+  groupU: number;
+  index: number;
   onToggle: (id: string) => void;
   onPatch: (id: string, patch: InlinePatch) => void;
-  onRowDragOver: (e: React.DragEvent) => void;
+  onRowOver: (e: React.DragEvent, u: number, index: number) => void;
   startDrag: (e: React.DragEvent, t: Ticket) => void;
   clearDrag: () => void;
   onStatus: (id: string, s: Status) => void;
   onMenu: (e: React.MouseEvent, t: Ticket) => void;
 };
 
-function QueueRow({ t, isNext, dragging, canReorder, expanded, onToggle, onPatch, onRowDragOver, startDrag, clearDrag, onStatus, onMenu }: QueueRowProps) {
+/* Memoized because dragover re-renders the list up to once per frame while a row is
+   dragged — without memo every row repaints on each indicator move. */
+const QueueRow = React.memo(function QueueRow({ t, isNext, dragging, canReorder, expanded, dropBefore, dropAfter, groupU, index, onToggle, onPatch, onRowOver, startDrag, clearDrag, onStatus, onMenu }: QueueRowProps) {
   // Keep the expansion body mounted through the collapse animation, then unmount.
   const [bodyMounted, setBodyMounted] = React.useState(expanded);
   // Two stages: a compact read-only peek first; the pencil opens the full inline editor.
@@ -441,11 +472,13 @@ function QueueRow({ t, isNext, dragging, canReorder, expanded, onToggle, onPatch
     isNext ? "next" : "",
     dragging ? "dragging" : "",
     expanded ? "expanded" : "",
+    dropBefore ? "drop-before" : "",
+    dropAfter ? "drop-after" : "",
     t.deviceType ?? "",
   ].join(" ");
 
   return (
-    <div className={cls} onDragOver={onRowDragOver}>
+    <div className={cls} onDragOver={(e) => onRowOver(e, groupU, index)}>
       <div className="lrow-head" onClick={headClick}>
         <span className={`grip ${canReorder ? "" : "off"}`}
           title={canReorder ? "Drag to reorder" : "Reordering is off while filtering"}
@@ -489,7 +522,31 @@ function QueueRow({ t, isNext, dragging, canReorder, expanded, onToggle, onPatch
       </div>
     </div>
   );
-}
+});
+
+/* Completed-section row. Memoized for the same reason as QueueRow. */
+const DoneRow = React.memo(function DoneRow({ t, onStatus }: { t: Ticket; onStatus: (id: string, s: Status) => void }) {
+  return (
+    <div className={`lrow done-row u${t.urgency} ${t.deviceType ?? ""}`}>
+      <div className="lrow-head static">
+        <span className="done-ic"><Icon name="circle-check" size={16} /></span>
+        <UrgencyChip u={t.urgency} />
+        <div style={{ minWidth: 0 }}>
+          <div className="nm">{t.name}</div>
+          <div className="ds">{t.desc}</div>
+        </div>
+        <span className="meta-mono l-date done-at" title="Completed"><Icon name="check" />{t.statusChangedAt ? fmtDueAt(t.statusChangedAt) : "—"}</span>
+        <span className="meta-mono l-phone"><Icon name="phone" />{t.phone}</span>
+        <StatusPillMenu t={t} onStatus={onStatus} />
+        <span className="acts">
+          <button className="btn pickup" onClick={() => onStatus(t.id, "picked")}>
+            <Icon name="package-check" />Picked up
+          </button>
+        </span>
+      </div>
+    </div>
+  );
+});
 
 /* Compact read-only peek shown first when a row expands: the full description plus
    the details the collapsed row hides, with an Edit button to open the inline editor. */
@@ -687,6 +744,7 @@ export function ConfirmMoveDialog({ move, onCancel, onConfirm }: {
 /* ================= WAITING ON PARTS ================= */
 /* Parked tickets, longest-waiting first. The status pill is the way back: set the
    ticket to any other status and it returns to its old slot in the queue. */
+const noDrag = () => {}; // module-level so memoized rows always see the same prop
 export function PartsView({ tickets, onStatus, onMenu, onPatch, expandedId, onToggleExpand }: {
   tickets: Ticket[];
   onStatus: (id: string, s: Status) => void;
@@ -718,8 +776,9 @@ export function PartsView({ tickets, onStatus, onMenu, onPatch, expandedId, onTo
       </div>
       {list.map((t) => (
         <QueueRow key={t.id} t={t} isNext={false} dragging={false} canReorder={false}
+          dropBefore={false} dropAfter={false} groupU={0} index={0}
           expanded={expandedId === t.id} onToggle={onToggleExpand} onPatch={onPatch}
-          onRowDragOver={() => {}} startDrag={() => {}} clearDrag={() => {}}
+          onRowOver={noDrag} startDrag={noDrag} clearDrag={noDrag}
           onStatus={onStatus} onMenu={onMenu} />
       ))}
     </div>
