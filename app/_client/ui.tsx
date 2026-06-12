@@ -1036,6 +1036,8 @@ export function TicketForm({ editing, today, onSave, onClose }: {
     editing?.dueAt ? dueParts(editing.dueAt) : { date: "", half: "PM" }
   );
   const [touched, setTouched] = React.useState(false);
+  // Where the ticket returns to when "Waiting on parts" is toggled back off.
+  const prevStatus = React.useRef<Status>(editing?.status && editing.status !== "parts" ? editing.status : "todo");
   const set = <K extends keyof FormDraft>(k: K, v: FormDraft[K]) => setF((p) => ({ ...p, [k]: v }));
 
   const errs = {
@@ -1124,7 +1126,7 @@ export function TicketForm({ editing, today, onSave, onClose }: {
             </div>
           </div>
 
-          <div className="field-grid">
+          <div className="field-grid trio">
             <div className="field">
               <label className="lbl">Expedite / contract <span className="opt-hint">optional</span></label>
               <div className="toggle svc">
@@ -1137,13 +1139,28 @@ export function TicketForm({ editing, today, onSave, onClose }: {
               </div>
             </div>
             <div className="field">
-              <label className="lbl">Charger left with device?</label>
+              <label className="lbl">Charger left?</label>
               <div className="toggle">
                 <button className={`yes ${f.charger ? "on" : ""}`} onClick={() => set("charger", true)}>
                   <Icon name="plug-zap" />Yes
                 </button>
                 <button className={`no ${!f.charger ? "on" : ""}`} onClick={() => set("charger", false)}>
                   <Icon name="plug" />No
+                </button>
+              </div>
+            </div>
+            <div className="field">
+              <label className="lbl">Waiting on parts?</label>
+              <div className="toggle">
+                <button className={`parts ${f.status === "parts" ? "on" : ""}`}
+                  onClick={() => {
+                    if (f.status !== "parts") { prevStatus.current = f.status; set("status", "parts"); }
+                  }}>
+                  <Icon name="package-search" />Yes
+                </button>
+                <button className={`no ${f.status !== "parts" ? "on" : ""}`}
+                  onClick={() => { if (f.status === "parts") set("status", prevStatus.current); }}>
+                  No
                 </button>
               </div>
             </div>

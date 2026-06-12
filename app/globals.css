@@ -452,6 +452,11 @@ button{font-family:inherit}
 .av-stack .avchip+.avchip{margin-left:-6px;box-shadow:0 0 0 1.5px #fff}
 .toggle button.on.expedite{background:#fef3c7;color:#b45309}
 .toggle button.on.contract{background:var(--gray-100);color:var(--ink-800)}
+.toggle button.on.parts{background:#fef3c7;color:#b45309}
+
+/* Three options on one form line: expedite/contract, charger, waiting on parts */
+.field-grid.trio{grid-template-columns:auto auto auto;justify-content:space-between;gap:10px}
+.field-grid.trio .toggle button{padding:10px 12px;font-size:13px}
 
 /* Arrow from drop-off toward the pickup due date in list rows */
 .date-arrow{color:var(--gray-300)}
@@ -487,7 +492,7 @@ button{font-family:inherit}
 @media(max-width:560px){
   .uselect{flex-wrap:wrap}
   .uselect .opt{flex:1 1 28%}
-  .field-grid{grid-template-columns:1fr}
+  .field-grid,.field-grid.trio{grid-template-columns:1fr}
 }
 
 /* ============ Mobile tab sheet ============ */
