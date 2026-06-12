@@ -5,18 +5,19 @@ import {
   Calendar, Phone, Plug, PlugZap, Search, Pencil, EllipsisVertical, Check, X,
   List, SignalHigh, Columns3, Archive, Plus, Menu, Inbox, Wrench, CircleCheck,
   PackageCheck, Clock, Circle, Loader, GripVertical, ChevronLeft, ChevronRight,
-  Trash2, type LucideIcon,
+  Trash2, MoveRight, type LucideIcon,
 } from "lucide-react";
 import {
-  URGENCY, STATUS, STATUS_ORDER, PEOPLE, fmtDate, fmtDateLong, fmtDueAt, fmtDueHalf,
+  URGENCY, STATUS, STATUS_ORDER, PEOPLE, DEVICE_TYPES, SERVICE_TAGS,
+  fmtDate, fmtDateLong, fmtDueAt, fmtDueHalf,
   buildDueAt, dueParts, sortQueue, cmpDue, sortEntryOrder,
-  type Ticket, type Status, type Person, type AmPm,
+  type Ticket, type Status, type Person, type AmPm, type DeviceType, type ServiceTag,
 } from "@/lib/tickets";
 
 /* Field-level edits the expanded row can save. */
 export type InlinePatch = Partial<Pick<Ticket,
   "name" | "phone" | "desc" | "urgency" | "charger" | "assignedTo" | "deviceType" |
-  "dropoff" | "dropoffAmPm" | "dueAt">>;
+  "serviceTag" | "dropoff" | "dropoffAmPm" | "dueAt">>;
 
 export type View = "list" | "urgency" | "status" | "archive";
 export type Drag = { id: string; from: string; over: string } | null;
@@ -29,6 +30,7 @@ const ICONS: Record<string, LucideIcon> = {
   inbox: Inbox, wrench: Wrench, "circle-check": CircleCheck, "package-check": PackageCheck,
   clock: Clock, circle: Circle, loader: Loader, "grip-vertical": GripVertical,
   "chevron-left": ChevronLeft, "chevron-right": ChevronRight, "trash-2": Trash2,
+  "move-right": MoveRight,
 };
 
 const pad2 = (n: number) => String(n).padStart(2, "0");
@@ -51,6 +53,12 @@ export function Charger({ yes }: { yes: boolean }) {
 export function StatusPill({ status }: { status: Status }) {
   const s = STATUS[status] || STATUS.todo;
   return <span className={`spill ${s.cls}`}><span className="d" />{s.label}</span>;
+}
+
+export function SvcTag({ tag }: { tag?: ServiceTag | null }) {
+  if (!tag) return null;
+  const s = SERVICE_TAGS.find((x) => x.key === tag);
+  return <span className={`svc-tag ${tag}`}>{(s?.label || tag).toUpperCase()}</span>;
 }
 
 /* ---------- anchored popover (shared by the pickers below) ---------- */
@@ -539,11 +547,12 @@ function QueueRow({ t, isNext, dragging, canReorder, expanded, onToggle, onPatch
         </span>
         <UrgencyChip u={t.urgency} />
         <div style={{ minWidth: 0 }}>
-          <div className="nm">{t.name}</div>
+          <div className="nm">{t.name}<SvcTag tag={t.serviceTag} /></div>
           <div className="ds">{t.desc}</div>
         </div>
         <span className="meta-mono l-date l-drop" title="Dropped off">
           <Icon name="calendar" />{fmtDate(t.dropoff)}{t.dropoffAmPm ? ` · ${t.dropoffAmPm}` : ""}
+          {t.dueAt && <Icon name="move-right" size={12} className="date-arrow" />}
         </span>
         {t.dueAt
           ? <span className="meta-mono l-date due l-due" title="Pickup due"><Icon name="clock" />{fmtDueHalf(t.dueAt)}</span>
@@ -583,9 +592,10 @@ function RowPeek({ t, onEdit }: { t: Ticket; onEdit: () => void }) {
         <span className="peek-item"><Icon name={t.charger ? "plug-zap" : "plug"} />{t.charger ? "Charger in" : "No charger"}</span>
         <span className="peek-item">
           <Icon name="wrench" />
-          {t.deviceType === "desktop" ? "Desktop" : t.deviceType === "laptop" ? "Laptop" : "Device not set"}
+          {DEVICE_TYPES.find((d) => d.key === t.deviceType)?.label || "Device not set"}
         </span>
         <span className="peek-item"><AvatarChip who={t.assignedTo} />{who ? who.label : "Keith"}</span>
+        {t.serviceTag && <span className="peek-item"><SvcTag tag={t.serviceTag} /></span>}
         <span className="peek-spacer" />
         {/* Mobile only — desktop edits via the pencil in the row (CSS hides this above 860px). */}
         <button type="button" className="btn ghost peek-edit" onClick={onEdit}>
@@ -663,10 +673,21 @@ function RowExpansion({ t, onPatch }: { t: Ticket; onPatch: (id: string, p: Inli
       <div className="exp-field">
         <label className="lbl">Device</label>
         <div className="toggle device">
-          <button type="button" className={t.deviceType === "laptop" ? "on" : ""}
-            onClick={() => onPatch(t.id, { deviceType: "laptop" })}>Laptop</button>
-          <button type="button" className={t.deviceType === "desktop" ? "on" : ""}
-            onClick={() => onPatch(t.id, { deviceType: "desktop" })}>Desktop</button>
+          {DEVICE_TYPES.map((d) => (
+            <button key={d.key} type="button" className={t.deviceType === d.key ? "on" : ""}
+              onClick={() => onPatch(t.id, { deviceType: d.key })}>{d.label}</button>
+          ))}
+        </div>
+      </div>
+      <div className="exp-field">
+        <label className="lbl">Expedite / contract</label>
+        <div className="toggle svc">
+          {SERVICE_TAGS.map((s) => (
+            <button key={s.key} type="button" className={`${s.key} ${t.serviceTag === s.key ? "on" : ""}`}
+              onClick={() => onPatch(t.id, { serviceTag: t.serviceTag === s.key ? null : s.key })}>
+              {s.label}
+            </button>
+          ))}
         </div>
       </div>
       <div className="exp-field">
@@ -1019,7 +1040,8 @@ export type FormDraft = {
   dropoffAmPm: AmPm | null;
   dueAt: string | null; // ISO timestamp, built from the due date + AM/PM on submit
   assignedTo: Person;
-  deviceType: "desktop" | "laptop" | null;
+  deviceType: DeviceType | null;
+  serviceTag: ServiceTag | null;
 };
 
 export function TicketForm({ editing, today, onSave, onClose }: {
@@ -1044,6 +1066,7 @@ export function TicketForm({ editing, today, onSave, onClose }: {
     assignedTo: editing?.assignedTo || "keith",
     // New tickets default to Laptop; legacy tickets show neither selected until set.
     deviceType: editing?.id ? editing?.deviceType ?? null : "laptop",
+    serviceTag: editing?.serviceTag ?? null,
   }));
   // Due date is a half-day pickup window ("Thursday AM"); default PM.
   const [due, setDueState] = React.useState<{ date: string; half: AmPm }>(() =>
@@ -1086,11 +1109,10 @@ export function TicketForm({ editing, today, onSave, onClose }: {
         <div className="modal-body">
           <div className="field-grid">
             <div className="field">
-              <label className="lbl">Drop-off date</label>
-              <div className="dropoff-row">
-                <DateField value={f.dropoff} onChange={(v) => set("dropoff", v)} />
-                <AmPmToggle value={f.dropoffAmPm} onChange={(v) => set("dropoffAmPm", v)} />
-              </div>
+              <label className="lbl">Customer name<span className="req">*</span></label>
+              <input className={`inp ${touched && errs.name ? "bad" : ""}`} placeholder="e.g. Dana Whitlock"
+                value={f.name} onChange={(e) => set("name", e.target.value)} />
+              {touched && errs.name && <div className="err">{errs.name}</div>}
             </div>
             <div className="field">
               <label className="lbl">Phone</label>
@@ -1100,6 +1122,13 @@ export function TicketForm({ editing, today, onSave, onClose }: {
 
           <div className="field-grid">
             <div className="field">
+              <label className="lbl">Drop-off date</label>
+              <div className="dropoff-row">
+                <DateField value={f.dropoff} onChange={(v) => set("dropoff", v)} />
+                <AmPmToggle value={f.dropoffAmPm} onChange={(v) => set("dropoffAmPm", v)} />
+              </div>
+            </div>
+            <div className="field">
               <label className="lbl">Pickup due <span className="opt-hint">optional</span></label>
               <div className="dropoff-row">
                 <DateField value={due.date} clearable placeholder="No due date"
@@ -1108,29 +1137,16 @@ export function TicketForm({ editing, today, onSave, onClose }: {
                   onChange={(v) => setDueState((p) => ({ ...p, half: v }))} />
               </div>
             </div>
-            <div className="field">
-              <label className="lbl">Device</label>
-              <div className="toggle device">
-                <button type="button" className={f.deviceType === "laptop" ? "on" : ""}
-                  onClick={() => set("deviceType", "laptop")}>Laptop</button>
-                <button type="button" className={f.deviceType === "desktop" ? "on" : ""}
-                  onClick={() => set("deviceType", "desktop")}>Desktop</button>
-              </div>
+          </div>
+
+          <div className="field">
+            <label className="lbl">Device</label>
+            <div className="toggle device">
+              {DEVICE_TYPES.map((d) => (
+                <button key={d.key} type="button" className={f.deviceType === d.key ? "on" : ""}
+                  onClick={() => set("deviceType", d.key)}>{d.label}</button>
+              ))}
             </div>
-          </div>
-
-          <div className="field">
-            <label className="lbl">Customer name<span className="req">*</span></label>
-            <input className={`inp ${touched && errs.name ? "bad" : ""}`} placeholder="e.g. Dana Whitlock"
-              value={f.name} onChange={(e) => set("name", e.target.value)} />
-            {touched && errs.name && <div className="err">{errs.name}</div>}
-          </div>
-
-          <div className="field">
-            <label className="lbl">What&apos;s wrong? <span className="opt-hint">optional</span></label>
-            <textarea className="ta"
-              placeholder="Device and the problem in plain words — e.g. &ldquo;MacBook Air, liquid spill, won't boot.&rdquo;"
-              value={f.desc} onChange={(e) => set("desc", e.target.value)} />
           </div>
 
           <div className="field">
@@ -1142,6 +1158,31 @@ export function TicketForm({ editing, today, onSave, onClose }: {
                   <span className="t">{URGENCY[u].short}</span>
                 </div>
               ))}
+            </div>
+          </div>
+
+          <div className="field-grid">
+            <div className="field">
+              <label className="lbl">Expedite / contract <span className="opt-hint">optional</span></label>
+              <div className="toggle svc">
+                {SERVICE_TAGS.map((s) => (
+                  <button key={s.key} type="button" className={`${s.key} ${f.serviceTag === s.key ? "on" : ""}`}
+                    onClick={() => set("serviceTag", f.serviceTag === s.key ? null : s.key)}>
+                    {s.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div className="field">
+              <label className="lbl">Charger left with device?</label>
+              <div className="toggle">
+                <button className={`yes ${f.charger ? "on" : ""}`} onClick={() => set("charger", true)}>
+                  <Icon name="plug-zap" />Yes
+                </button>
+                <button className={`no ${!f.charger ? "on" : ""}`} onClick={() => set("charger", false)}>
+                  <Icon name="plug" />No
+                </button>
+              </div>
             </div>
           </div>
 
@@ -1158,15 +1199,10 @@ export function TicketForm({ editing, today, onSave, onClose }: {
           </div>
 
           <div className="field" style={{ marginBottom: 0 }}>
-            <label className="lbl">Charger left with device?</label>
-            <div className="toggle">
-              <button className={`yes ${f.charger ? "on" : ""}`} onClick={() => set("charger", true)}>
-                <Icon name="plug-zap" />Yes
-              </button>
-              <button className={`no ${!f.charger ? "on" : ""}`} onClick={() => set("charger", false)}>
-                <Icon name="plug" />No
-              </button>
-            </div>
+            <label className="lbl">What&apos;s wrong? <span className="opt-hint">optional</span></label>
+            <textarea className="ta"
+              placeholder="Device and the problem in plain words — e.g. &ldquo;MacBook Air, liquid spill, won't boot.&rdquo;"
+              value={f.desc} onChange={(e) => set("desc", e.target.value)} />
           </div>
         </div>
 
