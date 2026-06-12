@@ -430,7 +430,14 @@ button{font-family:inherit}
 .empty .et{font-family:var(--font-display);font-size:17px;font-weight:700;color:var(--ink-800)}
 .empty .es{font-size:13.5px;color:var(--gray-500);max-width:300px}
 .count-pill{font-family:var(--font-mono);font-size:11px;font-weight:600;color:var(--gray-500);background:var(--gray-100);border-radius:var(--radius-pill);padding:3px 10px;white-space:nowrap}
-.device-counts{font-family:var(--font-mono);font-size:11px;font-weight:600;color:var(--gray-500);white-space:nowrap}
+/* Stats line below the worker tabs: active count + per-device counts with color key */
+.queue-stats{flex-basis:100%;display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+.dev-count{display:inline-flex;align-items:center;gap:6px;font-family:var(--font-mono);font-size:11px;font-weight:600;color:var(--gray-500);white-space:nowrap}
+.dev-dot{width:11px;height:11px;border-radius:3px;border:1px solid rgba(0,0,0,.1);flex:none}
+.dev-dot.desktop{background:#e4edf8}
+.dev-dot.laptop{background:#e6f2e8}
+.dev-dot.printer{background:#f3ecdf}
+.dev-dot.misc{background:#fff}
 
 /* ============ Expedite / contract tag ============ */
 .svc-tag{font-family:var(--font-mono);font-size:9px;font-weight:700;letter-spacing:.08em;padding:2px 7px;border-radius:var(--radius-pill);display:inline-block;vertical-align:middle;margin-left:9px}

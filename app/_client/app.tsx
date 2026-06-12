@@ -125,10 +125,12 @@ export default function App({ initialTickets, initialArchive }: { initialTickets
   // Reordering needs the full list visible — hidden rows would get jumped silently.
   const canReorder = who === "all" && !search.trim();
 
-  // "Active" = actually in the working queue: not picked up, not parked for parts.
-  const activeCount = byPerson.filter((x) => x.status !== "picked" && x.status !== "parts").length;
+  // "Active" = work still to be done: To Do + In Progress only. Complete, Picked Up,
+  // and Waiting on Parts all drop out of these numbers (Garrett's request).
+  const isActive = (x: Ticket) => x.status === "todo" || x.status === "prog";
+  const activeCount = byPerson.filter(isActive).length;
   const deviceCounts = React.useMemo(() => {
-    const active = byPerson.filter((x) => x.status !== "picked" && x.status !== "parts");
+    const active = byPerson.filter(isActive);
     return DEVICE_TYPES
       .map((d) => ({ ...d, n: active.filter((x) => x.deviceType === d.key).length }))
       .filter((d) => d.n > 0);
@@ -162,17 +164,22 @@ export default function App({ initialTickets, initialArchive }: { initialTickets
                 </button>
               ))}
             </div>
-            {view === "list" && <span className="count-pill">{activeCount} active</span>}
-            {view === "list" && deviceCounts.length > 0 && (
-              <span className="device-counts">
-                {deviceCounts.map((d) => `${d.n} ${d.key === "misc" ? "misc" : d.label.toLowerCase() + (d.n === 1 ? "" : "s")}`).join(" · ")}
-              </span>
-            )}
             {showSearch && (
               <div className="searchbox">
                 <Icon name="search" />
                 <input placeholder={view === "archive" ? "Search the vault…" : "Search tickets…"}
                   value={search} onChange={(e) => setSearch(e.target.value)} />
+              </div>
+            )}
+            {view === "list" && (
+              <div className="queue-stats">
+                <span className="count-pill">{activeCount} active</span>
+                {deviceCounts.map((d) => (
+                  <span key={d.key} className="dev-count">
+                    <span className={`dev-dot ${d.key}`} />
+                    {d.n} {d.key === "misc" ? "misc" : d.label.toLowerCase() + (d.n === 1 ? "" : "s")}
+                  </span>
+                ))}
               </div>
             )}
           </div>
