@@ -827,6 +827,8 @@ export function TopNav({ view, setView, onNew, onMobileMenu, partsCount }: {
 
 /* ================= QUICK MENU ================= */
 const STATUS_ICON: Record<Status, string> = { todo: "circle", prog: "loader", parts: "package-search", done: "circle-check", picked: "package-check" };
+/* Garrett wants "Waiting on parts" at the top of the 3-dots menu (the pill menu keeps flow order). */
+const QUICK_STATUS_ORDER: Status[] = ["parts", "todo", "prog", "done", "picked"];
 export function QuickMenu({ ctx, onClose, onUrgency, onStatus, onEdit, onDelete }: {
   ctx: { x: number; y: number; ticket: Ticket };
   onClose: () => void;
@@ -857,7 +859,7 @@ export function QuickMenu({ ctx, onClose, onUrgency, onStatus, onEdit, onDelete 
         </div>
         <div className="pop-div" />
         <div className="pop-sec">Status</div>
-        {STATUS_ORDER.map((s) => (
+        {QUICK_STATUS_ORDER.map((s) => (
           <button key={s} className={`pop-item ${t.status === s ? "on" : ""}`}
             onClick={() => { onStatus(t.id, s); onClose(); }}>
             <Icon name={t.status === s ? "check" : STATUS_ICON[s]} />{STATUS[s].label}
