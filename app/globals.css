@@ -282,7 +282,10 @@ button{font-family:inherit}
 .done-ic{color:var(--success);display:inline-flex;justify-content:center;width:16px}
 .lrow.parts-row{border-left-color:#d97706;background:#fffdf8}
 .parts-ic.done-ic{color:#d97706}
-.lrow.desktop{background:#e4edf8} /* cool tint = desktop computer; state rules below win */
+/* Device-type row shades (state rules below win). Misc + unset stay plain white. */
+.lrow.desktop{background:#e4edf8} /* cool blue = desktop */
+.lrow.laptop{background:#e6f2e8}  /* soft green = laptop */
+.lrow.printer{background:#f3ecdf} /* warm sand = printer */
 .lrow.done-row{border-left-color:var(--success);background:#fcfdfc}
 .lrow.done-row .nm{color:var(--gray-600)}
 .list-group-label.done-label{color:#147a44;margin-top:26px}

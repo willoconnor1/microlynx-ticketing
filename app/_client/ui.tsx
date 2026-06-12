@@ -369,7 +369,7 @@ export function ListView({ tickets, onMenu, onStatus, onMoveRequest, onPatch, ex
             <span>{done.length}</span>
           </div>
           {done.map((t) => (
-            <div key={t.id} className={`lrow done-row u${t.urgency} ${t.deviceType === "desktop" ? "desktop" : ""}`}>
+            <div key={t.id} className={`lrow done-row u${t.urgency} ${t.deviceType ?? ""}`}>
               <div className="lrow-head static">
                 <span className="done-ic"><Icon name="circle-check" size={16} /></span>
                 <UrgencyChip u={t.urgency} />
@@ -441,7 +441,7 @@ function QueueRow({ t, isNext, dragging, canReorder, expanded, onToggle, onPatch
     isNext ? "next" : "",
     dragging ? "dragging" : "",
     expanded ? "expanded" : "",
-    t.deviceType === "desktop" ? "desktop" : "",
+    t.deviceType ?? "",
   ].join(" ");
 
   return (
@@ -707,7 +707,7 @@ export function PartsView({ tickets, onStatus, onMenu }: {
         <span>{list.length}</span>
       </div>
       {list.map((t) => (
-        <div key={t.id} className={`lrow parts-row u${t.urgency} ${t.deviceType === "desktop" ? "desktop" : ""}`}>
+        <div key={t.id} className={`lrow parts-row u${t.urgency} ${t.deviceType ?? ""}`}>
           <div className="lrow-head static">
             <span className="done-ic parts-ic"><Icon name="package-search" size={16} /></span>
             <UrgencyChip u={t.urgency} />
