@@ -282,6 +282,11 @@ button{font-family:inherit}
 .done-ic{color:var(--success);display:inline-flex;justify-content:center;width:16px}
 .lrow.parts-row{border-left-color:#d97706;background:#fffdf8}
 .parts-ic.done-ic{color:#d97706}
+/* Parts rows: the waiting-since stamp spans two date columns (like done rows), and the
+   pill column is widened for the long "Waiting on parts" label by slimming the actions
+   column (two buttons here, not three). */
+.lrow.parts-row .done-at{grid-column:span 2}
+.lrow.parts-row .lrow-head{grid-template-columns:16px 30px minmax(0,1.7fr) 100px 100px 112px 160px 88px}
 /* Device-type row shades (state rules below win). Misc + unset stay plain white. */
 .lrow.desktop{background:#e4edf8} /* cool blue = desktop */
 .lrow.laptop{background:#e6f2e8}  /* soft green = laptop */
@@ -471,7 +476,7 @@ button{font-family:inherit}
   .lrow.done-row .done-at{display:none}
   .lrow.done-row .acts{display:flex}
   .lrow.done-row .spill-sel{display:none}
-  .lrow.parts-row .lrow-head{grid-template-columns:30px minmax(0,1fr) 140px}
+  .lrow.parts-row .lrow-head{grid-template-columns:30px minmax(0,1fr) 168px}
   .lrow.parts-row .done-at{display:none}
   .arow{grid-template-columns:26px minmax(0,1fr) 96px 34px;gap:10px}
   .arow .l-phone,.arow .chg,.arow .a-in{display:none}

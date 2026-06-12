@@ -682,10 +682,13 @@ export function ConfirmMoveDialog({ move, onCancel, onConfirm }: {
 /* ================= WAITING ON PARTS ================= */
 /* Parked tickets, longest-waiting first. The status pill is the way back: set the
    ticket to any other status and it returns to its old slot in the queue. */
-export function PartsView({ tickets, onStatus, onMenu }: {
+export function PartsView({ tickets, onStatus, onMenu, onPatch, expandedId, onToggleExpand }: {
   tickets: Ticket[];
   onStatus: (id: string, s: Status) => void;
   onMenu: (e: React.MouseEvent, t: Ticket) => void;
+  onPatch: (id: string, patch: InlinePatch) => void;
+  expandedId: string | null;
+  onToggleExpand: (id: string) => void;
 }) {
   const list = tickets.filter((t) => t.status === "parts").sort(sortEntryOrder);
 
@@ -707,25 +710,68 @@ export function PartsView({ tickets, onStatus, onMenu }: {
         <span>{list.length}</span>
       </div>
       {list.map((t) => (
-        <div key={t.id} className={`lrow parts-row u${t.urgency} ${t.deviceType ?? ""}`}>
-          <div className="lrow-head static">
-            <span className="done-ic parts-ic"><Icon name="package-search" size={16} /></span>
-            <UrgencyChip u={t.urgency} />
-            <div style={{ minWidth: 0 }}>
-              <div className="nm">{t.name}<SvcTag tag={t.serviceTag} /></div>
-              <div className="ds">{t.desc}</div>
-            </div>
-            <span className="meta-mono l-date done-at" title="Waiting since">
-              <Icon name="clock" />{t.statusChangedAt ? fmtDueAt(t.statusChangedAt) : "—"}
-            </span>
-            <span className="meta-mono l-phone"><Icon name="phone" />{t.phone}</span>
-            <StatusPillMenu t={t} onStatus={onStatus} />
-            <span className="acts">
-              <button className="iconbtn" title="Quick change" onClick={(e) => { e.stopPropagation(); onMenu(e, t); }}><Icon name="ellipsis-vertical" /></button>
-            </span>
-          </div>
-        </div>
+        <PartsRow key={t.id} t={t} expanded={expandedId === t.id} onToggle={onToggleExpand}
+          onPatch={onPatch} onStatus={onStatus} onMenu={onMenu} />
       ))}
+    </div>
+  );
+}
+
+/* Same accordion behavior as the queue rows: click for the read-only peek,
+   pencil for the full inline editor. */
+function PartsRow({ t, expanded, onToggle, onPatch, onStatus, onMenu }: {
+  t: Ticket;
+  expanded: boolean;
+  onToggle: (id: string) => void;
+  onPatch: (id: string, patch: InlinePatch) => void;
+  onStatus: (id: string, s: Status) => void;
+  onMenu: (e: React.MouseEvent, t: Ticket) => void;
+}) {
+  const [bodyMounted, setBodyMounted] = React.useState(expanded);
+  const [mode, setMode] = React.useState<"info" | "edit">("info");
+  React.useEffect(() => { if (expanded) setBodyMounted(true); }, [expanded]);
+
+  const openEditor = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setMode("edit");
+    if (!expanded) onToggle(t.id);
+  };
+  const headClick = () => {
+    if (window.getSelection()?.toString()) return;
+    onToggle(t.id);
+  };
+
+  return (
+    <div className={`lrow parts-row u${t.urgency} ${expanded ? "expanded" : ""} ${t.deviceType ?? ""}`}>
+      <div className="lrow-head" onClick={headClick}>
+        <span className="done-ic parts-ic"><Icon name="package-search" size={16} /></span>
+        <UrgencyChip u={t.urgency} />
+        <div style={{ minWidth: 0 }}>
+          <div className="nm">{t.name}<SvcTag tag={t.serviceTag} /></div>
+          <div className="ds">{t.desc}</div>
+        </div>
+        <span className="meta-mono l-date done-at" title="Waiting since">
+          <Icon name="clock" />{t.statusChangedAt ? fmtDueAt(t.statusChangedAt) : "—"}
+        </span>
+        <span className="meta-mono l-phone">{t.phone && <><Icon name="phone" />{t.phone}</>}</span>
+        <StatusPillMenu t={t} onStatus={onStatus} />
+        <span className="acts">
+          <button className="iconbtn" title="Edit" onClick={openEditor}><Icon name="pencil" /></button>
+          <button className="iconbtn" title="Quick change" onClick={(e) => { e.stopPropagation(); onMenu(e, t); }}><Icon name="ellipsis-vertical" /></button>
+        </span>
+      </div>
+      <div className="lrow-exp"
+        onTransitionEnd={(e) => { if (e.propertyName === "grid-template-rows" && !expanded) { setBodyMounted(false); setMode("info"); } }}>
+        <div className="lrow-exp-clip">
+          {bodyMounted && (
+            <div className="lrow-exp-body">
+              {mode === "edit"
+                ? <RowExpansion t={t} onPatch={onPatch} />
+                : <RowPeek t={t} onEdit={() => setMode("edit")} />}
+            </div>
+          )}
+        </div>
+      </div>
     </div>
   );
 }
