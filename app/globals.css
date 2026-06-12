@@ -244,6 +244,7 @@ button{font-family:inherit}
 .exp-field.full{grid-column:1 / -1}
 .exp-field .ta{min-height:64px}
 .uselect.compact .opt{padding:7px 4px}
+.toggle.device button{padding:10px 14px}
 .toggle.device button.on{background:var(--blue-50);color:var(--blue-700)}
 .lrow:hover{box-shadow:var(--shadow-sm);border-color:var(--acc)}
 .lrow .nm{font-weight:700;color:var(--ink-900);font-size:14.5px;line-height:1.25}
@@ -419,6 +420,18 @@ button{font-family:inherit}
 .empty .et{font-family:var(--font-display);font-size:17px;font-weight:700;color:var(--ink-800)}
 .empty .es{font-size:13.5px;color:var(--gray-500);max-width:300px}
 .count-pill{font-family:var(--font-mono);font-size:11px;font-weight:600;color:var(--gray-500);background:var(--gray-100);border-radius:var(--radius-pill);padding:3px 10px;white-space:nowrap}
+.device-counts{font-family:var(--font-mono);font-size:11px;font-weight:600;color:var(--gray-500);white-space:nowrap}
+
+/* ============ Expedite / contract tag ============ */
+.svc-tag{font-family:var(--font-mono);font-size:9px;font-weight:700;letter-spacing:.08em;padding:2px 7px;border-radius:var(--radius-pill);display:inline-block;vertical-align:middle;margin-left:9px}
+.svc-tag.expedite{background:#fef3c7;color:#b45309}
+.svc-tag.contract{background:var(--gray-100);color:var(--gray-600)}
+.peek-item .svc-tag{margin-left:0}
+.toggle button.on.expedite{background:#fef3c7;color:#b45309}
+.toggle button.on.contract{background:var(--gray-100);color:var(--ink-800)}
+
+/* Arrow from drop-off toward the pickup due date in list rows */
+.date-arrow{color:var(--gray-300)}
 
 /* ============ Responsive ============ */
 @media(max-width:1080px){.nav-eyebrow,.nav-logo .div{display:none}.nav{gap:14px}}

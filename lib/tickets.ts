@@ -2,11 +2,26 @@
 
 export type Status = "todo" | "prog" | "done" | "picked";
 export type Person = "keith" | "garrett" | "marisa";
+export type DeviceType = "desktop" | "laptop" | "printer" | "misc";
+export type ServiceTag = "expedite" | "contract";
 
 export const PEOPLE: { key: Person; label: string }[] = [
   { key: "keith", label: "Keith" },
   { key: "garrett", label: "Garrett" },
   { key: "marisa", label: "Marisa" },
+];
+
+export const DEVICE_TYPES: { key: DeviceType; label: string }[] = [
+  { key: "laptop", label: "Laptop" },
+  { key: "desktop", label: "Desktop" },
+  { key: "printer", label: "Printer" },
+  { key: "misc", label: "Misc" },
+];
+
+/* Expedite and contract are mutually exclusive; most tickets are neither (null). */
+export const SERVICE_TAGS: { key: ServiceTag; label: string }[] = [
+  { key: "expedite", label: "Expedite" },
+  { key: "contract", label: "Contract" },
 ];
 
 export interface Ticket {
@@ -17,7 +32,8 @@ export interface Ticket {
   urgency: number; // 1-5, 1 = most urgent
   charger: boolean;
   assignedTo?: Person; // defaults to keith
-  deviceType?: "desktop" | "laptop" | null; // null on pre-feature tickets
+  deviceType?: DeviceType | null; // null on pre-feature tickets
+  serviceTag?: ServiceTag | null; // expedite | contract | null (neither)
   status: Status;
   dropoff: string; // YYYY-MM-DD
   dropoffAmPm?: "AM" | "PM" | null; // morning vs afternoon drop-off

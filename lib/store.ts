@@ -5,7 +5,7 @@ import { eq, and, lt } from "drizzle-orm";
 import { db, hasDb } from "./db";
 import { tickets as ticketsTable, counters, type TicketRow } from "./schema";
 import { SEED_TICKETS, SEED_ARCHIVE, SEED_NEXT_ID } from "./seed";
-import { todayISO, daysBetween, cmpDue, sortQueue, POS_STEP, posBetween, type Ticket, type Status, type Person } from "./tickets";
+import { todayISO, daysBetween, cmpDue, sortQueue, POS_STEP, posBetween, type Ticket, type Status, type Person, type DeviceType, type ServiceTag } from "./tickets";
 
 export interface AppState {
   tickets: Ticket[]; // active (non-archived)
@@ -19,7 +19,8 @@ export interface NewTicketInput {
   urgency: number;
   charger: boolean;
   assignedTo?: Person;
-  deviceType?: "desktop" | "laptop" | null;
+  deviceType?: DeviceType | null;
+  serviceTag?: ServiceTag | null;
   status?: Status;
   dropoff: string;
   dropoffAmPm?: "AM" | "PM" | null;
@@ -33,7 +34,8 @@ export interface TicketPatch {
   urgency?: number;
   charger?: boolean;
   assignedTo?: Person;
-  deviceType?: "desktop" | "laptop" | null;
+  deviceType?: DeviceType | null;
+  serviceTag?: ServiceTag | null;
   status?: Status;
   dropoff?: string;
   dropoffAmPm?: "AM" | "PM" | null;
@@ -137,7 +139,8 @@ function rowToTicket(r: TicketRow): Ticket {
     urgency: r.urgency,
     charger: r.charger,
     assignedTo: (r.assignedTo as Person) || "keith",
-    deviceType: (r.deviceType as "desktop" | "laptop" | null) ?? null,
+    deviceType: (r.deviceType as DeviceType | null) ?? null,
+    serviceTag: (r.serviceTag as ServiceTag | null) ?? null,
     status: r.status as Status,
     dropoff: r.dropoff,
     dropoffAmPm: r.dropoffAmPm as "AM" | "PM" | null,
@@ -220,6 +223,7 @@ export async function createTicket(input: NewTicketInput): Promise<AppState> {
       charger: input.charger,
       assignedTo: input.assignedTo ?? "keith",
       deviceType: input.deviceType ?? null,
+      serviceTag: input.serviceTag ?? null,
       status: input.status ?? "todo",
       dropoff: input.dropoff,
       dropoffAmPm: input.dropoffAmPm ?? null,
@@ -266,6 +270,7 @@ export async function createTicket(input: NewTicketInput): Promise<AppState> {
     charger: input.charger,
     assignedTo: input.assignedTo ?? "keith",
     deviceType: input.deviceType ?? null,
+    serviceTag: input.serviceTag ?? null,
     status: input.status ?? "todo",
     dropoff: input.dropoff,
     dropoffAmPm: input.dropoffAmPm ?? null,
@@ -293,6 +298,7 @@ export async function updateTicket(id: string, patch: TicketPatch): Promise<AppS
       if (patch.charger !== undefined) t.charger = patch.charger;
       if (patch.assignedTo !== undefined) t.assignedTo = patch.assignedTo;
       if (patch.deviceType !== undefined) t.deviceType = patch.deviceType ?? null;
+      if (patch.serviceTag !== undefined) t.serviceTag = patch.serviceTag ?? null;
       if (patch.dropoff !== undefined) t.dropoff = patch.dropoff;
       if (patch.dropoffAmPm !== undefined) t.dropoffAmPm = patch.dropoffAmPm ?? null;
       if (patch.dueAt !== undefined) t.dueAt = patch.dueAt ?? null;
@@ -324,6 +330,7 @@ export async function updateTicket(id: string, patch: TicketPatch): Promise<AppS
   if (patch.charger !== undefined) set.charger = patch.charger;
   if (patch.assignedTo !== undefined) set.assignedTo = patch.assignedTo;
   if (patch.deviceType !== undefined) set.deviceType = patch.deviceType ?? null;
+  if (patch.serviceTag !== undefined) set.serviceTag = patch.serviceTag ?? null;
   if (patch.dropoff !== undefined) set.dropoff = patch.dropoff;
   if (patch.dropoffAmPm !== undefined) set.dropoffAmPm = patch.dropoffAmPm ?? null;
   if (patch.dueAt !== undefined) set.dueAt = patch.dueAt ? new Date(patch.dueAt) : null;

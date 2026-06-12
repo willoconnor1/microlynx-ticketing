@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { todayISO, posBetween, PEOPLE, type Ticket, type Status, type Person } from "@/lib/tickets";
+import { todayISO, posBetween, PEOPLE, DEVICE_TYPES, type Ticket, type Status, type Person } from "@/lib/tickets";
 import {
   fetchState, saveTicketAction, setUrgencyAction, setStatusAction, moveTicketAction,
   deleteTicketAction, patchTicketAction,
@@ -76,7 +76,7 @@ export default function App({ initialTickets, initialArchive }: { initialTickets
       name: data.name, phone: data.phone, desc: data.desc,
       urgency: data.urgency, charger: data.charger, status: data.status, dropoff: data.dropoff,
       dropoffAmPm: data.dropoffAmPm, dueAt: data.dueAt, assignedTo: data.assignedTo,
-      deviceType: data.deviceType,
+      deviceType: data.deviceType, serviceTag: data.serviceTag,
     }).then(apply);
   };
   const patchTicket = (id: string, patch: InlinePatch) => {
@@ -126,6 +126,12 @@ export default function App({ initialTickets, initialArchive }: { initialTickets
   const canReorder = who === "all" && !search.trim();
 
   const activeCount = byPerson.filter((x) => x.status !== "picked").length;
+  const deviceCounts = React.useMemo(() => {
+    const active = byPerson.filter((x) => x.status !== "picked");
+    return DEVICE_TYPES
+      .map((d) => ({ ...d, n: active.filter((x) => x.deviceType === d.key).length }))
+      .filter((d) => d.n > 0);
+  }, [byPerson]);
   const showSearch = view === "list" || view === "archive";
 
   let body: React.ReactNode;
@@ -155,6 +161,11 @@ export default function App({ initialTickets, initialArchive }: { initialTickets
               ))}
             </div>
             {view === "list" && <span className="count-pill">{activeCount} active</span>}
+            {view === "list" && deviceCounts.length > 0 && (
+              <span className="device-counts">
+                {deviceCounts.map((d) => `${d.n} ${d.key === "misc" ? "misc" : d.label.toLowerCase() + (d.n === 1 ? "" : "s")}`).join(" · ")}
+              </span>
+            )}
             {showSearch && (
               <div className="searchbox">
                 <Icon name="search" />
