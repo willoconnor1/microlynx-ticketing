@@ -4,6 +4,7 @@ export const tickets = pgTable("tickets", {
   id: text("id").primaryKey(), // e.g. MLX-4821
   name: text("name").notNull(),
   phone: text("phone").notNull().default(""),
+  password: text("password").notNull().default(""), // device login password (blank on older tickets)
   desc: text("description").notNull(),
   urgency: integer("urgency").notNull().default(3),
   charger: boolean("charger").notNull().default(false),
