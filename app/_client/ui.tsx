@@ -5,7 +5,7 @@ import {
   Calendar, Phone, Plug, PlugZap, Search, Pencil, EllipsisVertical, Check, X,
   List, Archive, Plus, Menu, Wrench, CircleCheck,
   PackageCheck, PackageSearch, Clock, Circle, Loader, GripVertical, ChevronLeft, ChevronRight,
-  Trash2, MoveRight, RotateCcw, LogOut, KeyRound, Printer, type LucideIcon,
+  Trash2, MoveRight, RotateCcw, LogOut, KeyRound, Printer, MessageCircle, type LucideIcon,
 } from "lucide-react";
 import { logoutAction } from "@/lib/auth-actions";
 import { printTicketLabels } from "./printLabels";
@@ -34,7 +34,7 @@ const ICONS: Record<string, LucideIcon> = {
   "grip-vertical": GripVertical,
   "chevron-left": ChevronLeft, "chevron-right": ChevronRight, "trash-2": Trash2,
   "move-right": MoveRight, "rotate-ccw": RotateCcw, "log-out": LogOut,
-  "key-round": KeyRound, printer: Printer,
+  "key-round": KeyRound, printer: Printer, "message-circle": MessageCircle,
 };
 
 const pad2 = (n: number) => String(n).padStart(2, "0");
@@ -90,7 +90,7 @@ export function StatusPillMenu({ t, onStatus }: { t: Ticket; onStatus: (id: stri
         <span className="d" />{s.label}
       </button>
       {anchor && (
-        <Pop anchor={anchor} width={176} height={212} onClose={() => setAnchor(null)} className="statmenu">
+        <Pop anchor={anchor} width={176} height={252} onClose={() => setAnchor(null)} className="statmenu">
           {STATUS_ORDER.map((k) => (
             <button key={k} type="button" className={`pop-item stat-opt ${t.status === k ? "on" : ""}`}
               onClick={() => { setAnchor(null); if (k !== t.status) onStatus(t.id, k); }}>
@@ -244,7 +244,7 @@ type ListProps = {
 };
 export function ListView({ tickets, onMenu, onStatus, onMoveRequest, onPatch, expandedId, onToggleExpand, drag, setDrag, canReorder }: ListProps) {
   const sorted = React.useMemo(
-    () => tickets.filter((t) => t.status === "todo" || t.status === "prog").sort(sortQueue),
+    () => tickets.filter((t) => t.status === "todo" || t.status === "prog" || t.status === "resp").sort(sortQueue),
     [tickets]
   );
   const done = React.useMemo(
@@ -900,9 +900,9 @@ export function TopNav({ view, setView, onNew, onMobileMenu, partsCount }: {
 }
 
 /* ================= QUICK MENU ================= */
-const STATUS_ICON: Record<Status, string> = { todo: "circle", prog: "loader", parts: "package-search", done: "circle-check", picked: "package-check" };
+const STATUS_ICON: Record<Status, string> = { todo: "circle", prog: "loader", resp: "message-circle", parts: "package-search", done: "circle-check", picked: "package-check" };
 /* Garrett wants "Waiting on parts" at the top of the 3-dots menu (the pill menu keeps flow order). */
-const QUICK_STATUS_ORDER: Status[] = ["parts", "todo", "prog", "done", "picked"];
+const QUICK_STATUS_ORDER: Status[] = ["parts", "todo", "prog", "resp", "done", "picked"];
 export function QuickMenu({ ctx, onClose, onUrgency, onStatus, onEdit, onDelete }: {
   ctx: { x: number; y: number; ticket: Ticket };
   onClose: () => void;
@@ -913,7 +913,7 @@ export function QuickMenu({ ctx, onClose, onUrgency, onStatus, onEdit, onDelete 
 }) {
   const t = ctx.ticket;
   const vw = window.innerWidth, vh = window.innerHeight;
-  const W = 210, H = 450;
+  const W = 210, H = 486;
   const left = Math.max(10, Math.min(ctx.x, vw - W - 10));
   const top = Math.max(10, Math.min(ctx.y, vh - H - 10));
   return (

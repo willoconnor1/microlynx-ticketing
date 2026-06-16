@@ -133,9 +133,9 @@ export default function App({ initialTickets, initialArchive }: { initialTickets
   // Reordering needs the full list visible — hidden rows would get jumped silently.
   const canReorder = who === "all" && !search.trim();
 
-  // "Active" = work still to be done: To Do + In Progress only. Complete, Picked Up,
-  // and Waiting on Parts all drop out of these numbers (Garrett's request).
-  const isActive = (x: Ticket) => x.status === "todo" || x.status === "prog";
+  // "Active" = work still to be done: To Do + In Progress + Awaiting Response. Complete,
+  // Picked Up, and Waiting on Parts all drop out of these numbers (Garrett's request).
+  const isActive = (x: Ticket) => x.status === "todo" || x.status === "prog" || x.status === "resp";
   const activeCount = byPerson.filter(isActive).length;
   const deviceCounts = React.useMemo(() => {
     const active = byPerson.filter(isActive);

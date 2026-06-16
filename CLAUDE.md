@@ -44,8 +44,9 @@ keith | garrett | marisa, default [keith] — `assignees()` in lib/tickets.ts is
 source of the default rule; the DB column is Postgres `text[]`), `deviceType` ("desktop" | "laptop" | "printer" | "misc" | null — desktops
 get a cool blue-white background tint), `serviceTag` ("expedite" | "contract" | null —
 mutually exclusive, purely visual chip, does NOT affect sorting), `name`, `description`,
-`urgency` (1-5), `phone`, `hasCharger` (bool), `status` (todo | prog | parts | done |
-picked), `createdAt`, `statusChangedAt`, `archived`.
+`urgency` (1-5), `phone`, `hasCharger` (bool), `status` (todo | prog | resp | parts | done |
+picked — `resp` = "Awaiting response", behaves like `prog`: stays in the List, counts as
+active), `createdAt`, `statusChangedAt`, `archived`.
 
 ## List rows are accordions
 Clicking a queue row expands it inline (one at a time); the expansion edits every field —
