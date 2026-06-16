@@ -1106,11 +1106,6 @@ export function TicketForm({ editing, today, onSave, onClose }: {
             </div>
           </div>
 
-          <div className="field">
-            <label className="lbl">Device password <span className="opt-hint">optional · for getting into the device</span></label>
-            <input className="inp mono" placeholder="Login / PIN for the device" value={f.password} onChange={(e) => set("password", e.target.value)} />
-          </div>
-
           <div className="field-grid">
             <div className="field">
               <label className="lbl">Drop-off date</label>
@@ -1210,11 +1205,16 @@ export function TicketForm({ editing, today, onSave, onClose }: {
             </div>
           </div>
 
-          <div className="field" style={{ marginBottom: 0 }}>
+          <div className="field">
             <label className="lbl">What&apos;s wrong? <span className="opt-hint">optional</span></label>
             <textarea className="ta"
               placeholder="Device and the problem in plain words — e.g. &ldquo;MacBook Air, liquid spill, won't boot.&rdquo;"
               value={f.desc} onChange={(e) => set("desc", e.target.value)} />
+          </div>
+
+          <div className="field" style={{ marginBottom: 0 }}>
+            <label className="lbl">Device password <span className="opt-hint">optional · for getting into the device</span></label>
+            <input className="inp mono" placeholder="Login / PIN for the device" value={f.password} onChange={(e) => set("password", e.target.value)} />
           </div>
         </div>
 
