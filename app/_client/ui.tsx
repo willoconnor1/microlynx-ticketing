@@ -5,8 +5,9 @@ import {
   Calendar, Phone, Plug, PlugZap, Search, Pencil, EllipsisVertical, Check, X,
   List, Archive, Plus, Menu, Wrench, CircleCheck,
   PackageCheck, PackageSearch, Clock, Circle, Loader, GripVertical, ChevronLeft, ChevronRight,
-  Trash2, MoveRight, RotateCcw, KeyRound, type LucideIcon,
+  Trash2, MoveRight, RotateCcw, KeyRound, Printer, type LucideIcon,
 } from "lucide-react";
+import { printTicketLabels } from "./printLabels";
 import {
   URGENCY, STATUS, STATUS_ORDER, PEOPLE, DEVICE_TYPES, SERVICE_TAGS,
   fmtDate, fmtDateLong, fmtDueAt, fmtDueHalf,
@@ -32,6 +33,7 @@ const ICONS: Record<string, LucideIcon> = {
   "grip-vertical": GripVertical,
   "chevron-left": ChevronLeft, "chevron-right": ChevronRight, "trash-2": Trash2,
   "move-right": MoveRight, "rotate-ccw": RotateCcw, "key-round": KeyRound,
+  printer: Printer,
 };
 
 const pad2 = (n: number) => String(n).padStart(2, "0");
@@ -504,6 +506,7 @@ const QueueRow = React.memo(function QueueRow({ t, isNext, dragging, canReorder,
         <StatusPillMenu t={t} onStatus={onStatus} />
         <span className="acts">
           <button className="iconbtn tick" title="Mark complete" onClick={(e) => { e.stopPropagation(); onStatus(t.id, "done"); }}><Icon name="check" /></button>
+          <button className="iconbtn" title={t.password ? "Print labels (customer + password)" : "Print customer label"} onClick={(e) => { e.stopPropagation(); printTicketLabels(t); }}><Icon name="printer" /></button>
           <button className="iconbtn" title="Edit" onClick={openEditor}><Icon name="pencil" /></button>
           <button className="iconbtn" title="Quick change" onClick={(e) => { e.stopPropagation(); onMenu(e, t); }}><Icon name="ellipsis-vertical" /></button>
         </span>
@@ -569,6 +572,9 @@ function RowPeek({ t, onEdit }: { t: Ticket; onEdit: () => void }) {
           </span>
         )}
         <span className="peek-spacer" />
+        <button type="button" className="btn ghost peek-print" onClick={() => printTicketLabels(t)}>
+          <Icon name="printer" />{t.password ? "Print labels" : "Print label"}
+        </button>
         {/* Mobile only — desktop edits via the pencil in the row (CSS hides this above 860px). */}
         <button type="button" className="btn ghost peek-edit" onClick={onEdit}>
           <Icon name="pencil" />Edit
