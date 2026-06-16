@@ -13,8 +13,9 @@ import type { Ticket } from "@/lib/tickets";
 
 export const SHOP_PHONE = "(253) 853-3298";
 
-/* Served from /public — same origin as the app, so the iframe loads it fine. */
-const LOGO_SRC = "/microlynx-logo.png";
+/* Solid-black wordmark (no tagline) — sharpest for the Dymo's black-only thermal
+   printing. Served from /public, same origin as the app, so the iframe loads it. */
+const LOGO_SRC = "/microlynx-logo-mark-bw.png";
 
 /* The 30336 prints landscape: 2-1/8" wide (54mm) x 1" tall (25.4mm). */
 const LABEL_W = "54mm";
@@ -83,9 +84,9 @@ function buildDoc(t: Ticket): string {
   .pw-value { font-family: "Courier New", monospace; font-weight: 700;
               font-size: 13pt; line-height: 1.05; margin-top: 0.3mm;
               word-break: break-all; }
-  .foot { display: flex; align-items: center; justify-content: space-between;
-          border-top: 0.3mm solid #bbb; padding-top: 0.8mm; gap: 2mm; }
-  .logo { height: 3.8mm; width: auto; }
+  .foot { display: flex; flex-direction: column; align-items: center; gap: 0.4mm;
+          border-top: 0.3mm solid #bbb; padding-top: 0.9mm; }
+  .logo { height: 4.4mm; width: auto; max-width: 47mm; }
   .shop-phone { font-size: 6.5pt; color: #333; white-space: nowrap; }
 </style></head><body>
 ${labels.join("\n")}
