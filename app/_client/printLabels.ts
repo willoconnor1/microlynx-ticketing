@@ -74,9 +74,9 @@ function buildDoc(t: Ticket): string {
   }
   .label:last-child { page-break-after: auto; }
   .top { min-height: 0; }
-  .cust-name { font-weight: 800; font-size: 12pt; line-height: 1.05;
+  .cust-name { font-weight: 800; font-size: 13.5pt; line-height: 1.05;
                white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .cust-phone { font-size: 10pt; margin-top: 0.6mm; letter-spacing: 0.02em; }
+  .cust-phone { font-size: 11.5pt; margin-top: 0.6mm; letter-spacing: 0.02em; }
   .pw-who { font-size: 6.5pt; color: #555; white-space: nowrap;
             overflow: hidden; text-overflow: ellipsis; }
   .pw-label { font-size: 6pt; letter-spacing: 0.1em; text-transform: uppercase;
@@ -86,8 +86,8 @@ function buildDoc(t: Ticket): string {
               word-break: break-all; }
   .foot { display: flex; flex-direction: column; align-items: center; gap: 0.4mm;
           border-top: 0.3mm solid #bbb; padding-top: 0.9mm; }
-  .logo { height: 4.4mm; width: auto; max-width: 47mm; }
-  .shop-phone { font-size: 6.5pt; color: #333; white-space: nowrap; }
+  .logo { height: 3.4mm; width: auto; max-width: 47mm; }
+  .shop-phone { font-size: 7.5pt; color: #333; white-space: nowrap; }
 </style></head><body>
 ${labels.join("\n")}
 </body></html>`;
