@@ -26,6 +26,26 @@ function esc(s: string): string {
     ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]!));
 }
 
+/* Auto-shrink the customer name so a long name never spills off the edge of the
+   label; the very longest names wrap to a second line instead of clipping. */
+function fitName(name: string): { size: number; wrap: boolean } {
+  const n = name.trim().length;
+  if (n <= 15) return { size: 13.5, wrap: false };
+  if (n <= 19) return { size: 11.5, wrap: false };
+  if (n <= 25) return { size: 9.5, wrap: false };
+  return { size: 9, wrap: true };
+}
+
+/* Same idea for the device password: long values step down in size and still
+   wrap (break-all in CSS) rather than running off the sticker. */
+function fitPw(pw: string): number {
+  const n = pw.length;
+  if (n <= 10) return 13;
+  if (n <= 16) return 11;
+  if (n <= 24) return 9;
+  return 7.5;
+}
+
 /* The shop logo + phone shown along the bottom of every sticker. */
 function footer(): string {
   return `<div class="foot">
@@ -35,9 +55,11 @@ function footer(): string {
 }
 
 function customerLabel(t: Ticket): string {
+  const fit = fitName(t.name);
+  const nameStyle = `font-size:${fit.size}pt;${fit.wrap ? "white-space:normal;-webkit-line-clamp:2;" : "white-space:nowrap;"}`;
   return `<div class="label">
     <div class="top">
-      <div class="cust-name">${esc(t.name)}</div>
+      <div class="cust-name${fit.wrap ? " wrap" : ""}" style="${nameStyle}">${esc(t.name)}</div>
       <div class="cust-phone">${esc(t.phone)}</div>
     </div>
     ${footer()}
@@ -45,11 +67,12 @@ function customerLabel(t: Ticket): string {
 }
 
 function passwordLabel(t: Ticket): string {
+  const pw = t.password || "";
   return `<div class="label">
     <div class="top">
       <div class="pw-who">${esc(t.name)} &middot; ${esc(t.id)}</div>
       <div class="pw-label">Device password</div>
-      <div class="pw-value">${esc(t.password || "")}</div>
+      <div class="pw-value" style="font-size:${fitPw(pw)}pt">${esc(pw)}</div>
     </div>
     ${footer()}
   </div>`;
@@ -74,8 +97,11 @@ function buildDoc(t: Ticket): string {
   }
   .label:last-child { page-break-after: auto; }
   .top { min-height: 0; }
-  .cust-name { font-weight: 800; font-size: 13.5pt; line-height: 1.05;
-               white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .cust-name { font-weight: 800; line-height: 1.05; overflow: hidden;
+               text-overflow: ellipsis; }
+  /* Longest names wrap to two lines instead of clipping. */
+  .cust-name.wrap { display: -webkit-box; -webkit-box-orient: vertical;
+                    -webkit-line-clamp: 2; }
   .cust-phone { font-size: 11.5pt; margin-top: 0.6mm; letter-spacing: 0.02em; }
   .pw-who { font-size: 6.5pt; color: #555; white-space: nowrap;
             overflow: hidden; text-overflow: ellipsis; }
