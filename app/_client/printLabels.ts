@@ -84,7 +84,7 @@ function buildDoc(t: Ticket): string {
   .pw-value { font-family: "Courier New", monospace; font-weight: 700;
               font-size: 13pt; line-height: 1.05; margin-top: 0.3mm;
               word-break: break-all; }
-  .foot { display: flex; flex-direction: column; align-items: center; gap: 0.4mm;
+  .foot { display: flex; flex-direction: column; align-items: center; gap: 1.4mm;
           border-top: 0.3mm solid #bbb; padding-top: 0.9mm; }
   .logo { height: 3.4mm; width: auto; max-width: 47mm; }
   .shop-phone { font-size: 7.5pt; color: #333; white-space: nowrap; }
