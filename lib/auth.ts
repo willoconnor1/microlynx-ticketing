@@ -21,7 +21,9 @@ export async function tokenFor(password: string): Promise<string> {
 // which case the gate stays open (see middleware) so a missing env var can't
 // lock the whole shop out.
 export async function expectedToken(): Promise<string | null> {
-  const pw = process.env.APP_PASSWORD;
+  // Trim to match loginAction — a stray space/newline in APP_PASSWORD must not
+  // produce a different token than the one the login flow sets.
+  const pw = process.env.APP_PASSWORD?.trim();
   if (!pw) return null;
   return tokenFor(pw);
 }

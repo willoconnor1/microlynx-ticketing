@@ -543,7 +543,7 @@ button{font-family:inherit}
   backdrop-filter:blur(18px) saturate(120%);
   -webkit-backdrop-filter:blur(18px) saturate(120%);
 }
-.login-logo{ height:34px; width:auto; margin-bottom:22px; }
+.login-logo{ height:54px; width:auto; margin-bottom:22px; }
 .login-eyebrow{
   font-family:var(--font-mono); font-size:var(--text-xs); font-weight:600;
   letter-spacing:var(--tracking-eyebrow); text-transform:uppercase;
@@ -610,5 +610,5 @@ button{font-family:inherit}
 
 @media (max-width:520px){
   .login-card{ padding:32px 22px 24px; }
-  .login-logo{ height:30px; }
+  .login-logo{ height:44px; }
 }
