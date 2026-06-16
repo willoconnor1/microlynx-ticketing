@@ -211,7 +211,7 @@ export async function getState(): Promise<AppState> {
   };
 }
 
-export async function createTicket(input: NewTicketInput): Promise<AppState> {
+export async function createTicket(input: NewTicketInput): Promise<{ state: AppState; id: string }> {
   const nowIso = new Date().toISOString();
   const dueAt = input.dueAt ?? null;
 
@@ -247,7 +247,7 @@ export async function createTicket(input: NewTicketInput): Promise<AppState> {
       if (row) row.sortPos = r.sortPos;
     }
     m.rows.unshift(t);
-    return getState();
+    return { state: await getState(), id };
   }
 
   await ensureSeeded();
@@ -284,7 +284,7 @@ export async function createTicket(input: NewTicketInput): Promise<AppState> {
     sortPos: placed.pos,
     pickedAt: input.status === "picked" ? todayISO() : null,
   });
-  return getState();
+  return { state: await getState(), id };
 }
 
 export async function updateTicket(id: string, patch: TicketPatch): Promise<AppState> {

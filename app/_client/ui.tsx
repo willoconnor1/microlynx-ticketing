@@ -1030,7 +1030,7 @@ export type FormDraft = {
 export function TicketForm({ editing, today, onSave, onClose }: {
   editing: Partial<Ticket>;
   today: string;
-  onSave: (d: FormDraft) => void;
+  onSave: (d: FormDraft, print?: boolean) => void;
   onClose: () => void;
 }) {
   const isEdit = !!editing && !!editing.id;
@@ -1066,13 +1066,13 @@ export function TicketForm({ editing, today, onSave, onClose }: {
   };
   const valid = !errs.name;
 
-  const submit = () => {
+  const submit = (print = false) => {
     setTouched(true);
     if (!valid) return;
     onSave({
       ...f, name: f.name.trim(), phone: f.phone.trim(), password: f.password.trim(), desc: f.desc.trim(),
       dueAt: due.date ? buildDueAt(due.date, due.half) : null,
-    });
+    }, print);
   };
 
   React.useEffect(() => {
@@ -1220,7 +1220,10 @@ export function TicketForm({ editing, today, onSave, onClose }: {
 
         <div className="modal-foot">
           <button className="btn ghost" onClick={onClose}>Cancel</button>
-          <button className="btn primary" onClick={submit}>
+          <button className="btn ghost" onClick={() => submit(true)} title="Save and print the labels">
+            <Icon name="printer" />Save &amp; print
+          </button>
+          <button className="btn primary" onClick={() => submit()}>
             <Icon name="check" />{isEdit ? "Save changes" : "Save ticket"}
           </button>
         </div>

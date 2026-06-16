@@ -12,6 +12,7 @@ import {
   type FormDraft, type PendingMove, type InlinePatch,
 } from "./ui";
 import { celebrate } from "./confetti";
+import { printTicketLabels } from "./printLabels";
 
 const VIEW_META: Record<View, [string, string, string]> = {
   list: ["ACTIVE QUEUE", "Repair tickets", "Most urgent first, then soonest due — grab the top of the list."],
@@ -72,14 +73,18 @@ export default function App({ initialTickets, initialArchive }: { initialTickets
     }));
     setStatusAction(id, s).then(apply);
   }, [apply, today]);
-  const saveTicket = (data: FormDraft) => {
+  const saveTicket = (data: FormDraft, print = false) => {
     setForm(null);
     saveTicketAction(data.id, {
       name: data.name, phone: data.phone, password: data.password, desc: data.desc,
       urgency: data.urgency, charger: data.charger, status: data.status, dropoff: data.dropoff,
       dropoffAmPm: data.dropoffAmPm, dueAt: data.dueAt, assignedTo: data.assignedTo,
       deviceType: data.deviceType, serviceTag: data.serviceTag,
-    }).then(apply);
+    }).then(({ state, id }) => {
+      apply(state);
+      // Print with the real ticket id (server-assigned for new tickets).
+      if (print) printTicketLabels({ ...data, id });
+    });
   };
   const patchTicket = React.useCallback((id: string, patch: InlinePatch) => {
     setTickets((p) => p.map((x) => (x.id === id ? { ...x, ...patch } : x)));

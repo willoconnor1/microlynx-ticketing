@@ -19,8 +19,8 @@ export async function fetchState(): Promise<AppState> {
 export async function saveTicketAction(
   id: string | null,
   data: NewTicketInput
-): Promise<AppState> {
-  if (id) return updateTicket(id, data);
+): Promise<{ state: AppState; id: string }> {
+  if (id) return { state: await updateTicket(id, data), id };
   return createTicket(data);
 }
 
