@@ -75,7 +75,7 @@ export default function App({ initialTickets, initialArchive }: { initialTickets
   const saveTicket = (data: FormDraft) => {
     setForm(null);
     saveTicketAction(data.id, {
-      name: data.name, phone: data.phone, desc: data.desc,
+      name: data.name, phone: data.phone, password: data.password, desc: data.desc,
       urgency: data.urgency, charger: data.charger, status: data.status, dropoff: data.dropoff,
       dropoffAmPm: data.dropoffAmPm, dueAt: data.dueAt, assignedTo: data.assignedTo,
       deviceType: data.deviceType, serviceTag: data.serviceTag,

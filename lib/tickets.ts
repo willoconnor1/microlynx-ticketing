@@ -28,6 +28,7 @@ export interface Ticket {
   id: string;
   name: string;
   phone: string;
+  password?: string; // device login password so techs can get into the customer's computer
   desc: string;
   urgency: number; // 1-5, 1 = most urgent
   charger: boolean;
