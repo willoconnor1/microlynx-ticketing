@@ -5,10 +5,13 @@ import {
   Calendar, Phone, Plug, PlugZap, Search, Pencil, EllipsisVertical, Check, X,
   List, Archive, Plus, Menu, Wrench, CircleCheck,
   PackageCheck, PackageSearch, Clock, Circle, Loader, GripVertical, ChevronLeft, ChevronRight,
-  Trash2, MoveRight, RotateCcw, LogOut, KeyRound, Printer, MessageCircle, type LucideIcon,
+  Trash2, MoveRight, RotateCcw, LogOut, KeyRound, Printer, MessageCircle,
+  Bell, Volume2, VolumeX, Play, CheckCheck, type LucideIcon,
 } from "lucide-react";
 import { logoutAction } from "@/lib/auth-actions";
 import { printTicketLabels } from "./printLabels";
+import { NEW_PRESETS, REORDER_PRESETS, previewChime } from "./chime";
+import type { FeedItem } from "./notifStore";
 import {
   URGENCY, STATUS, STATUS_ORDER, PEOPLE, DEVICE_TYPES, SERVICE_TAGS,
   fmtDate, fmtDateLong, fmtDueAt, fmtDueHalf,
@@ -35,6 +38,7 @@ const ICONS: Record<string, LucideIcon> = {
   "chevron-left": ChevronLeft, "chevron-right": ChevronRight, "trash-2": Trash2,
   "move-right": MoveRight, "rotate-ccw": RotateCcw, "log-out": LogOut,
   "key-round": KeyRound, printer: Printer, "message-circle": MessageCircle,
+  bell: Bell, "volume-2": Volume2, "volume-x": VolumeX, play: Play, "check-check": CheckCheck,
 };
 
 const pad2 = (n: number) => String(n).padStart(2, "0");
@@ -241,8 +245,9 @@ type ListProps = {
   drag: Drag;
   setDrag: (d: Drag) => void;
   canReorder: boolean; // off while a person filter or search hides rows
+  getAlert: (id: string) => boolean; // true while a row should glow (new/moved, unresolved)
 };
-export function ListView({ tickets, onMenu, onStatus, onMoveRequest, onPatch, expandedId, onToggleExpand, drag, setDrag, canReorder }: ListProps) {
+export function ListView({ tickets, onMenu, onStatus, onMoveRequest, onPatch, expandedId, onToggleExpand, drag, setDrag, canReorder, getAlert }: ListProps) {
   const sorted = React.useMemo(
     () => tickets.filter((t) => t.status === "todo" || t.status === "prog" || t.status === "resp").sort(sortQueue),
     [tickets]
@@ -393,6 +398,7 @@ export function ListView({ tickets, onMenu, onStatus, onMoveRequest, onPatch, ex
                 isNext={t.id === topId}
                 dragging={!!listDrag && listDrag.id === t.id}
                 canReorder={canReorder}
+                alert={getAlert(t.id)}
                 expanded={expandedId === t.id}
                 dropBefore={lineAt === i}
                 dropAfter={lineAt === list.length && i === list.length - 1}
@@ -436,6 +442,7 @@ type QueueRowProps = {
   isNext: boolean;
   dragging: boolean;
   canReorder: boolean;
+  alert: boolean; // glow this row (new ticket / moved in queue, not yet resolved)
   expanded: boolean;
   dropBefore: boolean; // paint the drop indicator above this row
   dropAfter: boolean; // ...or below it (end of an urgency group)
@@ -452,7 +459,7 @@ type QueueRowProps = {
 
 /* Memoized because dragover re-renders the list up to once per frame while a row is
    dragged — without memo every row repaints on each indicator move. */
-const QueueRow = React.memo(function QueueRow({ t, isNext, dragging, canReorder, expanded, dropBefore, dropAfter, groupU, index, onToggle, onPatch, onRowOver, startDrag, clearDrag, onStatus, onMenu }: QueueRowProps) {
+const QueueRow = React.memo(function QueueRow({ t, isNext, dragging, canReorder, alert, expanded, dropBefore, dropAfter, groupU, index, onToggle, onPatch, onRowOver, startDrag, clearDrag, onStatus, onMenu }: QueueRowProps) {
   // Keep the expansion body mounted through the collapse animation, then unmount.
   const [bodyMounted, setBodyMounted] = React.useState(expanded);
   // Two stages: a compact read-only peek first; the pencil opens the full inline editor.
@@ -477,6 +484,7 @@ const QueueRow = React.memo(function QueueRow({ t, isNext, dragging, canReorder,
     expanded ? "expanded" : "",
     dropBefore ? "drop-before" : "",
     dropAfter ? "drop-after" : "",
+    alert ? "alert" : "",
     t.deviceType ?? "",
   ].join(" ");
 
@@ -789,7 +797,7 @@ export function PartsView({ tickets, onStatus, onMenu, onPatch, expandedId, onTo
         <span>{list.length}</span>
       </div>
       {list.map((t) => (
-        <QueueRow key={t.id} t={t} isNext={false} dragging={false} canReorder={false}
+        <QueueRow key={t.id} t={t} isNext={false} dragging={false} canReorder={false} alert={false}
           dropBefore={false} dropAfter={false} groupU={0} index={0}
           expanded={expandedId === t.id} onToggle={onToggleExpand} onPatch={onPatch}
           onRowOver={noDrag} startDrag={noDrag} clearDrag={noDrag}
@@ -852,13 +860,113 @@ export function ArchiveView({ archive, search, onStatus }: {
   );
 }
 
+/* ================= NOTIFICATIONS ================= */
+export type NotifProps = {
+  count: number;                 // currently-glowing (unresolved) alerts
+  feed: FeedItem[];              // recent activity, newest first
+  open: boolean;
+  setOpen: (v: boolean) => void;
+  soundOn: boolean;              // is THIS screen the one that plays sound
+  onToggleSound: () => void;
+  soundNew: string;
+  setSoundNew: (k: string) => void;
+  soundReorder: string;
+  setSoundReorder: (k: string) => void;
+  onResolveAll: () => void;
+};
+
+function timeAgo(ts: number): string {
+  const s = Math.max(0, Math.round((Date.now() - ts) / 1000));
+  if (s < 60) return "just now";
+  const m = Math.round(s / 60);
+  if (m < 60) return `${m}m ago`;
+  return `${Math.round(m / 60)}h ago`;
+}
+
+/* App-styled sound picker (no bare <select>): a chip per preset; clicking one
+   selects it AND previews it so Keith hears the choice immediately. */
+function SoundPicker({ label, kind, presets, value, onChange }: {
+  label: string; kind: "new" | "reorder";
+  presets: { key: string; label: string }[]; value: string; onChange: (k: string) => void;
+}) {
+  return (
+    <div className="notif-pick">
+      <span className="notif-pick-label">{label}</span>
+      <div className="notif-chips">
+        {presets.map((p) => (
+          <button key={p.key} className={`notif-chip ${value === p.key ? "on" : ""}`}
+            onClick={() => { onChange(p.key); previewChime(kind, p.key); }}>
+            {value === p.key && <Icon name="play" size={12} />}{p.label}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+export function NotifBell({ notif }: { notif: NotifProps }) {
+  const [anchor, setAnchor] = React.useState<DOMRect | null>(null);
+  const close = () => { notif.setOpen(false); setAnchor(null); };
+  const toggle = (e: React.MouseEvent) => {
+    if (notif.open) close();
+    else { setAnchor(e.currentTarget.getBoundingClientRect()); notif.setOpen(true); }
+  };
+  return (
+    <div className="notif">
+      <button className={`nav-lock notif-bell ${notif.count ? "has" : ""}`}
+        title="Notifications" aria-label="Notifications" onClick={toggle}>
+        <Icon name="bell" size={18} />
+        {notif.count > 0 && <span className="notif-badge">{notif.count > 9 ? "9+" : notif.count}</span>}
+      </button>
+      {notif.open && anchor && (
+        <Pop anchor={anchor} width={326} height={440} onClose={close} className="notif-pop">
+          <div className="notif-head">
+            <span className="notif-title">Activity</span>
+            <button className={`notif-sound ${notif.soundOn ? "on" : ""}`} onClick={notif.onToggleSound}
+              title={notif.soundOn ? "Sound plays on this screen" : "Turn on sound for this screen"}>
+              <Icon name={notif.soundOn ? "volume-2" : "volume-x"} size={14} />
+              {notif.soundOn ? "Sound on" : "Sound off"}
+            </button>
+          </div>
+
+          <div className="notif-list">
+            {notif.feed.length === 0
+              ? <div className="notif-empty">Nothing new — you’re all caught up.</div>
+              : notif.feed.map((f) => (
+                <div key={f.key} className="notif-item">
+                  <span className={`notif-dot ${f.kind}`} />
+                  <span className="notif-text">{f.text}</span>
+                  <span className="notif-time">{timeAgo(f.ts)}</span>
+                </div>
+              ))}
+          </div>
+
+          {notif.soundOn && (
+            <div className="notif-settings">
+              <SoundPicker label="New ticket" kind="new" presets={NEW_PRESETS} value={notif.soundNew} onChange={notif.setSoundNew} />
+              <SoundPicker label="Queue moved" kind="reorder" presets={REORDER_PRESETS} value={notif.soundReorder} onChange={notif.setSoundReorder} />
+            </div>
+          )}
+
+          <div className="notif-foot">
+            <button className="btn primary notif-resolve" onClick={notif.onResolveAll} disabled={notif.count === 0}>
+              <Icon name="check-check" />Resolve all{notif.count > 0 ? ` (${notif.count})` : ""}
+            </button>
+          </div>
+        </Pop>
+      )}
+    </div>
+  );
+}
+
 /* ================= TOP NAV ================= */
 const TABS: [View, string, string][] = [
   ["list", "list", "List"],
   ["parts", "package-search", "Waiting on Parts"],
 ];
-export function TopNav({ view, setView, onNew, onMobileMenu, partsCount }: {
+export function TopNav({ view, setView, onNew, onMobileMenu, partsCount, notif }: {
   view: View; setView: (v: View) => void; onNew: () => void; onMobileMenu: () => void; partsCount: number;
+  notif: NotifProps;
 }) {
   const isArchive = view === "archive";
   return (
@@ -880,6 +988,8 @@ export function TopNav({ view, setView, onNew, onMobileMenu, partsCount }: {
       </nav>
 
       <div className="nav-spacer" />
+
+      <NotifBell notif={notif} />
 
       <button className={`nav-archive ${isArchive ? "on" : ""}`} onClick={() => setView("archive")}>
         <Icon name="archive" /><span>Archive</span>

@@ -152,6 +152,7 @@ function rowToTicket(r: TicketRow): Ticket {
     sortPos: r.sortPos,
     pickedAt: r.pickedAt,
     statusChangedAt: r.statusChangedAt ? new Date(r.statusChangedAt).toISOString() : null,
+    reorderedAt: r.reorderedAt ? new Date(r.reorderedAt).toISOString() : null,
     createdAt: r.createdAt ? new Date(r.createdAt).toISOString() : null,
     archivedAt: r.archivedAt,
   };
@@ -322,6 +323,7 @@ export async function updateTicket(id: string, patch: TicketPatch): Promise<AppS
         const group = groupTickets(m.rows, t.urgency, t.id);
         const placed = placeAt(group, t.id, autoIndex(group, t));
         t.sortPos = placed.pos;
+        t.reorderedAt = new Date().toISOString();
         for (const r of placed.renumber) {
           const row = m.rows.find((x) => x.id === r.id);
           if (row) row.sortPos = r.sortPos;
@@ -374,6 +376,7 @@ export async function updateTicket(id: string, patch: TicketPatch): Promise<AppS
         const group = groupTickets(all, nextUrgency, id);
         const placed = placeAt(group, id, autoIndex(group, probe));
         set.sortPos = placed.pos;
+        set.reorderedAt = new Date();
         await dbApplyRenumber(placed.renumber);
       }
     }
@@ -415,6 +418,7 @@ export async function moveTicket(
       const placed = place(m.rows, t);
       t.urgency = urgency;
       t.sortPos = placed.pos;
+      t.reorderedAt = new Date().toISOString();
       for (const r of placed.renumber) {
         const row = m.rows.find((x) => x.id === r.id);
         if (row) row.sortPos = r.sortPos;
@@ -428,7 +432,7 @@ export async function moveTicket(
   if (t) {
     const placed = place(all, t);
     await dbApplyRenumber(placed.renumber);
-    await db.update(ticketsTable).set({ urgency, sortPos: placed.pos }).where(eq(ticketsTable.id, id));
+    await db.update(ticketsTable).set({ urgency, sortPos: placed.pos, reorderedAt: new Date() }).where(eq(ticketsTable.id, id));
   }
   return getState();
 }
