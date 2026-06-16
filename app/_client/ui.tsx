@@ -5,7 +5,7 @@ import {
   Calendar, Phone, Plug, PlugZap, Search, Pencil, EllipsisVertical, Check, X,
   List, Archive, Plus, Menu, Wrench, CircleCheck,
   PackageCheck, PackageSearch, Clock, Circle, Loader, GripVertical, ChevronLeft, ChevronRight,
-  Trash2, MoveRight, RotateCcw, type LucideIcon,
+  Trash2, MoveRight, RotateCcw, KeyRound, type LucideIcon,
 } from "lucide-react";
 import {
   URGENCY, STATUS, STATUS_ORDER, PEOPLE, DEVICE_TYPES, SERVICE_TAGS,
@@ -16,7 +16,7 @@ import {
 
 /* Field-level edits the expanded row can save. */
 export type InlinePatch = Partial<Pick<Ticket,
-  "name" | "phone" | "desc" | "urgency" | "charger" | "assignedTo" | "deviceType" |
+  "name" | "phone" | "password" | "desc" | "urgency" | "charger" | "assignedTo" | "deviceType" |
   "serviceTag" | "dropoff" | "dropoffAmPm" | "dueAt">>;
 
 export type View = "list" | "parts" | "archive";
@@ -31,7 +31,7 @@ const ICONS: Record<string, LucideIcon> = {
   "package-search": PackageSearch, clock: Clock, circle: Circle, loader: Loader,
   "grip-vertical": GripVertical,
   "chevron-left": ChevronLeft, "chevron-right": ChevronRight, "trash-2": Trash2,
-  "move-right": MoveRight, "rotate-ccw": RotateCcw,
+  "move-right": MoveRight, "rotate-ccw": RotateCcw, "key-round": KeyRound,
 };
 
 const pad2 = (n: number) => String(n).padStart(2, "0");
@@ -555,6 +555,7 @@ function RowPeek({ t, onEdit }: { t: Ticket; onEdit: () => void }) {
     <div className="exp-peek">
       <div className="peek-desc">{t.desc || <span className="muted">No description</span>}</div>
       <div className="peek-meta">
+        {t.password && <span className="peek-item"><Icon name="key-round" />{t.password}</span>}
         <span className="peek-item"><Icon name={t.charger ? "plug-zap" : "plug"} />{t.charger ? "Charger in" : "No charger"}</span>
         <span className="peek-item">
           <Icon name="wrench" />
@@ -580,7 +581,7 @@ function RowPeek({ t, onEdit }: { t: Ticket; onEdit: () => void }) {
 /* Inline editor inside the expanded row. Buttons save instantly; text saves on blur
    (and on unmount, so collapsing mid-edit never loses typing). */
 function RowExpansion({ t, onPatch }: { t: Ticket; onPatch: (id: string, p: InlinePatch) => void }) {
-  const [draft, setDraft] = React.useState({ name: t.name, phone: t.phone, desc: t.desc });
+  const [draft, setDraft] = React.useState({ name: t.name, phone: t.phone, password: t.password ?? "", desc: t.desc });
   const draftRef = React.useRef(draft); draftRef.current = draft;
   const tRef = React.useRef(t); tRef.current = t;
   const onPatchRef = React.useRef(onPatch); onPatchRef.current = onPatch;
@@ -590,6 +591,7 @@ function RowExpansion({ t, onPatch }: { t: Ticket; onPatch: (id: string, p: Inli
     const p: InlinePatch = {};
     if (d.name.trim() && d.name.trim() !== cur.name) p.name = d.name.trim();
     if (d.phone.trim() !== cur.phone) p.phone = d.phone.trim();
+    if (d.password.trim() !== (cur.password ?? "")) p.password = d.password.trim();
     if (d.desc.trim() !== cur.desc) p.desc = d.desc.trim();
     if (Object.keys(p).length) onPatchRef.current(cur.id, p);
   }, []);
@@ -609,6 +611,11 @@ function RowExpansion({ t, onPatch }: { t: Ticket; onPatch: (id: string, p: Inli
         <label className="lbl">Phone</label>
         <input className="inp mono" type="tel" value={draft.phone} onBlur={flush}
           onChange={(e) => setDraft((p) => ({ ...p, phone: e.target.value }))} />
+      </div>
+      <div className="exp-field full">
+        <label className="lbl">Device password</label>
+        <input className="inp mono" placeholder="Login / PIN for the device" value={draft.password} onBlur={flush}
+          onChange={(e) => setDraft((p) => ({ ...p, password: e.target.value }))} />
       </div>
       <div className="exp-field full">
         <label className="lbl">What&apos;s wrong?</label>
@@ -995,6 +1002,7 @@ export type FormDraft = {
   id: string | null;
   name: string;
   phone: string;
+  password: string;
   desc: string;
   urgency: number;
   charger: boolean;
@@ -1018,6 +1026,7 @@ export function TicketForm({ editing, today, onSave, onClose }: {
     id: editing?.id || null,
     name: editing?.name || "",
     phone: editing?.phone || "",
+    password: editing?.password || "",
     desc: editing?.desc || "",
     urgency: editing?.urgency || 3,
     charger: editing?.charger ?? false,
@@ -1049,7 +1058,7 @@ export function TicketForm({ editing, today, onSave, onClose }: {
     setTouched(true);
     if (!valid) return;
     onSave({
-      ...f, name: f.name.trim(), phone: f.phone.trim(), desc: f.desc.trim(),
+      ...f, name: f.name.trim(), phone: f.phone.trim(), password: f.password.trim(), desc: f.desc.trim(),
       dueAt: due.date ? buildDueAt(due.date, due.half) : null,
     });
   };
@@ -1083,6 +1092,11 @@ export function TicketForm({ editing, today, onSave, onClose }: {
               <label className="lbl">Phone</label>
               <input className="inp mono" type="tel" placeholder="(253) 555-0000" value={f.phone} onChange={(e) => set("phone", e.target.value)} />
             </div>
+          </div>
+
+          <div className="field">
+            <label className="lbl">Device password <span className="opt-hint">optional · for getting into the device</span></label>
+            <input className="inp mono" placeholder="Login / PIN for the device" value={f.password} onChange={(e) => set("password", e.target.value)} />
           </div>
 
           <div className="field-grid">

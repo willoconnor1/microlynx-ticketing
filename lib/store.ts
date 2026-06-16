@@ -15,6 +15,7 @@ export interface AppState {
 export interface NewTicketInput {
   name: string;
   phone: string;
+  password?: string;
   desc: string;
   urgency: number;
   charger: boolean;
@@ -30,6 +31,7 @@ export interface NewTicketInput {
 export interface TicketPatch {
   name?: string;
   phone?: string;
+  password?: string;
   desc?: string;
   urgency?: number;
   charger?: boolean;
@@ -133,6 +135,7 @@ function rowToTicket(r: TicketRow): Ticket {
     id: r.id,
     name: r.name,
     phone: r.phone,
+    password: r.password ?? "",
     desc: r.desc,
     urgency: r.urgency,
     charger: r.charger,
@@ -219,6 +222,7 @@ export async function createTicket(input: NewTicketInput): Promise<AppState> {
       id,
       name: input.name,
       phone: input.phone,
+      password: input.password ?? "",
       desc: input.desc,
       urgency: input.urgency,
       charger: input.charger,
@@ -266,6 +270,7 @@ export async function createTicket(input: NewTicketInput): Promise<AppState> {
     id,
     name: input.name,
     phone: input.phone,
+    password: input.password ?? "",
     desc: input.desc,
     urgency: input.urgency,
     charger: input.charger,
@@ -294,6 +299,7 @@ export async function updateTicket(id: string, patch: TicketPatch): Promise<AppS
         (patch.dueAt !== undefined && (patch.dueAt ?? null) !== (t.dueAt ?? null));
       if (patch.name !== undefined) t.name = patch.name;
       if (patch.phone !== undefined) t.phone = patch.phone;
+      if (patch.password !== undefined) t.password = patch.password;
       if (patch.desc !== undefined) t.desc = patch.desc;
       if (patch.urgency !== undefined) t.urgency = patch.urgency;
       if (patch.charger !== undefined) t.charger = patch.charger;
@@ -328,6 +334,7 @@ export async function updateTicket(id: string, patch: TicketPatch): Promise<AppS
   const set: Partial<TicketRow> = {};
   if (patch.name !== undefined) set.name = patch.name;
   if (patch.phone !== undefined) set.phone = patch.phone;
+  if (patch.password !== undefined) set.password = patch.password;
   if (patch.desc !== undefined) set.desc = patch.desc;
   if (patch.urgency !== undefined) set.urgency = patch.urgency;
   if (patch.charger !== undefined) set.charger = patch.charger;
