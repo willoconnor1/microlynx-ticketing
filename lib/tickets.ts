@@ -1,6 +1,6 @@
 /* Shared ticket types, config, and helpers (server + client safe). */
 
-export type Status = "todo" | "prog" | "parts" | "done" | "picked";
+export type Status = "todo" | "prog" | "resp" | "parts" | "done" | "picked";
 export type Person = "keith" | "garrett" | "marisa";
 export type DeviceType = "desktop" | "laptop" | "printer" | "misc";
 export type ServiceTag = "expedite" | "contract";
@@ -57,12 +57,13 @@ export const URGENCY: Record<number, { label: string; short: string }> = {
 export const STATUS: Record<Status, { label: string; cls: string }> = {
   todo: { label: "To do", cls: "todo" },
   prog: { label: "In progress", cls: "prog" },
+  resp: { label: "Awaiting response", cls: "resp" },
   parts: { label: "Waiting on parts", cls: "parts" },
   done: { label: "Complete", cls: "done" },
   picked: { label: "Picked up", cls: "picked" },
 };
 
-export const STATUS_ORDER: Status[] = ["todo", "prog", "parts", "done", "picked"];
+export const STATUS_ORDER: Status[] = ["todo", "prog", "resp", "parts", "done", "picked"];
 
 /* Single source for the "default Keith" rule: every ticket has at least one assignee. */
 export function assignees(t: { assignedTo?: Person[] | null }): Person[] {
