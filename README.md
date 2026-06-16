@@ -19,6 +19,14 @@ npm install
 npm run dev        # http://localhost:3000  (uses an in-memory fallback if no DATABASE_URL)
 ```
 
+## Login gate
+The whole app sits behind a single shared password (`/login`). Set `APP_PASSWORD`
+in the environment (locally in `.env.local`, in production via Vercel env vars) to
+turn the gate on. While it's unset the app stays open. A correct password sets an
+`httpOnly` cookie holding a SHA-256 hash of the password (never the password itself);
+`middleware.ts` checks that cookie on every request and redirects to `/login` if it's
+missing. The "lock" button in the top-right nav logs out. See `lib/auth.ts`.
+
 ## Database
 Set `DATABASE_URL` (Neon Postgres) in `.env` or via the Vercel integration, then:
 ```bash

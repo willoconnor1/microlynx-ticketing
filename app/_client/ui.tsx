@@ -5,8 +5,9 @@ import {
   Calendar, Phone, Plug, PlugZap, Search, Pencil, EllipsisVertical, Check, X,
   List, Archive, Plus, Menu, Wrench, CircleCheck,
   PackageCheck, PackageSearch, Clock, Circle, Loader, GripVertical, ChevronLeft, ChevronRight,
-  Trash2, MoveRight, RotateCcw, type LucideIcon,
+  Trash2, MoveRight, RotateCcw, LogOut, type LucideIcon,
 } from "lucide-react";
+import { logoutAction } from "@/lib/auth-actions";
 import {
   URGENCY, STATUS, STATUS_ORDER, PEOPLE, DEVICE_TYPES, SERVICE_TAGS,
   fmtDate, fmtDateLong, fmtDueAt, fmtDueHalf,
@@ -31,7 +32,7 @@ const ICONS: Record<string, LucideIcon> = {
   "package-search": PackageSearch, clock: Clock, circle: Circle, loader: Loader,
   "grip-vertical": GripVertical,
   "chevron-left": ChevronLeft, "chevron-right": ChevronRight, "trash-2": Trash2,
-  "move-right": MoveRight, "rotate-ccw": RotateCcw,
+  "move-right": MoveRight, "rotate-ccw": RotateCcw, "log-out": LogOut,
 };
 
 const pad2 = (n: number) => String(n).padStart(2, "0");
@@ -873,6 +874,11 @@ export function TopNav({ view, setView, onNew, onMobileMenu, partsCount }: {
       <button className="btn primary" onClick={onNew}>
         <Icon name="plus" /><span className="nt-label">New Ticket</span>
       </button>
+      <form action={logoutAction}>
+        <button className="nav-lock" type="submit" title="Lock workspace" aria-label="Lock workspace">
+          <Icon name="log-out" size={18} />
+        </button>
+      </form>
       <button className="iconbtn nav-menu-btn" onClick={onMobileMenu} style={{ width: 38, height: 38 }}>
         <Icon name="menu" size={20} />
       </button>
