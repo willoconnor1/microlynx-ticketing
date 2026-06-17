@@ -6,7 +6,7 @@ import {
   List, Archive, Plus, Menu, Wrench, CircleCheck,
   PackageCheck, PackageSearch, Clock, Circle, Loader, GripVertical, ChevronLeft, ChevronRight,
   Trash2, MoveRight, RotateCcw, LogOut, KeyRound, Printer, MessageCircle,
-  Bell, Volume2, VolumeX, Play, CheckCheck, type LucideIcon,
+  Bell, Volume2, VolumeX, Play, CheckCheck, Settings, type LucideIcon,
 } from "lucide-react";
 import { logoutAction } from "@/lib/auth-actions";
 import { printTicketLabels } from "./printLabels";
@@ -39,6 +39,7 @@ const ICONS: Record<string, LucideIcon> = {
   "move-right": MoveRight, "rotate-ccw": RotateCcw, "log-out": LogOut,
   "key-round": KeyRound, printer: Printer, "message-circle": MessageCircle,
   bell: Bell, "volume-2": Volume2, "volume-x": VolumeX, play: Play, "check-check": CheckCheck,
+  settings: Settings,
 };
 
 const pad2 = (n: number) => String(n).padStart(2, "0");
@@ -873,6 +874,7 @@ export type NotifProps = {
   soundReorder: string;
   setSoundReorder: (k: string) => void;
   onResolveAll: () => void;
+  onOpenSettings: () => void;
 };
 
 function timeAgo(ts: number): string {
@@ -919,13 +921,13 @@ export function NotifBell({ notif }: { notif: NotifProps }) {
         {notif.count > 0 && <span className="notif-badge">{notif.count > 9 ? "9+" : notif.count}</span>}
       </button>
       {notif.open && anchor && (
-        <Pop anchor={anchor} width={326} height={440} onClose={close} className="notif-pop">
+        <Pop anchor={anchor} width={326} height={430} onClose={close} className="notif-pop">
           <div className="notif-head">
             <span className="notif-title">Activity</span>
-            <button className={`notif-sound ${notif.soundOn ? "on" : ""}`} onClick={notif.onToggleSound}
-              title={notif.soundOn ? "Sound plays on this screen" : "Turn on sound for this screen"}>
+            <button className="notif-gear" onClick={() => { close(); notif.onOpenSettings(); }}
+              title="Notification settings">
               <Icon name={notif.soundOn ? "volume-2" : "volume-x"} size={14} />
-              {notif.soundOn ? "Sound on" : "Sound off"}
+              <Icon name="settings" size={14} />
             </button>
           </div>
 
@@ -941,13 +943,6 @@ export function NotifBell({ notif }: { notif: NotifProps }) {
               ))}
           </div>
 
-          {notif.soundOn && (
-            <div className="notif-settings">
-              <SoundPicker label="New ticket" kind="new" presets={NEW_PRESETS} value={notif.soundNew} onChange={notif.setSoundNew} />
-              <SoundPicker label="Queue moved" kind="reorder" presets={REORDER_PRESETS} value={notif.soundReorder} onChange={notif.setSoundReorder} />
-            </div>
-          )}
-
           <div className="notif-foot">
             <button className="btn primary notif-resolve" onClick={notif.onResolveAll} disabled={notif.count === 0}>
               <Icon name="check-check" />Resolve all{notif.count > 0 ? ` (${notif.count})` : ""}
@@ -955,6 +950,58 @@ export function NotifBell({ notif }: { notif: NotifProps }) {
           </div>
         </Pop>
       )}
+    </div>
+  );
+}
+
+/* ================= SETTINGS (per-screen) ================= */
+export function SettingsModal({ notif, onClose }: { notif: NotifProps; onClose: () => void }) {
+  React.useEffect(() => {
+    const k = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
+    window.addEventListener("keydown", k);
+    return () => window.removeEventListener("keydown", k);
+  }, [onClose]);
+  return (
+    <div className="scrim-dark" onMouseDown={onClose}>
+      <div className="modal settings-modal" onMouseDown={(e) => e.stopPropagation()}>
+        <div className="modal-head">
+          <div>
+            <div className="eyebrow">{"</"} SETTINGS {">"}</div>
+            <h2>This screen</h2>
+          </div>
+          <button className="iconbtn" onClick={onClose} style={{ width: 34, height: 34 }}><Icon name="x" size={18} /></button>
+        </div>
+        <div className="modal-body">
+          <div className="set-row">
+            <div className="set-text">
+              <div className="set-label">Notification sounds on this screen</div>
+              <div className="set-sub">
+                Turn this on for the shop screen Keith works at — that&apos;s how the app knows which
+                screen should make noise. Leave it off on the owners&apos; laptops; they&apos;ll still
+                see new and moved tickets glow, just silently.
+              </div>
+            </div>
+            <button type="button" role="switch" aria-checked={notif.soundOn}
+              className={`switch ${notif.soundOn ? "on" : ""}`} onClick={notif.onToggleSound}
+              title={notif.soundOn ? "Sounds on" : "Sounds off"}>
+              <span className="switch-knob" />
+            </button>
+          </div>
+
+          {notif.soundOn ? (
+            <div className="set-sounds">
+              <SoundPicker label="New ticket sound" kind="new" presets={NEW_PRESETS} value={notif.soundNew} onChange={notif.setSoundNew} />
+              <SoundPicker label="Queue moved sound" kind="reorder" presets={REORDER_PRESETS} value={notif.soundReorder} onChange={notif.setSoundReorder} />
+              <div className="set-hint">Tap a sound to hear it.</div>
+            </div>
+          ) : (
+            <div className="set-off">This screen is silent. Flip the switch above to make it Keith&apos;s screen.</div>
+          )}
+        </div>
+        <div className="modal-foot">
+          <button className="btn primary" onClick={onClose}>Done</button>
+        </div>
+      </div>
     </div>
   );
 }
@@ -990,6 +1037,9 @@ export function TopNav({ view, setView, onNew, onMobileMenu, partsCount, notif }
       <div className="nav-spacer" />
 
       <NotifBell notif={notif} />
+      <button className="nav-lock notif-settings-btn" onClick={notif.onOpenSettings} title="Settings" aria-label="Settings">
+        <Icon name="settings" size={18} />
+      </button>
 
       <button className={`nav-archive ${isArchive ? "on" : ""}`} onClick={() => setView("archive")}>
         <Icon name="archive" /><span>Archive</span>

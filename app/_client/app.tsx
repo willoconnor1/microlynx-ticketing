@@ -8,8 +8,8 @@ import {
 } from "@/lib/actions";
 import {
   Icon, ListView, PartsView, ArchiveView, TopNav, QuickMenu,
-  MobileSheet, TicketForm, ConfirmMoveDialog, ConfirmDeleteDialog, type View, type Drag,
-  type FormDraft, type PendingMove, type InlinePatch,
+  MobileSheet, TicketForm, ConfirmMoveDialog, ConfirmDeleteDialog, SettingsModal,
+  type View, type Drag, type FormDraft, type PendingMove, type InlinePatch,
 } from "./ui";
 import { celebrate } from "./confetti";
 import { printTicketLabels } from "./printLabels";
@@ -53,6 +53,7 @@ export default function App({ initialTickets, initialArchive }: { initialTickets
   const [soundNew, setSoundNew] = React.useState<string>(() => loadSoundChoice("new", DEFAULT_NEW));
   const [soundReorder, setSoundReorder] = React.useState<string>(() => loadSoundChoice("reorder", DEFAULT_REORDER));
   const [notifOpen, setNotifOpen] = React.useState(false);
+  const [settingsOpen, setSettingsOpen] = React.useState(false);
   const [alertTick, setAlertTick] = React.useState(0); // ticks each minute so 2h-old glows expire
 
   const prevSigRef = React.useRef<Map<string, string> | null>(null); // last seen alert per ticket
@@ -301,6 +302,13 @@ export default function App({ initialTickets, initialArchive }: { initialTickets
   const partsCount = tickets.filter((t) => t.status === "parts").length;
   const showSearch = view === "list" || view === "archive";
 
+  const notif = {
+    count: alertSet.size, feed, open: notifOpen, setOpen: setNotifOpen,
+    soundOn, onToggleSound: toggleSound,
+    soundNew, setSoundNew, soundReorder, setSoundReorder,
+    onResolveAll: resolveAll, onOpenSettings: () => setSettingsOpen(true),
+  };
+
   let body: React.ReactNode;
   if (view === "list") body = <ListView tickets={listTickets} onMenu={openMenu} onStatus={setStatus} onMoveRequest={requestMove} onPatch={patchTicket} expandedId={expandedId} onToggleExpand={toggleExpand} drag={drag} setDrag={setDrag} canReorder={canReorder} getAlert={getAlert} />;
   else if (view === "parts") body = <PartsView tickets={byPerson} onStatus={setStatus} onMenu={openMenu} onPatch={patchTicket} expandedId={expandedId} onToggleExpand={toggleExpand} />;
@@ -308,13 +316,7 @@ export default function App({ initialTickets, initialArchive }: { initialTickets
 
   return (
     <>
-      <TopNav view={view} setView={setView} onNew={() => setForm({})} onMobileMenu={() => setSheet(true)} partsCount={partsCount}
-        notif={{
-          count: alertSet.size, feed, open: notifOpen, setOpen: setNotifOpen,
-          soundOn, onToggleSound: toggleSound,
-          soundNew, setSoundNew, soundReorder, setSoundReorder,
-          onResolveAll: resolveAll,
-        }} />
+      <TopNav view={view} setView={setView} onNew={() => setForm({})} onMobileMenu={() => setSheet(true)} partsCount={partsCount} notif={notif} />
 
       <main className="page">
         <div className="page-head">
@@ -369,6 +371,7 @@ export default function App({ initialTickets, initialArchive }: { initialTickets
           onConfirm={() => doDelete(confirmDelete)} />
       )}
       {sheet && <MobileSheet view={view} setView={setView} onClose={() => setSheet(false)} partsCount={partsCount} />}
+      {settingsOpen && <SettingsModal notif={notif} onClose={() => setSettingsOpen(false)} />}
     </>
   );
 }

@@ -110,9 +110,6 @@ button{font-family:inherit}
 .notif-pop{padding:0;overflow:hidden}
 .notif-head{display:flex;align-items:center;justify-content:space-between;padding:11px 13px;border-bottom:1px solid var(--gray-150)}
 .notif-title{font-weight:700;font-size:13.5px;color:var(--ink-900)}
-.notif-sound{display:inline-flex;align-items:center;gap:5px;border:1px solid var(--border-strong);background:#fff;color:var(--gray-500);border-radius:var(--radius-pill);padding:4px 10px;font-size:11.5px;font-weight:600;cursor:pointer;transition:all .12s ease}
-.notif-sound:hover{color:var(--ink-800);border-color:var(--acc)}
-.notif-sound.on{color:var(--acc);border-color:var(--acc);background:var(--acc-soft)}
 .notif-list{max-height:262px;overflow-y:auto;padding:6px}
 .notif-empty{padding:24px 14px;text-align:center;color:var(--gray-400);font-size:12.5px}
 .notif-item{display:grid;grid-template-columns:8px 1fr auto;align-items:center;gap:9px;padding:8px 9px;border-radius:var(--radius-sm)}
@@ -122,7 +119,6 @@ button{font-family:inherit}
 .notif-dot.reorder{background:var(--u3)}
 .notif-text{font-size:13px;color:var(--ink-800);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .notif-time{font-family:var(--font-mono);font-size:10.5px;color:var(--gray-400);white-space:nowrap}
-.notif-settings{border-top:1px solid var(--gray-150);padding:11px 13px;display:flex;flex-direction:column;gap:10px}
 .notif-pick{display:flex;flex-direction:column;gap:6px}
 .notif-pick-label{font-family:var(--font-mono);font-size:9.5px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--gray-400)}
 .notif-chips{display:flex;gap:5px;flex-wrap:wrap}
@@ -133,6 +129,25 @@ button{font-family:inherit}
 .notif-list + .notif-foot{border-top:1px solid var(--gray-150)}
 .notif-resolve{width:100%;justify-content:center}
 .notif-resolve:disabled{opacity:.45;cursor:default;box-shadow:none}
+.notif-gear{display:inline-flex;align-items:center;gap:3px;border:0;background:none;color:var(--gray-400);cursor:pointer;padding:4px 6px;border-radius:var(--radius-sm)}
+.notif-gear:hover{color:var(--acc);background:var(--gray-100)}
+.notif-gear i,.notif-gear svg{width:14px;height:14px}
+.notif-settings-btn:hover{color:var(--acc);border-color:var(--acc)}
+
+/* ---- Settings modal (per-screen) ---- */
+.settings-modal{max-width:444px}
+.set-row{display:flex;align-items:flex-start;justify-content:space-between;gap:16px}
+.set-text{min-width:0}
+.set-label{font-weight:700;font-size:14px;color:var(--ink-900)}
+.set-sub{font-size:12.5px;color:var(--gray-600);margin-top:4px;line-height:1.45}
+.set-sounds{margin-top:18px;padding-top:16px;border-top:1px solid var(--gray-150);display:flex;flex-direction:column;gap:14px}
+.set-hint{font-size:11.5px;color:var(--gray-400)}
+.set-off{margin-top:16px;padding-top:14px;border-top:1px solid var(--gray-150);font-size:12.5px;color:var(--gray-500)}
+.switch{position:relative;flex:none;width:46px;height:26px;border-radius:999px;border:1px solid var(--border-strong);background:var(--gray-200);cursor:pointer;transition:background .15s ease,border-color .15s ease;padding:0}
+.switch .switch-knob{position:absolute;top:2px;left:2px;width:20px;height:20px;border-radius:999px;background:#fff;box-shadow:var(--shadow-sm);transition:left .16s ease}
+.switch.on{background:var(--acc);border-color:var(--acc)}
+.switch.on .switch-knob{left:22px}
+.switch:focus-visible{outline:3px solid var(--acc-ring);outline-offset:2px}
 .btn{font-weight:600;border-radius:var(--radius-sm);border:1px solid transparent;cursor:pointer;font-size:13.5px;padding:10px 15px;display:inline-flex;align-items:center;justify-content:center;gap:8px;transition:all .15s ease;white-space:nowrap}
 .btn i,.btn svg{width:16px;height:16px}
 .btn.primary{background:var(--acc);color:#fff;box-shadow:var(--shadow-brand)}
