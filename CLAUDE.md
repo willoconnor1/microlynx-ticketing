@@ -1,8 +1,8 @@
 # Microlynx Ticketing System
 
 Internal ticketing app for **Microlynx**, a computer/tech repair shop in Gig Harbor, WA.
-Users: **Garrett** (owner), **Marisa** (owner), **Keith** (tech). No login — a private shared
-URL hosted on Vercel.
+Users: **Garrett** (owner), **Marisa** (owner), **Keith** (tech). Password-gated (one shared
+shop password, enforced by `middleware.ts` / `app/login`); hosted on Vercel.
 
 ## What it does
 Tracks repair tickets ranked by urgency (1 = most urgent ... 5 = least), oldest-first within
@@ -44,7 +44,8 @@ keith | garrett | marisa, default [keith] — `assignees()` in lib/tickets.ts is
 source of the default rule; the DB column is Postgres `text[]`), `deviceType` ("desktop" | "laptop" | "printer" | "misc" | null — desktops
 get a cool blue-white background tint), `serviceTag` ("expedite" | "contract" | null —
 mutually exclusive, purely visual chip, does NOT affect sorting), `name`, `description`,
-`urgency` (1-5), `phone`, `hasCharger` (bool), `status` (todo | prog | resp | parts | done |
+`urgency` (1-5), `phone`, `hasCharger` (bool), `password` (device login, blank if none, prints
+on the inside label), `status` (todo | prog | resp | parts | done |
 picked — `resp` = "Awaiting response", behaves like `prog`: stays in the List, counts as
 active), `createdAt`, `statusChangedAt`, `archived`.
 
@@ -80,7 +81,6 @@ machine is Intel/x64 where Turbopack native bindings are unavailable).
 - `app/api/cron/archive` — daily archive sweep, now a backstop only (also runs on every read).
 
 ## Conventions
-- The ranking/sorting rules live in `lib/tickets.ts`; all reads/writes go through `lib/store.ts`.
 - Changing a ticket's status MUST update `statusChangedAt` (store handles this).
 - Run the DB setup with `npm run db:push` after `DATABASE_URL` is set.
 
