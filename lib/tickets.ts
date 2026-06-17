@@ -42,6 +42,7 @@ export interface Ticket {
   sortPos?: number | null; // position within the urgency group (auto from dueAt, manual on drag)
   pickedAt?: string | null; // YYYY-MM-DD set when status === 'picked'
   statusChangedAt?: string | null; // ISO timestamp, updated on any status change
+  reorderedAt?: string | null; // ISO timestamp, set when the queue position changes (drag or urgency/due re-slot)
   createdAt?: string | null; // ISO timestamp
   archivedAt?: string | null; // YYYY-MM-DD set when archived
 }
