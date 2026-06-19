@@ -504,6 +504,8 @@ const QueueRow = React.memo(function QueueRow({ t, isNext, dragging, canReorder,
         <div style={{ minWidth: 0 }}>
           <div className="nm">{t.name}<SvcTag tag={t.serviceTag} /></div>
           <div className="ds">{t.desc}</div>
+          {/* phone-layout only (CSS-shown ≤640): the narrow row has no phone column */}
+          {t.phone && <div className="nm-phone"><Icon name="phone" size={12} />{t.phone}</div>}
         </div>
         <span className="meta-mono l-date l-drop" title="Dropped off">
           <Icon name="calendar" />{fmtDate(t.dropoff)}{t.dropoffAmPm ? ` · ${t.dropoffAmPm}` : ""}
