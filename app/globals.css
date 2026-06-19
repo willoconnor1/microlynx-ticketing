@@ -302,6 +302,10 @@ button{font-family:inherit}
 .lrow:hover{box-shadow:var(--shadow-sm);border-color:var(--acc)}
 .lrow .nm{font-weight:700;color:var(--ink-900);font-size:14.5px;line-height:1.25}
 .lrow .ds{font-size:13px;color:var(--gray-600);margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+/* inline phone line under the name — hidden by default; only the phone layout shows it
+   (desktop/tablet carry the phone in its own column instead) */
+.nm-phone{display:none;align-items:center;gap:5px;margin-top:3px;font-family:var(--font-mono);font-size:11.5px;color:var(--gray-500)}
+.nm-phone svg,.nm-phone i{width:12px;height:12px;color:var(--gray-400)}
 .lrow .acts{display:flex;gap:4px;justify-content:flex-end}
 .lrow.next{border-left-width:4px;box-shadow:0 0 0 1px var(--uc), var(--shadow-md)}
 .lrow.next .nm::after{content:"NEXT UP";font-family:var(--font-mono);font-size:9px;font-weight:700;letter-spacing:.1em;color:var(--u1);background:var(--u1-bg);padding:2px 7px;border-radius:var(--radius-pill);margin-left:9px;vertical-align:middle}
@@ -550,14 +554,17 @@ button{font-family:inherit}
 @media(max-width:1024px), (pointer:coarse){
   /* Drop the drag grip and the per-row icon buttons. Status changes happen on
      the pill; edits happen by tapping the row open. Both dates + status stay. */
-  .lrow-head{grid-template-columns:30px minmax(0,1fr) 112px 100px 140px;gap:12px}
+  /* phone in place of the dates — visible without expanding (phone + status stay,
+     both dates move into the tap-to-expand peek) */
+  .lrow-head{grid-template-columns:30px minmax(0,1fr) 116px 140px;gap:12px}
   .lrow .grip,.lrow-head .acts,.lrow .done-ic{display:none}
-  .lrow .l-phone{display:none} /* the phone number reappears in the expanded peek */
+  .lrow .l-drop,.lrow .l-due{display:none} /* dates swapped out for the phone number */
+  .lrow.done-row .l-phone{display:none} /* completed rows stay name + Picked up only */
   .lrow.done-row .lrow-head{grid-template-columns:30px minmax(0,1fr) 132px}
   .lrow.done-row .done-at{display:none}
   .lrow.done-row .acts{display:flex}
   .lrow.done-row .spill-sel{display:none}
-  .parts-list .lrow-head{grid-template-columns:30px minmax(0,1fr) 112px 100px 160px}
+  .parts-list .lrow-head{grid-template-columns:30px minmax(0,1fr) 116px 160px}
   .arow{grid-template-columns:26px minmax(0,1fr) 116px 32px 120px 34px;gap:14px}
   .arow .a-in{display:none}
   .btn.peek-edit{display:inline-flex} /* row pencil is gone, so the peek carries Edit */
@@ -592,7 +599,8 @@ button{font-family:inherit}
   /* a phone is too narrow for date columns — show urgency + name + status, and
      surface both dates in the tap-to-expand peek. Names finally get real room. */
   .lrow-head{grid-template-columns:30px minmax(0,1fr) auto;gap:10px;padding:14px 14px}
-  .lrow .l-drop,.lrow .l-due{display:none}
+  .lrow .l-drop,.lrow .l-due,.lrow .l-phone{display:none}
+  .nm-phone{display:flex} /* phone shows as a line under the name instead of a column */
   .lrow.done-row .lrow-head{grid-template-columns:30px minmax(0,1fr) auto}
   .parts-list .lrow-head{grid-template-columns:30px minmax(0,1fr) auto}
   .arow{grid-template-columns:26px minmax(0,1fr) 96px 34px;gap:10px}
