@@ -54,7 +54,7 @@ a:hover{color:var(--primary-hover);text-decoration:underline}
    App reset + fixed app tokens (accent, density, urgency palette)
    ============================================================ */
 *{box-sizing:border-box}
-html,body{margin:0;padding:0;height:100%}
+html,body{margin:0;padding:0;height:100%;-webkit-text-size-adjust:100%;text-size-adjust:100%}
 body{background:var(--canvas);color:var(--ink-700);font-family:var(--font-sans);font-size:var(--text-base);line-height:var(--leading-normal);-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
 #root{min-height:100vh}
 button{font-family:inherit}
@@ -158,7 +158,8 @@ button{font-family:inherit}
 .btn.danger{background:var(--danger);color:#fff}
 .btn.danger:hover{background:#b3352c}
 .btn:focus-visible{outline:3px solid var(--acc-ring);outline-offset:1px}
-.nav-menu-btn{display:none}
+/* scoped under .nav so it beats .iconbtn{display:inline-flex} (defined later) */
+.nav .nav-menu-btn{display:none}
 
 /* ============ Page scaffold ============ */
 .page{max-width:1240px;margin:0 auto;padding:26px 24px 64px}
@@ -521,37 +522,91 @@ button{font-family:inherit}
 .date-arrow{color:var(--gray-300)}
 
 /* ============ Responsive ============ */
+/* Layers, widest to narrowest:
+     ≤1080                       trim nav chrome that no longer fits
+     ≤1024  OR  (pointer:coarse) tablet rows — iPad + any touch device
+     ≤1024                       top nav collapses to the hamburger menu
+     (pointer:coarse)            finger-friendly sizing on touch screens
+     ≤640                        phone layout
+   The tablet ROW rules fire on a touch device at ANY width, so an iPad in
+   landscape (wide, but a finger) gets the same simplified rows as portrait. */
+
 @media(max-width:1080px){.nav-eyebrow,.nav-logo .div{display:none}.nav{gap:14px}}
-@media(max-width:860px){
-  .nav{gap:12px;padding:0 14px}
-  .nav-eyebrow,.nav-logo .div{display:none}
+
+/* ---- Top nav → hamburger (iPad portrait & narrow desktop windows) ---- */
+@media(max-width:1024px){
+  .nav{gap:12px;padding:0 16px}
   .nav-tabs{display:none}
-  .nav-archive span{display:none}
-  .nav-menu-btn{display:inline-flex}
-  .page{padding:18px 14px 80px}
-  .searchbox{width:100%}
+  /* these move into the menu sheet; .nav scope beats .nav-lock/.iconbtn defined later */
+  .nav-archive,.nav-logout,.nav .notif-settings-btn{display:none}
+  .nav .nav-menu-btn{display:inline-flex}
+  .page{padding:20px 16px 84px}
   .page-tools{width:100%}
-  .lrow-head{grid-template-columns:30px minmax(0,1fr) 96px 112px;gap:10px}
-  .lrow .grip,.lrow .l-drop,.lrow .l-phone,.lrow .done-ic{display:none}
-  .lrow-head .acts{display:none}
+  .searchbox{flex:1;min-width:170px;width:auto}
   .who-tabs{order:-1}
-  .lrow.done-row .lrow-head{grid-template-columns:30px minmax(0,1fr) 118px}
+}
+
+/* ---- Simplified rows: the tablet layout, and EVERY touch device ---- */
+@media(max-width:1024px), (pointer:coarse){
+  /* Drop the drag grip and the per-row icon buttons. Status changes happen on
+     the pill; edits happen by tapping the row open. Both dates + status stay. */
+  .lrow-head{grid-template-columns:30px minmax(0,1fr) 112px 100px 140px;gap:12px}
+  .lrow .grip,.lrow-head .acts,.lrow .done-ic{display:none}
+  .lrow .l-phone{display:none} /* the phone number reappears in the expanded peek */
+  .lrow.done-row .lrow-head{grid-template-columns:30px minmax(0,1fr) 132px}
   .lrow.done-row .done-at{display:none}
   .lrow.done-row .acts{display:flex}
   .lrow.done-row .spill-sel{display:none}
-  .parts-list .lrow-head{grid-template-columns:30px minmax(0,1fr) 150px}
-  .parts-list .l-due{display:none} /* phones: the pill needs the room; due date lives in the peek */
+  .parts-list .lrow-head{grid-template-columns:30px minmax(0,1fr) 112px 100px 160px}
+  .arow{grid-template-columns:26px minmax(0,1fr) 116px 32px 120px 34px;gap:14px}
+  .arow .a-in{display:none}
+  .btn.peek-edit{display:inline-flex} /* row pencil is gone, so the peek carries Edit */
+}
+
+/* ---- Finger-friendly sizing on any touch screen ---- */
+@media (pointer:coarse){
+  a,button,[role="button"],.lrow-head,.pickbtn,.spill-sel,.who-tab,.nav-tab,
+  .msheet-item,.cal-day,.toggle button,.notif-chip{
+    -webkit-tap-highlight-color:transparent; touch-action:manipulation;
+  }
+  /* 16px fields stop iOS Safari from zooming the page in when a field is tapped */
+  .inp,.ta,.searchbox input{font-size:16px}
+  .iconbtn{width:40px;height:40px}
+  .iconbtn i,.iconbtn svg{width:18px;height:18px}
+  .btn{padding:12px 16px;min-height:44px}
+  .who-tab{padding:9px 15px}
+  .nav-tab{padding:10px 17px}
+  .spill{padding:6px 11px;font-size:11px}
+  .toggle button{padding:13px 16px}
+  .toggle.ampm button{padding:13px 15px;font-size:13px}
+  .pop-item{padding:11px 10px}
+  .stat-opt{font-size:14px}
+  .msheet-item{padding:15px 12px}
+  .cal-day{height:34px} .cal-dow{height:26px}
+}
+
+/* ---- Phone layout (≤640) ---- */
+@media(max-width:640px){
+  .page{padding:16px 12px 84px}
+  .page-head h1{font-size:22px}
+  /* a phone is too narrow for date columns — show urgency + name + status, and
+     surface both dates in the tap-to-expand peek. Names finally get real room. */
+  .lrow-head{grid-template-columns:30px minmax(0,1fr) auto;gap:10px;padding:14px 14px}
+  .lrow .l-drop,.lrow .l-due{display:none}
+  .lrow.done-row .lrow-head{grid-template-columns:30px minmax(0,1fr) auto}
+  .parts-list .lrow-head{grid-template-columns:30px minmax(0,1fr) auto}
   .arow{grid-template-columns:26px minmax(0,1fr) 96px 34px;gap:10px}
-  .arow .l-phone,.arow .chg,.arow .a-in{display:none}
+  .arow .l-phone,.arow .chg{display:none}
   .vault-head .vault-note{display:none}
   .exp-grid{grid-template-columns:1fr}
-  .btn.peek-edit{display:inline-flex}
-  .col{min-width:84vw;max-width:90vw}
-}
-@media(max-width:560px){
+  .btn.primary .nt-label{display:none} /* New Ticket → just the + on a phone */
   .uselect{flex-wrap:wrap}
   .uselect .opt{flex:1 1 28%}
   .field-grid,.field-grid.trio{grid-template-columns:1fr}
+  /* roomy, thumb-reachable stacked buttons on the ticket form */
+  .scrim-dark{padding:16px 10px}
+  .modal-foot{flex-direction:column-reverse;align-items:stretch;gap:8px}
+  .modal-foot .btn{width:100%}
 }
 
 /* ============ Mobile tab sheet ============ */
@@ -562,6 +617,9 @@ button{font-family:inherit}
 .msheet-item i,.msheet-item svg{width:19px;height:19px;color:var(--gray-500)}
 .msheet-item.on{background:var(--acc-soft);color:var(--acc)}
 .msheet-item.on i,.msheet-item.on svg{color:var(--acc)}
+.msheet-div{height:1px;background:var(--gray-150);margin:6px 8px}
+/* the logout <form> shouldn't add a box — let its button sit in the flex column */
+.msheet-logout{display:contents}
 
 /* ============================================================
    Login screen (password gate) — bridge backdrop + glass card

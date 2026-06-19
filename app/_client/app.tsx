@@ -370,7 +370,7 @@ export default function App({ initialTickets, initialArchive }: { initialTickets
           onCancel={() => setConfirmDelete(null)}
           onConfirm={() => doDelete(confirmDelete)} />
       )}
-      {sheet && <MobileSheet view={view} setView={setView} onClose={() => setSheet(false)} partsCount={partsCount} />}
+      {sheet && <MobileSheet view={view} setView={setView} onClose={() => setSheet(false)} partsCount={partsCount} onOpenSettings={() => setSettingsOpen(true)} />}
       {settingsOpen && <SettingsModal notif={notif} onClose={() => setSettingsOpen(false)} />}
     </>
   );

@@ -568,6 +568,10 @@ function RowPeek({ t, onEdit }: { t: Ticket; onEdit: () => void }) {
     <div className="exp-peek">
       <div className="peek-desc">{t.desc || <span className="muted">No description</span>}</div>
       <div className="peek-meta">
+        {t.phone && <span className="peek-item"><Icon name="phone" />{t.phone}</span>}
+        {/* dates live here too: the phone-width row hides its date columns */}
+        <span className="peek-item"><Icon name="calendar" />In {fmtDate(t.dropoff)}{t.dropoffAmPm ? ` · ${t.dropoffAmPm}` : ""}</span>
+        {t.dueAt && <span className="peek-item"><Icon name="clock" />Due {fmtDueHalf(t.dueAt)}</span>}
         {t.password && <span className="peek-item"><Icon name="key-round" />{t.password}</span>}
         <span className="peek-item"><Icon name={t.charger ? "plug-zap" : "plug"} />{t.charger ? "Charger in" : "No charger"}</span>
         <span className="peek-item">
@@ -1047,7 +1051,7 @@ export function TopNav({ view, setView, onNew, onMobileMenu, partsCount, notif }
       <button className="btn primary" onClick={onNew}>
         <Icon name="plus" /><span className="nt-label">New Ticket</span>
       </button>
-      <form action={logoutAction}>
+      <form action={logoutAction} className="nav-logout">
         <button className="nav-lock" type="submit" title="Lock workspace" aria-label="Lock workspace">
           <Icon name="log-out" size={18} />
         </button>
@@ -1146,8 +1150,11 @@ export function ConfirmDeleteDialog({ ticket, onCancel, onConfirm }: {
 }
 
 /* ================= MOBILE SHEET ================= */
-export function MobileSheet({ view, setView, onClose, partsCount }: {
+/* The small-screen menu. Holds the three views and — since they leave the top
+   bar on phones/tablets — Settings and Lock workspace. */
+export function MobileSheet({ view, setView, onClose, partsCount, onOpenSettings }: {
   view: View; setView: (v: View) => void; onClose: () => void; partsCount: number;
+  onOpenSettings: () => void;
 }) {
   const items: [View, string, string][] = [
     ["list", "list", "List"],
@@ -1164,6 +1171,15 @@ export function MobileSheet({ view, setView, onClose, partsCount }: {
             {id === "parts" && partsCount > 0 && <span className="tab-badge">{partsCount}</span>}
           </button>
         ))}
+        <div className="msheet-div" />
+        <button className="msheet-item" onClick={() => { onOpenSettings(); onClose(); }}>
+          <Icon name="settings" />Settings
+        </button>
+        <form action={logoutAction} className="msheet-logout">
+          <button type="submit" className="msheet-item">
+            <Icon name="log-out" />Lock workspace
+          </button>
+        </form>
       </div>
     </div>
   );
