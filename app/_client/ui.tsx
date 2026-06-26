@@ -422,7 +422,7 @@ export function ListView({ tickets, onMenu, onStatus, onMoveRequest, onPatch, ex
             <span className="ln" />
             <span>{done.length}</span>
           </div>
-          {done.map((t) => <DoneRow key={t.id} t={t} onStatus={onStatus} />)}
+          {done.map((t) => <DoneRow key={t.id} t={t} onStatus={onStatus} expanded={expandedId === t.id} onToggle={onToggleExpand} onPatch={onPatch} />)}
         </>
       )}
 
@@ -540,10 +540,31 @@ const QueueRow = React.memo(function QueueRow({ t, isNext, dragging, canReorder,
 });
 
 /* Completed-section row. Memoized for the same reason as QueueRow. */
-const DoneRow = React.memo(function DoneRow({ t, onStatus }: { t: Ticket; onStatus: (id: string, s: Status) => void }) {
+const DoneRow = React.memo(function DoneRow({ t, onStatus, expanded, onToggle, onPatch }: {
+  t: Ticket;
+  onStatus: (id: string, s: Status) => void;
+  expanded: boolean;
+  onToggle: (id: string) => void;
+  onPatch: (id: string, patch: InlinePatch) => void;
+}) {
+  const [bodyMounted, setBodyMounted] = React.useState(expanded);
+  const [mode, setMode] = React.useState<"info" | "edit">("info");
+  React.useEffect(() => { if (expanded) setBodyMounted(true); }, [expanded]);
+
+  const headClick = () => {
+    if (window.getSelection()?.toString()) return;
+    onToggle(t.id);
+  };
+
+  const openEditor = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setMode("edit");
+    if (!expanded) onToggle(t.id);
+  };
+
   return (
-    <div className={`lrow done-row u${t.urgency} ${t.deviceType ?? ""}`}>
-      <div className="lrow-head static">
+    <div className={`lrow done-row u${t.urgency} ${t.deviceType ?? ""} ${expanded ? "expanded" : ""}`}>
+      <div className="lrow-head" onClick={headClick}>
         <span className="done-ic"><Icon name="circle-check" size={16} /></span>
         <UrgencyChip u={t.urgency} />
         <div style={{ minWidth: 0 }}>
@@ -553,11 +574,24 @@ const DoneRow = React.memo(function DoneRow({ t, onStatus }: { t: Ticket; onStat
         <span className="meta-mono l-date done-at" title="Completed"><Icon name="check" />{t.statusChangedAt ? fmtDueAt(t.statusChangedAt) : "—"}</span>
         <span className="meta-mono l-phone"><Icon name="phone" />{t.phone}</span>
         <StatusPillMenu t={t} onStatus={onStatus} />
-        <span className="acts">
+        <span className="acts" onClick={(e) => e.stopPropagation()}>
+          <button className="iconbtn" title="Edit" onClick={openEditor}><Icon name="pencil" /></button>
           <button className="btn pickup" onClick={() => onStatus(t.id, "picked")}>
             <Icon name="package-check" />Picked up
           </button>
         </span>
+      </div>
+      <div className="lrow-exp"
+        onTransitionEnd={(e) => { if (e.propertyName === "grid-template-rows" && !expanded) { setBodyMounted(false); setMode("info"); } }}>
+        <div className="lrow-exp-clip">
+          {bodyMounted && (
+            <div className="lrow-exp-body">
+              {mode === "edit"
+                ? <RowExpansion t={t} onPatch={onPatch} />
+                : <RowPeek t={t} onEdit={() => setMode("edit")} />}
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
