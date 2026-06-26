@@ -305,16 +305,16 @@ export function ListView({ tickets, onMenu, onStatus, onMoveRequest, onPatch, ex
   }, [onToggleExpand, setDrag]);
 
   const overRow = React.useCallback((e: React.DragEvent, u: number, index: number) => {
-    if (!draggedRef.current) return;
     e.preventDefault();
     e.dataTransfer.dropEffect = "move";
+    if (!draggedRef.current) return;
     const r = (e.currentTarget as HTMLElement).getBoundingClientRect();
     queueTarget(u, index + (e.clientY < r.top + r.height / 2 ? 0 : 1));
   }, [queueTarget]);
 
   const overTop = React.useCallback((e: React.DragEvent, u: number) => {
-    if (!draggedRef.current) return;
     e.preventDefault();
+    if (!draggedRef.current) return;
     queueTarget(u, 0);
   }, [queueTarget]);
 
@@ -323,8 +323,8 @@ export function ListView({ tickets, onMenu, onStatus, onMoveRequest, onPatch, ex
   // scrolling so the speed is steady and the hot event handler stays cheap.
   const pointerY = React.useRef(-1);
   const overList = React.useCallback((e: React.DragEvent) => {
-    if (!draggedRef.current) return;
     e.preventDefault();
+    if (!draggedRef.current) return;
     pointerY.current = e.clientY;
   }, []);
   const isDragging = !!dragged;
