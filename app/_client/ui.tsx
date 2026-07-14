@@ -305,16 +305,16 @@ export function ListView({ tickets, onMenu, onStatus, onMoveRequest, onPatch, ex
       e.dataTransfer.effectAllowed = "move";
       const row = (e.currentTarget as HTMLElement).closest(".lrow");
       if (row) {
-        // Live rows can have running CSS animations (.alert glow, .next highlight)
-        // that cause Chrome to silently produce a blank drag ghost. Clone the row
-        // and shift it off-screen with transform (NOT top/left) — Chrome composites
-        // transformed elements even when shifted outside the viewport, so the
-        // snapshot is always clean. A freshly-inserted clone also has no running
-        // animations, which avoids the mid-frame capture issue.
+        // Clone the row for the drag ghost. Strip animation classes (.alert, .next)
+        // — Chrome cannot snapshot an element with a running CSS animation synchronously,
+        // producing a blank ghost. Fix the width too: the clone is parented to body
+        // (full-viewport width), not the constrained list column.
         const ghost = (row as HTMLElement).cloneNode(true) as HTMLElement;
+        ghost.classList.remove("alert", "next", "dragging");
         ghost.style.position = "fixed";
         ghost.style.top = "0";
         ghost.style.left = "0";
+        ghost.style.width = `${(row as HTMLElement).offsetWidth}px`;
         ghost.style.transform = "translate(-9999px, -9999px)";
         ghost.style.pointerEvents = "none";
         document.body.appendChild(ghost);
