@@ -305,16 +305,21 @@ export function ListView({ tickets, onMenu, onStatus, onMoveRequest, onPatch, ex
       e.dataTransfer.effectAllowed = "move";
       const row = (e.currentTarget as HTMLElement).closest(".lrow");
       if (row) {
-        // Clone off-screen: live rows can have CSS animations (.alert glow, .next)
-        // that cause Chrome to silently produce a blank ghost from setDragImage.
-        // A freshly-inserted clone has no running animations so the snapshot is clean.
+        // Live rows can have running CSS animations (.alert glow, .next highlight)
+        // that cause Chrome to silently produce a blank drag ghost. Clone the row
+        // and shift it off-screen with transform (NOT top/left) — Chrome composites
+        // transformed elements even when shifted outside the viewport, so the
+        // snapshot is always clean. A freshly-inserted clone also has no running
+        // animations, which avoids the mid-frame capture issue.
         const ghost = (row as HTMLElement).cloneNode(true) as HTMLElement;
         ghost.style.position = "fixed";
-        ghost.style.top = "-1000px";
+        ghost.style.top = "0";
+        ghost.style.left = "0";
+        ghost.style.transform = "translate(-9999px, -9999px)";
         ghost.style.pointerEvents = "none";
         document.body.appendChild(ghost);
         e.dataTransfer.setDragImage(ghost, 24, 24);
-        requestAnimationFrame(() => ghost.remove());
+        setTimeout(() => ghost.remove(), 0);
       }
     } catch {}
     setDrag({ id: t.id, from: "list", over: "list" });
