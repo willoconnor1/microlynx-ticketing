@@ -311,7 +311,7 @@ export default function App({ initialTickets, initialArchive }: { initialTickets
 
   let body: React.ReactNode;
   if (view === "list") body = <ListView tickets={listTickets} onMenu={openMenu} onStatus={setStatus} onMoveRequest={requestMove} onPatch={patchTicket} expandedId={expandedId} onToggleExpand={toggleExpand} drag={drag} setDrag={setDrag} canReorder={canReorder} getAlert={getAlert} />;
-  else if (view === "parts") body = <PartsView tickets={byPerson} onStatus={setStatus} onMenu={openMenu} onPatch={patchTicket} expandedId={expandedId} onToggleExpand={toggleExpand} />;
+  else if (view === "parts") body = <PartsView tickets={byPerson} onStatus={setStatus} onMenu={openMenu} onPatch={patchTicket} expandedId={expandedId} onToggleExpand={toggleExpand} drag={drag} setDrag={setDrag} onMoveRequest={requestMove} canReorder={canReorder} />;
   else body = <ArchiveView archive={visibleArchive} search={search} onStatus={setStatus} />;
 
   return (
