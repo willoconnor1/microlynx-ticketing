@@ -304,7 +304,18 @@ export function ListView({ tickets, onMenu, onStatus, onMoveRequest, onPatch, ex
       e.dataTransfer.setData("text/plain", t.id);
       e.dataTransfer.effectAllowed = "move";
       const row = (e.currentTarget as HTMLElement).closest(".lrow");
-      if (row) e.dataTransfer.setDragImage(row as HTMLElement, 24, 24);
+      if (row) {
+        // Clone off-screen: live rows can have CSS animations (.alert glow, .next)
+        // that cause Chrome to silently produce a blank ghost from setDragImage.
+        // A freshly-inserted clone has no running animations so the snapshot is clean.
+        const ghost = (row as HTMLElement).cloneNode(true) as HTMLElement;
+        ghost.style.position = "fixed";
+        ghost.style.top = "-1000px";
+        ghost.style.pointerEvents = "none";
+        document.body.appendChild(ghost);
+        e.dataTransfer.setDragImage(ghost, 24, 24);
+        requestAnimationFrame(() => ghost.remove());
+      }
     } catch {}
     setDrag({ id: t.id, from: "list", over: "list" });
   }, [onToggleExpand, setDrag]);
