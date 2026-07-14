@@ -311,7 +311,7 @@ button{font-family:inherit}
 .lrow.next .nm::after{content:"NEXT UP";font-family:var(--font-mono);font-size:9px;font-weight:700;letter-spacing:.1em;color:var(--u1);background:var(--u1-bg);padding:2px 7px;border-radius:var(--radius-pill);margin-left:9px;vertical-align:middle}
 .lrow.dragging{opacity:.35}
 .lrow .l-date.due{color:var(--ink-700);font-weight:600}
-.grip{display:inline-flex;align-items:center;justify-content:center;width:16px;height:30px;color:var(--gray-300);cursor:grab;flex:none}
+.grip{display:inline-flex;align-items:center;justify-content:center;width:16px;height:30px;color:var(--gray-300);cursor:grab;flex:none;user-select:none;-webkit-user-select:none}
 .grip:hover{color:var(--gray-500)}
 .grip:active{cursor:grabbing}
 .grip.off{opacity:.25;cursor:default}

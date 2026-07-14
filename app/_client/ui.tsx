@@ -271,6 +271,9 @@ export function ListView({ tickets, onMenu, onStatus, onMoveRequest, onPatch, ex
 
   const draggedRef = React.useRef(dragged); draggedRef.current = dragged;
   const expandedIdRef = React.useRef(expandedId); expandedIdRef.current = expandedId;
+  // Set synchronously in startDrag so the very first dragover sees a truthy value
+  // before React's re-render makes draggedRef available.
+  const dragIdRef = React.useRef<string | null>(null);
 
   // dragover fires much faster than the screen refreshes; buffer the latest
   // candidate and commit at most one target update per animation frame.
@@ -288,6 +291,7 @@ export function ListView({ tickets, onMenu, onStatus, onMoveRequest, onPatch, ex
   React.useEffect(() => () => { if (targetRaf.current) cancelAnimationFrame(targetRaf.current); }, []);
 
   const clearDrag = React.useCallback(() => {
+    dragIdRef.current = null;
     setDrag(null);
     pendingTarget.current = null;
     setTarget(null);
@@ -295,6 +299,7 @@ export function ListView({ tickets, onMenu, onStatus, onMoveRequest, onPatch, ex
 
   const startDrag = React.useCallback((e: React.DragEvent, t: Ticket) => {
     if (expandedIdRef.current) onToggleExpand(expandedIdRef.current); // collapse so the drop math sees normal-height rows
+    dragIdRef.current = t.id; // set before setDrag so first dragover doesn't get ignored
     try {
       e.dataTransfer.setData("text/plain", t.id);
       e.dataTransfer.effectAllowed = "move";
@@ -305,6 +310,7 @@ export function ListView({ tickets, onMenu, onStatus, onMoveRequest, onPatch, ex
   }, [onToggleExpand, setDrag]);
 
   const overRow = React.useCallback((e: React.DragEvent, u: number, index: number) => {
+    if (!dragIdRef.current) return;
     e.preventDefault();
     e.dataTransfer.dropEffect = "move";
     if (!draggedRef.current) return;
@@ -313,6 +319,7 @@ export function ListView({ tickets, onMenu, onStatus, onMoveRequest, onPatch, ex
   }, [queueTarget]);
 
   const overTop = React.useCallback((e: React.DragEvent, u: number) => {
+    if (!dragIdRef.current) return;
     e.preventDefault();
     if (!draggedRef.current) return;
     queueTarget(u, 0);
@@ -323,6 +330,7 @@ export function ListView({ tickets, onMenu, onStatus, onMoveRequest, onPatch, ex
   // scrolling so the speed is steady and the hot event handler stays cheap.
   const pointerY = React.useRef(-1);
   const overList = React.useCallback((e: React.DragEvent) => {
+    if (!dragIdRef.current) return;
     e.preventDefault();
     if (!draggedRef.current) return;
     pointerY.current = e.clientY;
@@ -805,18 +813,105 @@ export function ConfirmMoveDialog({ move, onCancel, onConfirm }: {
 }
 
 /* ================= WAITING ON PARTS ================= */
-/* Parked tickets, longest-waiting first. The status pill is the way back: set the
+/* Parked tickets — drag to reorder. The status pill is the way back: set the
    ticket to any other status and it returns to its old slot in the queue. */
 const noDrag = () => {}; // module-level so memoized rows always see the same prop
-export function PartsView({ tickets, onStatus, onMenu, onPatch, expandedId, onToggleExpand }: {
+// Sort by sortPos (drag order) with statusChangedAt as tiebreaker for new arrivals.
+function sortPartsOrder(a: Ticket, b: Ticket): number {
+  const ap = a.sortPos ?? Infinity, bp = b.sortPos ?? Infinity;
+  if (ap !== bp) return ap - bp;
+  return sortEntryOrder(a, b);
+}
+export function PartsView({ tickets, onStatus, onMenu, onPatch, expandedId, onToggleExpand, drag, setDrag, onMoveRequest, canReorder }: {
   tickets: Ticket[];
   onStatus: (id: string, s: Status) => void;
   onMenu: (e: React.MouseEvent, t: Ticket) => void;
   onPatch: (id: string, patch: InlinePatch) => void;
   expandedId: string | null;
   onToggleExpand: (id: string) => void;
+  drag: Drag;
+  setDrag: (d: Drag) => void;
+  onMoveRequest: (m: PendingMove) => void;
+  canReorder: boolean;
 }) {
-  const list = tickets.filter((t) => t.status === "parts").sort(sortEntryOrder);
+  const list = tickets.filter((t) => t.status === "parts").sort(sortPartsOrder);
+
+  const partsDrag = drag && drag.from === "parts" ? drag : null;
+  const dragged = partsDrag ? list.find((t) => t.id === partsDrag.id) || null : null;
+  const [target, setTarget] = React.useState<number | null>(null);
+
+  const draggedRef = React.useRef(dragged); draggedRef.current = dragged;
+  const expandedIdRef = React.useRef(expandedId); expandedIdRef.current = expandedId;
+  const dragIdRef = React.useRef<string | null>(null);
+
+  const pendingTarget = React.useRef<number | null>(null);
+  const targetRaf = React.useRef(0);
+  const queueTarget = React.useCallback((index: number) => {
+    pendingTarget.current = index;
+    if (targetRaf.current) return;
+    targetRaf.current = requestAnimationFrame(() => {
+      targetRaf.current = 0;
+      const t = pendingTarget.current;
+      setTarget((p) => (p === t ? p : t));
+    });
+  }, []);
+  React.useEffect(() => () => { if (targetRaf.current) cancelAnimationFrame(targetRaf.current); }, []);
+
+  const clearDrag = React.useCallback(() => {
+    dragIdRef.current = null;
+    setDrag(null);
+    pendingTarget.current = null;
+    setTarget(null);
+  }, [setDrag]);
+
+  const startDrag = React.useCallback((e: React.DragEvent, t: Ticket) => {
+    if (expandedIdRef.current) onToggleExpand(expandedIdRef.current);
+    dragIdRef.current = t.id;
+    try {
+      e.dataTransfer.setData("text/plain", t.id);
+      e.dataTransfer.effectAllowed = "move";
+      const row = (e.currentTarget as HTMLElement).closest(".lrow");
+      if (row) e.dataTransfer.setDragImage(row as HTMLElement, 24, 24);
+    } catch {}
+    setDrag({ id: t.id, from: "parts", over: "parts" });
+  }, [onToggleExpand, setDrag]);
+
+  const overRow = React.useCallback((e: React.DragEvent, _u: number, index: number) => {
+    if (!dragIdRef.current) return;
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "move";
+    if (!draggedRef.current) return;
+    const r = (e.currentTarget as HTMLElement).getBoundingClientRect();
+    queueTarget(index + (e.clientY < r.top + r.height / 2 ? 0 : 1));
+  }, [queueTarget]);
+
+  const overList = React.useCallback((e: React.DragEvent) => {
+    if (!dragIdRef.current) return;
+    e.preventDefault();
+  }, []);
+
+  const overTop = React.useCallback((e: React.DragEvent) => {
+    if (!dragIdRef.current) return;
+    e.preventDefault();
+    if (!draggedRef.current) return;
+    queueTarget(0);
+  }, [queueTarget]);
+
+  const commitDrop = React.useCallback(() => {
+    const tgt = pendingTarget.current ?? target;
+    if (dragged === null || tgt === null) { clearDrag(); return; }
+    const oldIdx = list.findIndex((t) => t.id === dragged.id);
+    const listWithout = list.filter((t) => t.id !== dragged.id);
+    // tgt is an insertion index into the FULL list; convert to listWithout index.
+    const ins = tgt > oldIdx ? tgt - 1 : tgt;
+    const prevId = ins > 0 ? (listWithout[ins - 1]?.id ?? null) : null;
+    const nextId = listWithout[ins]?.id ?? null;
+    const prevIdBefore = oldIdx > 0 ? list[oldIdx - 1].id : null;
+    const nextIdBefore = list[oldIdx + 1]?.id ?? null;
+    clearDrag();
+    if (prevId === prevIdBefore && nextId === nextIdBefore) return;
+    onMoveRequest({ ticket: dragged, urgency: dragged.urgency, prevId, nextId, jumped: [] });
+  }, [dragged, list, target, clearDrag, onMoveRequest]);
 
   if (list.length === 0) {
     return (
@@ -828,20 +923,21 @@ export function PartsView({ tickets, onStatus, onMenu, onPatch, expandedId, onTo
     );
   }
 
-  // Rows are the same QueueRow the List uses (dates, phone, pill, actions, accordion);
-  // only drag-reordering is off — the tab keeps longest-waiting-first order.
   return (
-    <div className="list-wrap parts-list">
-      <div className="list-group-label">
-        <span>Waiting on parts · longest first</span>
+    <div className="list-wrap parts-list" onDragOver={overList} onDrop={(e) => { e.preventDefault(); commitDrop(); }}>
+      <div className="list-group-label" onDragOver={overTop}>
+        <span>Waiting on parts</span>
         <span className="ln" />
         <span>{list.length}</span>
       </div>
-      {list.map((t) => (
-        <QueueRow key={t.id} t={t} isNext={false} dragging={false} canReorder={false} alert={false}
-          dropBefore={false} dropAfter={false} groupU={0} index={0}
+      {list.map((t, i) => (
+        <QueueRow key={t.id} t={t} isNext={false} dragging={!!partsDrag && partsDrag.id === t.id} canReorder={canReorder} alert={false}
+          dropBefore={target === i} dropAfter={target === i + 1 && i === list.length - 1}
+          groupU={0} index={i}
           expanded={expandedId === t.id} onToggle={onToggleExpand} onPatch={onPatch}
-          onRowOver={noDrag} startDrag={noDrag} clearDrag={noDrag}
+          onRowOver={canReorder ? overRow : noDrag}
+          startDrag={canReorder ? startDrag : noDrag}
+          clearDrag={canReorder ? clearDrag : noDrag}
           onStatus={onStatus} onMenu={onMenu} />
       ))}
     </div>
