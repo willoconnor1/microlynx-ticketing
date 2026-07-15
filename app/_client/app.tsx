@@ -41,10 +41,10 @@ export default function App({ initialTickets, initialArchive }: { initialTickets
   const [confirmDelete, setConfirmDelete] = React.useState<Ticket | null>(null);
   const [who, setWho] = React.useState<"all" | Person>("all");
   const [expandedId, setExpandedId] = React.useState<string | null>(null);
-  const [today] = React.useState(() => todayISO());
+  const today = todayISO();
 
   const busy = React.useRef(false); // suppress polling while the user is mid-interaction
-  busy.current = !!drag || !!form || !!menu || !!pendingMove || !!confirmDelete || !!expandedId;
+  busy.current = !!drag || !!form || !!menu || !!pendingMove || !!confirmDelete;
 
   /* ---- notifications (all per-screen, saved in this browser) ---- */
   const [resolved, setResolved] = React.useState<Record<string, string>>(loadResolved);
@@ -166,7 +166,7 @@ export default function App({ initialTickets, initialArchive }: { initialTickets
   /* keep the board fresh across devices: poll + refetch on focus */
   React.useEffect(() => {
     const refresh = async () => { if (!busy.current) apply(await fetchState()); };
-    const id = setInterval(refresh, 20000);
+    const id = setInterval(refresh, 10000);
     window.addEventListener("focus", refresh);
     return () => { clearInterval(id); window.removeEventListener("focus", refresh); };
   }, []);
