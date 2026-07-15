@@ -285,7 +285,7 @@ button{font-family:inherit}
 .lrow-exp-body{margin:0 var(--row-pad-x);border-top:1px dashed var(--gray-200);padding:14px 0 16px}
 @media (prefers-reduced-motion: reduce){.lrow-exp{transition:none}}
 .exp-peek{display:flex;flex-direction:column;gap:11px}
-.peek-desc{font-size:13.5px;color:var(--ink-700);line-height:1.55;max-width:70ch}
+.peek-desc{font-size:13.5px;color:var(--ink-700);line-height:1.55;max-width:70ch;white-space:pre-wrap}
 .peek-desc .muted{color:var(--gray-400)}
 .peek-meta{display:flex;align-items:center;gap:18px;flex-wrap:wrap}
 .peek-item{display:inline-flex;align-items:center;gap:7px;font-family:var(--font-mono);font-size:11.5px;color:var(--gray-600)}
