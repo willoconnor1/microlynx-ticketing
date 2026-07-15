@@ -407,8 +407,15 @@ export async function moveTicket(
     } else {
       index = group.length;
     }
-    if (index === -1) index = autoIndex(group, { ...t, urgency }); // neighbor vanished — fall back
-    return placeAt(group, id, index);
+    if (index !== -1) return placeAt(group, id, index);
+    // Neighbors are from a different urgency group (Parts view cross-urgency drop).
+    // Use their sortPos values directly rather than auto-placing within this group.
+    const prevT = prevId ? all.find((x) => x.id === prevId) : null;
+    const nextT = nextId ? all.find((x) => x.id === nextId) : null;
+    if (prevT || nextT) {
+      return { pos: posBetween(prevT?.sortPos, nextT?.sortPos), renumber: [] };
+    }
+    return placeAt(group, id, autoIndex(group, { ...t, urgency }));
   };
 
   if (!hasDb) {
