@@ -298,29 +298,20 @@ export function ListView({ tickets, onMenu, onStatus, onMoveRequest, onPatch, ex
   }, [setDrag]);
 
   const startDrag = React.useCallback((e: React.DragEvent, t: Ticket) => {
-    if (expandedIdRef.current) onToggleExpand(expandedIdRef.current); // collapse so the drop math sees normal-height rows
-    dragIdRef.current = t.id; // set before setDrag so first dragover doesn't get ignored
+    if (expandedIdRef.current) onToggleExpand(expandedIdRef.current);
+    dragIdRef.current = t.id;
     try {
       e.dataTransfer.setData("text/plain", t.id);
       e.dataTransfer.effectAllowed = "move";
-      const row = (e.currentTarget as HTMLElement).closest(".lrow");
-      if (row) {
-        // Clone the row for the drag ghost. Strip animation classes (.alert, .next)
-        // — Chrome cannot snapshot an element with a running CSS animation synchronously,
-        // producing a blank ghost. Fix the width too: the clone is parented to body
-        // (full-viewport width), not the constrained list column.
-        const ghost = (row as HTMLElement).cloneNode(true) as HTMLElement;
-        ghost.classList.remove("alert", "next", "dragging");
-        ghost.style.position = "fixed";
-        ghost.style.top = "0";
-        ghost.style.left = "0";
-        ghost.style.width = `${(row as HTMLElement).offsetWidth}px`;
-        ghost.style.transform = "translate(-9999px, -9999px)";
-        ghost.style.pointerEvents = "none";
-        document.body.appendChild(ghost);
-        e.dataTransfer.setDragImage(ghost, 24, 24);
-        setTimeout(() => ghost.remove(), 0);
-      }
+      // Use a plain pill element instead of cloning the row — clones can inherit
+      // CSS animations (.alert glow) that Chrome can't snapshot synchronously,
+      // producing a blank ghost that silently kills the drag session.
+      const pill = document.createElement("div");
+      pill.textContent = t.name;
+      pill.style.cssText = "position:fixed;top:0;left:0;transform:translate(-9999px,-9999px);background:#fff;border:1px solid #d1d5db;border-radius:8px;padding:6px 14px;font-size:14px;font-weight:600;color:#111;box-shadow:0 2px 8px rgba(0,0,0,.15);pointer-events:none;white-space:nowrap";
+      document.body.appendChild(pill);
+      e.dataTransfer.setDragImage(pill, pill.offsetWidth / 2, 20);
+      setTimeout(() => pill.remove(), 0);
     } catch {}
     setDrag({ id: t.id, from: "list", over: "list" });
   }, [onToggleExpand, setDrag]);
@@ -364,6 +355,13 @@ export function ListView({ tickets, onMenu, onStatus, onMoveRequest, onPatch, ex
     });
     return () => { cancelAnimationFrame(raf); pointerY.current = -1; };
   }, [isDragging]);
+
+  // Safety net: if dragend fires on the document instead of the grip element
+  // (blank ghost, cancelled drag, element removed mid-drag), clean up state anyway.
+  React.useEffect(() => {
+    document.addEventListener("dragend", clearDrag);
+    return () => document.removeEventListener("dragend", clearDrag);
+  }, [clearDrag]);
 
   const commitDrop = () => {
     // pendingTarget may hold a frame not yet flushed to state — trust it first.
@@ -880,14 +878,23 @@ export function PartsView({ tickets, onStatus, onMenu, onPatch, expandedId, onTo
     setTarget(null);
   }, [setDrag]);
 
+  React.useEffect(() => {
+    document.addEventListener("dragend", clearDrag);
+    return () => document.removeEventListener("dragend", clearDrag);
+  }, [clearDrag]);
+
   const startDrag = React.useCallback((e: React.DragEvent, t: Ticket) => {
     if (expandedIdRef.current) onToggleExpand(expandedIdRef.current);
     dragIdRef.current = t.id;
     try {
       e.dataTransfer.setData("text/plain", t.id);
       e.dataTransfer.effectAllowed = "move";
-      const row = (e.currentTarget as HTMLElement).closest(".lrow");
-      if (row) e.dataTransfer.setDragImage(row as HTMLElement, 24, 24);
+      const pill = document.createElement("div");
+      pill.textContent = t.name;
+      pill.style.cssText = "position:fixed;top:0;left:0;transform:translate(-9999px,-9999px);background:#fff;border:1px solid #d1d5db;border-radius:8px;padding:6px 14px;font-size:14px;font-weight:600;color:#111;box-shadow:0 2px 8px rgba(0,0,0,.15);pointer-events:none;white-space:nowrap";
+      document.body.appendChild(pill);
+      e.dataTransfer.setDragImage(pill, pill.offsetWidth / 2, 20);
+      setTimeout(() => pill.remove(), 0);
     } catch {}
     setDrag({ id: t.id, from: "parts", over: "parts" });
   }, [onToggleExpand, setDrag]);
