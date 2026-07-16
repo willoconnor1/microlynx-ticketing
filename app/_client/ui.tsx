@@ -44,6 +44,13 @@ const ICONS: Record<string, LucideIcon> = {
 
 const pad2 = (n: number) => String(n).padStart(2, "0");
 
+function fmtPhone(raw: string): string {
+  const d = raw.replace(/\D/g, "").slice(0, 10);
+  if (d.length <= 3) return d;
+  if (d.length <= 6) return `${d.slice(0, 3)}-${d.slice(3)}`;
+  return `${d.slice(0, 3)}-${d.slice(3, 6)}-${d.slice(6)}`;
+}
+
 export function Icon({ name, size, className = "", style = {} }: { name: string; size?: number; className?: string; style?: React.CSSProperties }) {
   const C = ICONS[name];
   if (!C) return null;
@@ -688,7 +695,7 @@ function RowExpansion({ t, onPatch }: { t: Ticket; onPatch: (id: string, p: Inli
       <div className="exp-field">
         <label className="lbl">Phone</label>
         <input className="inp mono" type="tel" value={draft.phone} onBlur={flush}
-          onChange={(e) => setDraft((p) => ({ ...p, phone: e.target.value }))} />
+          onChange={(e) => setDraft((p) => ({ ...p, phone: fmtPhone(e.target.value) }))} />
       </div>
       <div className="exp-field full">
         <label className="lbl">Device password</label>
@@ -1433,7 +1440,7 @@ export function TicketForm({ editing, today, onSave, onClose }: {
             </div>
             <div className="field">
               <label className="lbl">Phone</label>
-              <input className="inp mono" type="tel" placeholder="(253) 555-0000" value={f.phone} onChange={(e) => set("phone", e.target.value)} />
+              <input className="inp mono" type="tel" placeholder="253-555-0000" value={f.phone} onChange={(e) => set("phone", fmtPhone(e.target.value))} />
             </div>
           </div>
 
