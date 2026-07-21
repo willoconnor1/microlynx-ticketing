@@ -278,83 +278,136 @@ export function ListView({ tickets, onMenu, onStatus, onMoveRequest, onPatch, ex
 
   const draggedRef = React.useRef(dragged); draggedRef.current = dragged;
   const expandedIdRef = React.useRef(expandedId); expandedIdRef.current = expandedId;
-  // Set synchronously in startDrag so the very first dragover sees a truthy value
-  // before React's re-render makes draggedRef available.
-  const dragIdRef = React.useRef<string | null>(null);
+  // Pointer-events drag — no HTML5 DnD API at all.
+  // HTML5 drag is rejected by browsers (Chrome, Safari) when source elements have
+  // CSS animations, causing silent failures with no dragend cleanup. Pointer events
+  // fire unconditionally regardless of CSS state, so every row behaves identically.
+  const listWrapRef = React.useRef<HTMLDivElement | null>(null);
+  const pillRef = React.useRef<HTMLDivElement | null>(null);
+  const isDraggingRef = React.useRef(false); isDraggingRef.current = !!dragged;
+  const pointerY = React.useRef(-1);
+  // Grip pressed but not yet moved 5 px — waiting to confirm drag intent vs. click.
+  const pendingDrag = React.useRef<{ t: Ticket; startX: number; startY: number } | null>(null);
 
-  // dragover fires much faster than the screen refreshes; buffer the latest
-  // candidate and commit at most one target update per animation frame.
+  // Buffer target updates to at most one per animation frame (pointermove is fast).
   const pendingTarget = React.useRef<{ u: number; index: number } | null>(null);
   const targetRaf = React.useRef(0);
-  const queueTarget = React.useCallback((u: number, index: number) => {
-    pendingTarget.current = { u, index };
-    if (targetRaf.current) return;
-    targetRaf.current = requestAnimationFrame(() => {
-      targetRaf.current = 0;
-      const t = pendingTarget.current;
-      setTarget((p) => (p && t && p.u === t.u && p.index === t.index ? p : t));
-    });
-  }, []);
   React.useEffect(() => () => { if (targetRaf.current) cancelAnimationFrame(targetRaf.current); }, []);
 
   const clearDrag = React.useCallback(() => {
-    dragIdRef.current = null;
-    setDrag(null);
+    pendingDrag.current = null;
     pendingTarget.current = null;
+    setDrag(null);
     setTarget(null);
+    pointerY.current = -1;
+    if (pillRef.current) { pillRef.current.remove(); pillRef.current = null; }
   }, [setDrag]);
 
-  const startDrag = React.useCallback((e: React.DragEvent, t: Ticket) => {
-    if (expandedIdRef.current) onToggleExpand(expandedIdRef.current);
-    dragIdRef.current = t.id;
-    try {
-      e.dataTransfer.setData("text/plain", t.id);
-      e.dataTransfer.effectAllowed = "move";
-      // Use a plain pill element instead of cloning the row — clones can inherit
-      // CSS animations (.alert glow) that Chrome can't snapshot synchronously,
-      // producing a blank ghost that silently kills the drag session.
-      const pill = document.createElement("div");
-      pill.textContent = t.name;
-      pill.style.cssText = "position:fixed;top:0;left:0;transform:translate(-9999px,-9999px);background:#fff;border:1px solid #d1d5db;border-radius:8px;padding:6px 14px;font-size:14px;font-weight:600;color:#111;box-shadow:0 2px 8px rgba(0,0,0,.15);pointer-events:none;white-space:nowrap";
-      document.body.appendChild(pill);
-      e.dataTransfer.setDragImage(pill, pill.offsetWidth / 2, 20);
-      setTimeout(() => pill.remove(), 0);
-    } catch {}
-    setDrag({ id: t.id, from: "list", over: "list" });
-  }, [onToggleExpand, setDrag]);
+  // Stored in a ref so the always-on pointer listener always calls the version
+  // with the freshest dragged / target / byU / sorted closure values.
+  const commitRef = React.useRef<() => void>(() => {});
+  commitRef.current = () => {
+    const tgt = pendingTarget.current || target;
+    if (!draggedRef.current || !tgt) { clearDrag(); return; }
+    const dr = draggedRef.current;
+    const grp = byU.get(tgt.u) || [];
+    const beforeItems = grp.slice(0, tgt.index).filter((t) => t.id !== dr.id);
+    const afterItems = grp.slice(tgt.index).filter((t) => t.id !== dr.id);
+    const prevId = beforeItems.length ? beforeItems[beforeItems.length - 1].id : null;
+    const nextId = afterItems.length ? afterItems[0].id : null;
+    const moved = { ...dr, urgency: tgt.u };
+    const newOrder: Ticket[] = [];
+    for (const u of [1, 2, 3, 4, 5]) {
+      const arr = (byU.get(u) || []).filter((t) => t.id !== dr.id);
+      if (u === tgt.u) {
+        const at = nextId ? arr.findIndex((t) => t.id === nextId) : arr.length;
+        arr.splice(at === -1 ? arr.length : at, 0, moved);
+      }
+      newOrder.push(...arr);
+    }
+    const oldIdx = sorted.findIndex((t) => t.id === dr.id);
+    const newIdx = newOrder.findIndex((t) => t.id === dr.id);
+    const newPos = new Map(newOrder.map((t, i) => [t.id, i] as const));
+    const jumped = sorted.filter((t, i) =>
+      t.id !== dr.id &&
+      i < oldIdx && (newPos.get(t.id) ?? 0) > newIdx &&
+      !!t.dueAt && (!dr.dueAt || (t.dueAt as string) < (dr.dueAt as string))
+    );
+    clearDrag();
+    if (newIdx === oldIdx && dr.urgency === tgt.u) return;
+    onMoveRequest({ ticket: dr, urgency: tgt.u, prevId, nextId, jumped });
+  };
 
-  const overRow = React.useCallback((e: React.DragEvent, u: number, index: number) => {
-    if (!dragIdRef.current) return;
-    e.preventDefault();
-    e.dataTransfer.dropEffect = "move";
-    if (!draggedRef.current) return;
-    const r = (e.currentTarget as HTMLElement).getBoundingClientRect();
-    queueTarget(u, index + (e.clientY < r.top + r.height / 2 ? 0 : 1));
-  }, [queueTarget]);
+  // Single set of document listeners mounted once. All state is accessed via refs
+  // so the stable closure never goes stale.
+  React.useEffect(() => {
+    const onMove = (e: PointerEvent) => {
+      // Phase 1: pending — confirm drag intent once pointer moves 5 px.
+      if (pendingDrag.current && !isDraggingRef.current) {
+        const { t, startX, startY } = pendingDrag.current;
+        if (Math.hypot(e.clientX - startX, e.clientY - startY) < 5) return;
+        pendingDrag.current = null;
+        if (expandedIdRef.current) onToggleExpand(expandedIdRef.current);
+        const pill = document.createElement("div");
+        pill.textContent = t.name;
+        pill.style.cssText = "position:fixed;z-index:9999;pointer-events:none;background:#fff;border:1px solid #d1d5db;border-radius:8px;padding:6px 14px;font-size:14px;font-weight:600;color:#111;box-shadow:0 2px 8px rgba(0,0,0,.18);white-space:nowrap;transform:translate(-50%,-50%)";
+        pill.style.left = e.clientX + "px";
+        pill.style.top = (e.clientY - 24) + "px";
+        document.body.appendChild(pill);
+        pillRef.current = pill;
+        setDrag({ id: t.id, from: "list", over: "list" });
+        return;
+      }
+      // Phase 2: active drag — track position and update drop target.
+      if (!isDraggingRef.current) return;
+      pointerY.current = e.clientY;
+      if (pillRef.current) {
+        pillRef.current.style.left = e.clientX + "px";
+        pillRef.current.style.top = (e.clientY - 24) + "px";
+      }
+      if (!listWrapRef.current || !draggedRef.current) return;
+      // Scan every draggable row (and empty-group drop zones) by position.
+      const nodes = listWrapRef.current.querySelectorAll<HTMLElement>("[data-dgu]");
+      let found: { u: number; index: number } | null = null;
+      for (const node of nodes) {
+        const r = node.getBoundingClientRect();
+        const u = +(node.dataset.dgu as string);
+        const i = +(node.dataset.dgi as string);
+        if (e.clientY < r.top + r.height / 2) { found = { u, index: i }; break; }
+        found = { u, index: i + 1 };
+      }
+      if (found) {
+        pendingTarget.current = found;
+        if (!targetRaf.current) {
+          targetRaf.current = requestAnimationFrame(() => {
+            targetRaf.current = 0;
+            const pt = pendingTarget.current;
+            setTarget((p) => (!pt || (p && p.u === pt.u && p.index === pt.index)) ? p : pt);
+          });
+        }
+      }
+    };
+    const onUp = () => {
+      if (isDraggingRef.current) commitRef.current();
+      else pendingDrag.current = null;
+    };
+    const onCancel = () => clearDrag();
+    document.addEventListener("pointermove", onMove);
+    document.addEventListener("pointerup", onUp);
+    document.addEventListener("pointercancel", onCancel);
+    return () => {
+      document.removeEventListener("pointermove", onMove);
+      document.removeEventListener("pointerup", onUp);
+      document.removeEventListener("pointercancel", onCancel);
+    };
+  }, [setDrag, clearDrag, onToggleExpand]);
 
-  const overTop = React.useCallback((e: React.DragEvent, u: number) => {
-    if (!dragIdRef.current) return;
-    e.preventDefault();
-    if (!draggedRef.current) return;
-    queueTarget(u, 0);
-  }, [queueTarget]);
-
-  // Native drag doesn't auto-scroll the page in Firefox/Safari — nudge it near
-  // the edges. dragover only records the pointer; a per-frame loop does the
-  // scrolling so the speed is steady and the hot event handler stays cheap.
-  const pointerY = React.useRef(-1);
-  const overList = React.useCallback((e: React.DragEvent) => {
-    if (!dragIdRef.current) return;
-    e.preventDefault();
-    if (!draggedRef.current) return;
-    pointerY.current = e.clientY;
-  }, []);
   const isDragging = !!dragged;
   React.useEffect(() => {
     if (!isDragging) return;
     let raf = requestAnimationFrame(function tick() {
       const y = pointerY.current;
-      if (y >= 0) {
+      if (y > 0) {
         if (y < 90) window.scrollBy(0, -10);
         else if (y > window.innerHeight - 90) window.scrollBy(0, 10);
       }
@@ -363,63 +416,26 @@ export function ListView({ tickets, onMenu, onStatus, onMoveRequest, onPatch, ex
     return () => { cancelAnimationFrame(raf); pointerY.current = -1; };
   }, [isDragging]);
 
-  // Safety net: if dragend fires on the document instead of the grip element
-  // (blank ghost, cancelled drag, element removed mid-drag), clean up state anyway.
-  React.useEffect(() => {
-    document.addEventListener("dragend", clearDrag);
-    return () => document.removeEventListener("dragend", clearDrag);
-  }, [clearDrag]);
-
-  const commitDrop = () => {
-    // pendingTarget may hold a frame not yet flushed to state — trust it first.
-    const tgt = pendingTarget.current || target;
-    if (!dragged || !tgt) { clearDrag(); return; }
-    const grp = byU.get(tgt.u) || [];
-    const beforeItems = grp.slice(0, tgt.index).filter((t) => t.id !== dragged.id);
-    const afterItems = grp.slice(tgt.index).filter((t) => t.id !== dragged.id);
-    const prevId = beforeItems.length ? beforeItems[beforeItems.length - 1].id : null;
-    const nextId = afterItems.length ? afterItems[0].id : null;
-
-    // Simulate the new order to find which sooner-due tickets get jumped.
-    const moved = { ...dragged, urgency: tgt.u };
-    const newOrder: Ticket[] = [];
-    for (const u of [1, 2, 3, 4, 5]) {
-      const arr = (byU.get(u) || []).filter((t) => t.id !== dragged.id);
-      if (u === tgt.u) {
-        const at = nextId ? arr.findIndex((t) => t.id === nextId) : arr.length;
-        arr.splice(at === -1 ? arr.length : at, 0, moved);
-      }
-      newOrder.push(...arr);
-    }
-    const oldIdx = sorted.findIndex((t) => t.id === dragged.id);
-    const newIdx = newOrder.findIndex((t) => t.id === dragged.id);
-    const newPos = new Map(newOrder.map((t, i) => [t.id, i] as const));
-    const jumped = sorted.filter((t, i) =>
-      t.id !== dragged.id &&
-      i < oldIdx && (newPos.get(t.id) ?? 0) > newIdx &&
-      !!t.dueAt && (!dragged.dueAt || (t.dueAt as string) < (dragged.dueAt as string))
-    );
-
-    clearDrag();
-    if (newIdx === oldIdx && dragged.urgency === tgt.u) return; // dropped where it started
-    onMoveRequest({ ticket: dragged, urgency: tgt.u, prevId, nextId, jumped });
-  };
+  const onGripDown = React.useCallback((e: React.PointerEvent, t: Ticket) => {
+    e.preventDefault(); // prevent text selection while holding the grip
+    pendingDrag.current = { t, startX: e.clientX, startY: e.clientY };
+  }, []);
 
   return (
-    <div className="list-wrap" onDragOver={overList} onDrop={(e) => { e.preventDefault(); commitDrop(); }}>
+    <div className="list-wrap" ref={listWrapRef}>
       {[1, 2, 3, 4, 5].map((u) => {
         const list = byU.get(u) || [];
         if (!list.length && !dragged) return null;
         const lineAt = dragged && target && target.u === u ? target.index : -1;
         return (
           <React.Fragment key={u}>
-            <div className="list-group-label" onDragOver={(e) => overTop(e, u)}>
+            <div className="list-group-label">
               <span>Urgency {u} · {URGENCY[u].label}</span>
               <span className="ln" />
               <span>{list.length}</span>
             </div>
             {list.length === 0 && dragged && (
-              <div className={`ins-zone ${lineAt === 0 ? "on" : ""}`} onDragOver={(e) => overTop(e, u)}>
+              <div className={`ins-zone ${lineAt === 0 ? "on" : ""}`} data-dgu={u} data-dgi={0}>
                 drop here
               </div>
             )}
@@ -435,9 +451,7 @@ export function ListView({ tickets, onMenu, onStatus, onMoveRequest, onPatch, ex
                 groupU={u} index={i}
                 onToggle={onToggleExpand}
                 onPatch={onPatch}
-                onRowOver={overRow}
-                startDrag={startDrag}
-                clearDrag={clearDrag}
+                onGripDown={onGripDown}
                 onStatus={onStatus} onMenu={onMenu} />
             ))}
           </React.Fragment>
@@ -480,16 +494,14 @@ type QueueRowProps = {
   index: number;
   onToggle: (id: string) => void;
   onPatch: (id: string, patch: InlinePatch) => void;
-  onRowOver: (e: React.DragEvent, u: number, index: number) => void;
-  startDrag: (e: React.DragEvent, t: Ticket) => void;
-  clearDrag: () => void;
+  onGripDown: (e: React.PointerEvent, t: Ticket) => void;
   onStatus: (id: string, s: Status) => void;
   onMenu: (e: React.MouseEvent, t: Ticket) => void;
 };
 
 /* Memoized because dragover re-renders the list up to once per frame while a row is
    dragged — without memo every row repaints on each indicator move. */
-const QueueRow = React.memo(function QueueRow({ t, isNext, dragging, canReorder, alert, expanded, dropBefore, dropAfter, groupU, index, onToggle, onPatch, onRowOver, startDrag, clearDrag, onStatus, onMenu }: QueueRowProps) {
+const QueueRow = React.memo(function QueueRow({ t, isNext, dragging, canReorder, alert, expanded, dropBefore, dropAfter, groupU, index, onToggle, onPatch, onGripDown, onStatus, onMenu }: QueueRowProps) {
   // Keep the expansion body mounted through the collapse animation, then unmount.
   const [bodyMounted, setBodyMounted] = React.useState(expanded);
   // Two stages: a compact read-only peek first; the pencil opens the full inline editor.
@@ -519,14 +531,12 @@ const QueueRow = React.memo(function QueueRow({ t, isNext, dragging, canReorder,
   ].join(" ");
 
   return (
-    <div className={cls} onDragOver={(e) => onRowOver(e, groupU, index)}>
+    <div className={cls} data-dgu={groupU} data-dgi={index}>
       <div className="lrow-head" onClick={headClick}>
         <span className={`grip ${canReorder ? "" : "off"}`}
           title={canReorder ? "Drag to reorder" : "Reordering is off while filtering"}
-          draggable={canReorder}
           onClick={(e) => e.stopPropagation()}
-          onDragStart={canReorder ? (e) => startDrag(e, t) : undefined}
-          onDragEnd={canReorder ? clearDrag : undefined}>
+          onPointerDown={canReorder ? (e) => onGripDown(e, t) : undefined}>
           <Icon name="grip-vertical" size={15} />
         </span>
         <UrgencyChip u={t.urgency} />
@@ -836,7 +846,6 @@ export function ConfirmMoveDialog({ move, onCancel, onConfirm }: {
 /* ================= WAITING ON PARTS ================= */
 /* Parked tickets — drag to reorder. The status pill is the way back: set the
    ticket to any other status and it returns to its old slot in the queue. */
-const noDrag = () => {}; // module-level so memoized rows always see the same prop
 // Sort by sortPos (drag order) with statusChangedAt as tiebreaker for new arrivals.
 function sortPartsOrder(a: Ticket, b: Ticket): number {
   const ap = a.sortPos ?? Infinity, bp = b.sortPos ?? Infinity;
@@ -863,76 +872,31 @@ export function PartsView({ tickets, onStatus, onMenu, onPatch, expandedId, onTo
 
   const draggedRef = React.useRef(dragged); draggedRef.current = dragged;
   const expandedIdRef = React.useRef(expandedId); expandedIdRef.current = expandedId;
-  const dragIdRef = React.useRef<string | null>(null);
+  const listWrapRef = React.useRef<HTMLDivElement | null>(null);
+  const pillRef = React.useRef<HTMLDivElement | null>(null);
+  const isDraggingRef = React.useRef(false); isDraggingRef.current = !!dragged;
+  const pointerY = React.useRef(-1);
+  const pendingDrag = React.useRef<{ t: Ticket; startX: number; startY: number } | null>(null);
 
   const pendingTarget = React.useRef<number | null>(null);
   const targetRaf = React.useRef(0);
-  const queueTarget = React.useCallback((index: number) => {
-    pendingTarget.current = index;
-    if (targetRaf.current) return;
-    targetRaf.current = requestAnimationFrame(() => {
-      targetRaf.current = 0;
-      const t = pendingTarget.current;
-      setTarget((p) => (p === t ? p : t));
-    });
-  }, []);
   React.useEffect(() => () => { if (targetRaf.current) cancelAnimationFrame(targetRaf.current); }, []);
 
   const clearDrag = React.useCallback(() => {
-    dragIdRef.current = null;
-    setDrag(null);
+    pendingDrag.current = null;
     pendingTarget.current = null;
+    setDrag(null);
     setTarget(null);
+    pointerY.current = -1;
+    if (pillRef.current) { pillRef.current.remove(); pillRef.current = null; }
   }, [setDrag]);
 
-  React.useEffect(() => {
-    document.addEventListener("dragend", clearDrag);
-    return () => document.removeEventListener("dragend", clearDrag);
-  }, [clearDrag]);
-
-  const startDrag = React.useCallback((e: React.DragEvent, t: Ticket) => {
-    if (expandedIdRef.current) onToggleExpand(expandedIdRef.current);
-    dragIdRef.current = t.id;
-    try {
-      e.dataTransfer.setData("text/plain", t.id);
-      e.dataTransfer.effectAllowed = "move";
-      const pill = document.createElement("div");
-      pill.textContent = t.name;
-      pill.style.cssText = "position:fixed;top:0;left:0;transform:translate(-9999px,-9999px);background:#fff;border:1px solid #d1d5db;border-radius:8px;padding:6px 14px;font-size:14px;font-weight:600;color:#111;box-shadow:0 2px 8px rgba(0,0,0,.15);pointer-events:none;white-space:nowrap";
-      document.body.appendChild(pill);
-      e.dataTransfer.setDragImage(pill, pill.offsetWidth / 2, 20);
-      setTimeout(() => pill.remove(), 0);
-    } catch {}
-    setDrag({ id: t.id, from: "parts", over: "parts" });
-  }, [onToggleExpand, setDrag]);
-
-  const overRow = React.useCallback((e: React.DragEvent, _u: number, index: number) => {
-    if (!dragIdRef.current) return;
-    e.preventDefault();
-    e.dataTransfer.dropEffect = "move";
-    if (!draggedRef.current) return;
-    const r = (e.currentTarget as HTMLElement).getBoundingClientRect();
-    queueTarget(index + (e.clientY < r.top + r.height / 2 ? 0 : 1));
-  }, [queueTarget]);
-
-  const overList = React.useCallback((e: React.DragEvent) => {
-    if (!dragIdRef.current) return;
-    e.preventDefault();
-  }, []);
-
-  const overTop = React.useCallback((e: React.DragEvent) => {
-    if (!dragIdRef.current) return;
-    e.preventDefault();
-    if (!draggedRef.current) return;
-    queueTarget(0);
-  }, [queueTarget]);
-
-  const commitDrop = React.useCallback(() => {
+  const commitRef = React.useRef<() => void>(() => {});
+  commitRef.current = () => {
     const tgt = pendingTarget.current ?? target;
     if (dragged === null || tgt === null) { clearDrag(); return; }
     const oldIdx = list.findIndex((t) => t.id === dragged.id);
     const listWithout = list.filter((t) => t.id !== dragged.id);
-    // tgt is an insertion index into the FULL list; convert to listWithout index.
     const ins = tgt > oldIdx ? tgt - 1 : tgt;
     const prevId = ins > 0 ? (listWithout[ins - 1]?.id ?? null) : null;
     const nextId = listWithout[ins]?.id ?? null;
@@ -941,7 +905,85 @@ export function PartsView({ tickets, onStatus, onMenu, onPatch, expandedId, onTo
     clearDrag();
     if (prevId === prevIdBefore && nextId === nextIdBefore) return;
     onMoveRequest({ ticket: dragged, urgency: dragged.urgency, prevId, nextId, jumped: [] });
-  }, [dragged, list, target, clearDrag, onMoveRequest]);
+  };
+
+  React.useEffect(() => {
+    const onMove = (e: PointerEvent) => {
+      if (pendingDrag.current && !isDraggingRef.current) {
+        const { t, startX, startY } = pendingDrag.current;
+        if (Math.hypot(e.clientX - startX, e.clientY - startY) < 5) return;
+        pendingDrag.current = null;
+        if (expandedIdRef.current) onToggleExpand(expandedIdRef.current);
+        const pill = document.createElement("div");
+        pill.textContent = t.name;
+        pill.style.cssText = "position:fixed;z-index:9999;pointer-events:none;background:#fff;border:1px solid #d1d5db;border-radius:8px;padding:6px 14px;font-size:14px;font-weight:600;color:#111;box-shadow:0 2px 8px rgba(0,0,0,.18);white-space:nowrap;transform:translate(-50%,-50%)";
+        pill.style.left = e.clientX + "px";
+        pill.style.top = (e.clientY - 24) + "px";
+        document.body.appendChild(pill);
+        pillRef.current = pill;
+        setDrag({ id: t.id, from: "parts", over: "parts" });
+        return;
+      }
+      if (!isDraggingRef.current) return;
+      pointerY.current = e.clientY;
+      if (pillRef.current) {
+        pillRef.current.style.left = e.clientX + "px";
+        pillRef.current.style.top = (e.clientY - 24) + "px";
+      }
+      if (!listWrapRef.current || !draggedRef.current) return;
+      const nodes = listWrapRef.current.querySelectorAll<HTMLElement>("[data-dgi]");
+      let found: number | null = null;
+      for (const node of nodes) {
+        const r = node.getBoundingClientRect();
+        const i = +(node.dataset.dgi as string);
+        if (e.clientY < r.top + r.height / 2) { found = i; break; }
+        found = i + 1;
+      }
+      if (found !== null) {
+        pendingTarget.current = found;
+        if (!targetRaf.current) {
+          targetRaf.current = requestAnimationFrame(() => {
+            targetRaf.current = 0;
+            const pt = pendingTarget.current;
+            setTarget((p) => (p === pt ? p : pt));
+          });
+        }
+      }
+    };
+    const onUp = () => {
+      if (isDraggingRef.current) commitRef.current();
+      else pendingDrag.current = null;
+    };
+    const onCancel = () => clearDrag();
+    document.addEventListener("pointermove", onMove);
+    document.addEventListener("pointerup", onUp);
+    document.addEventListener("pointercancel", onCancel);
+    return () => {
+      document.removeEventListener("pointermove", onMove);
+      document.removeEventListener("pointerup", onUp);
+      document.removeEventListener("pointercancel", onCancel);
+    };
+  }, [setDrag, clearDrag, onToggleExpand]);
+
+  const isDragging = !!dragged;
+  React.useEffect(() => {
+    if (!isDragging) return;
+    let raf = requestAnimationFrame(function tick() {
+      const y = pointerY.current;
+      if (y > 0) {
+        if (y < 90) window.scrollBy(0, -10);
+        else if (y > window.innerHeight - 90) window.scrollBy(0, 10);
+      }
+      raf = requestAnimationFrame(tick);
+    });
+    return () => { cancelAnimationFrame(raf); pointerY.current = -1; };
+  }, [isDragging]);
+
+  const onGripDown = React.useCallback((e: React.PointerEvent, t: Ticket) => {
+    e.preventDefault();
+    pendingDrag.current = { t, startX: e.clientX, startY: e.clientY };
+  }, []);
+
 
   if (list.length === 0) {
     return (
@@ -954,8 +996,8 @@ export function PartsView({ tickets, onStatus, onMenu, onPatch, expandedId, onTo
   }
 
   return (
-    <div className="list-wrap parts-list" onDragOver={overList} onDrop={(e) => { e.preventDefault(); commitDrop(); }}>
-      <div className="list-group-label" onDragOver={overTop}>
+    <div className="list-wrap parts-list" ref={listWrapRef}>
+      <div className="list-group-label">
         <span>Waiting on parts</span>
         <span className="ln" />
         <span>{list.length}</span>
@@ -965,9 +1007,7 @@ export function PartsView({ tickets, onStatus, onMenu, onPatch, expandedId, onTo
           dropBefore={target === i} dropAfter={target === i + 1 && i === list.length - 1}
           groupU={0} index={i}
           expanded={expandedId === t.id} onToggle={onToggleExpand} onPatch={onPatch}
-          onRowOver={canReorder ? overRow : noDrag}
-          startDrag={canReorder ? startDrag : noDrag}
-          clearDrag={canReorder ? clearDrag : noDrag}
+          onGripDown={onGripDown}
           onStatus={onStatus} onMenu={onMenu} />
       ))}
     </div>
