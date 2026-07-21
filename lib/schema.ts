@@ -11,7 +11,7 @@ export const tickets = pgTable("tickets", {
   assignedTo: text("assigned_to").array().notNull().default(["keith"]), // one or more of keith | garrett | marisa
   deviceType: text("device_type"), // "desktop" | "laptop" | "printer" | "misc" | null (pre-feature tickets)
   serviceTag: text("service_tag"), // "expedite" | "contract" | null (neither)
-  status: text("status").notNull().default("todo"), // todo | prog | resp | parts | done | picked
+  status: text("status").notNull().default("todo"), // todo | prog | call | resp | parts | done | picked
   dropoff: text("dropoff").notNull(), // YYYY-MM-DD
   dropoffAmPm: text("dropoff_ampm"), // "AM" | "PM" — morning vs afternoon drop-off
   dueAt: timestamp("due_at", { withTimezone: true }), // optional promised-by date & time

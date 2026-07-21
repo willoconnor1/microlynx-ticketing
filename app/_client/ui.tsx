@@ -257,7 +257,7 @@ type ListProps = {
 };
 export function ListView({ tickets, onMenu, onStatus, onMoveRequest, onPatch, expandedId, onToggleExpand, drag, setDrag, canReorder, getAlert }: ListProps) {
   const sorted = React.useMemo(
-    () => tickets.filter((t) => t.status === "todo" || t.status === "prog" || t.status === "resp").sort(sortQueue),
+    () => tickets.filter((t) => t.status === "todo" || t.status === "prog" || t.status === "call" || t.status === "resp").sort(sortQueue),
     [tickets]
   );
   const done = React.useMemo(
@@ -1266,9 +1266,9 @@ export function TopNav({ view, setView, onNew, onMobileMenu, partsCount, notif }
 }
 
 /* ================= QUICK MENU ================= */
-const STATUS_ICON: Record<Status, string> = { todo: "circle", prog: "loader", resp: "message-circle", parts: "package-search", done: "circle-check", picked: "package-check" };
+const STATUS_ICON: Record<Status, string> = { todo: "circle", prog: "loader", call: "phone", resp: "message-circle", parts: "package-search", done: "circle-check", picked: "package-check" };
 /* Garrett wants "Waiting on parts" at the top of the 3-dots menu (the pill menu keeps flow order). */
-const QUICK_STATUS_ORDER: Status[] = ["parts", "todo", "prog", "resp", "done", "picked"];
+const QUICK_STATUS_ORDER: Status[] = ["parts", "todo", "prog", "call", "resp", "done", "picked"];
 export function QuickMenu({ ctx, onClose, onUrgency, onStatus, onEdit, onDelete }: {
   ctx: { x: number; y: number; ticket: Ticket };
   onClose: () => void;
