@@ -273,7 +273,7 @@ button{font-family:inherit}
 .list-group-label{font-family:var(--font-mono);font-size:10.5px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--gray-500);margin:12px 2px 2px;display:flex;align-items:center;gap:9px}
 .list-group-label .ln{flex:1;height:1px;background:var(--border)}
 .lrow{display:block;position:relative;background:#fff;border:1px solid var(--border);border-left:3px solid var(--uc);border-radius:var(--radius-md);box-shadow:var(--shadow-xs);transition:box-shadow .14s ease,border-color .14s ease}
-.lrow-head{display:grid;grid-template-columns:16px 30px minmax(0,1.7fr) 100px 100px 112px 132px 122px;align-items:center;gap:14px;padding:var(--row-pad-y) var(--row-pad-x);cursor:pointer;user-select:none;-webkit-user-select:none}
+.lrow-head{display:grid;grid-template-columns:16px 30px minmax(0,1.7fr) 100px 100px 112px 132px 122px;align-items:center;gap:14px;padding:var(--row-pad-y) var(--row-pad-x);cursor:pointer}
 .lrow-head.static{cursor:default}
 .lrow .l-due.nodue{color:var(--gray-300)}
 .done-row .done-at{grid-column:span 2}
