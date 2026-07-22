@@ -373,6 +373,9 @@ export function ListView({ tickets, onMenu, onStatus, onMoveRequest, onPatch, ex
         const r = node.getBoundingClientRect();
         const u = +(node.dataset.dgu as string);
         const i = +(node.dataset.dgi as string);
+        // If pointer is above this row's top entirely, we're in a gap or group label —
+        // keep the previous group's position rather than jumping to the next urgency group.
+        if (found && e.clientY < r.top) { break; }
         if (e.clientY < r.top + r.height / 2) { found = { u, index: i }; break; }
         found = { u, index: i + 1 };
       }
