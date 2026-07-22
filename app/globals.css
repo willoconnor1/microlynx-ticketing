@@ -263,6 +263,7 @@ button{font-family:inherit}
 .tcard .menu-btn{opacity:0;transition:opacity .12s ease}
 .tcard:hover .menu-btn{opacity:1}
 .tcard.desktop{background:#e4edf8}
+.tcard.laptop{background:#ede8f8}
 .tcard.is-picked{background:var(--gray-100);border-color:var(--border);box-shadow:none;opacity:.92}
 .tcard.is-picked .tc-name{color:var(--gray-600)}
 .tcard.is-picked .tc-desc{color:var(--gray-500)}
@@ -299,7 +300,11 @@ button{font-family:inherit}
 .uselect.compact .opt{padding:7px 4px}
 .toggle.device{width:100%}
 .toggle.device button{padding:10px 14px;flex:1;justify-content:center}
-.toggle.device button.on{background:var(--blue-50);color:var(--blue-700)}
+.toggle.device button.on{font-weight:600}
+.toggle.device button.dt-desktop:hover,.toggle.device button.dt-desktop.on{background:#e4edf8;color:#1e3a6e}
+.toggle.device button.dt-laptop:hover,.toggle.device button.dt-laptop.on{background:#ede8f8;color:#4c1d95}
+.toggle.device button.dt-printer:hover,.toggle.device button.dt-printer.on{background:#f3ecdf;color:#92400e}
+.toggle.device button.dt-misc:hover,.toggle.device button.dt-misc.on{background:var(--gray-100);color:var(--ink-700)}
 .lrow:hover{box-shadow:var(--shadow-sm);border-color:#f0a0a0}
 .lrow .nm{font-weight:700;color:var(--ink-900);font-size:14.5px;line-height:1.25}
 .lrow .ds{font-size:13px;color:var(--gray-600);margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -344,7 +349,7 @@ button{font-family:inherit}
 .parts-list .lrow-head{grid-template-columns:16px 30px minmax(0,1.7fr) 100px 100px 112px 160px 122px}
 /* Device-type row shades (state rules below win). Misc + unset stay plain white. */
 .lrow.desktop{background:#e4edf8} /* cool blue = desktop */
-.lrow.laptop{background:#e6f2e8}  /* soft green = laptop */
+.lrow.laptop{background:#ede8f8}  /* soft purple = laptop */
 .lrow.printer{background:#f3ecdf} /* warm sand = printer */
 .lrow.done-row{border-left-color:var(--success);background:#fcfdfc}
 .lrow.done-row .nm{color:var(--gray-600)}
@@ -498,7 +503,7 @@ button{font-family:inherit}
 .dev-count{display:inline-flex;align-items:center;gap:6px;font-family:var(--font-mono);font-size:11px;font-weight:600;color:var(--gray-500);white-space:nowrap}
 .dev-dot{width:11px;height:11px;border-radius:3px;border:1px solid rgba(0,0,0,.1);flex:none}
 .dev-dot.desktop{background:#e4edf8}
-.dev-dot.laptop{background:#e6f2e8}
+.dev-dot.laptop{background:#ede8f8}
 .dev-dot.printer{background:#f3ecdf}
 .dev-dot.misc{background:#fff}
 

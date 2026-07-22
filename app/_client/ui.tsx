@@ -772,7 +772,7 @@ function RowExpansion({ t, onPatch }: { t: Ticket; onPatch: (id: string, p: Inli
         <label className="lbl">Device</label>
         <div className="toggle device">
           {DEVICE_TYPES.map((d) => (
-            <button key={d.key} type="button" className={t.deviceType === d.key ? "on" : ""}
+            <button key={d.key} type="button" className={`dt-${d.key}${t.deviceType === d.key ? " on" : ""}`}
               onClick={() => onPatch(t.id, { deviceType: d.key })}>{d.label}</button>
           ))}
         </div>
@@ -1550,7 +1550,7 @@ export function TicketForm({ editing, today, onSave, onClose }: {
             <label className="lbl">Device</label>
             <div className="toggle device">
               {DEVICE_TYPES.map((d) => (
-                <button key={d.key} type="button" className={f.deviceType === d.key ? "on" : ""}
+                <button key={d.key} type="button" className={`dt-${d.key}${f.deviceType === d.key ? " on" : ""}`}
                   onClick={() => set("deviceType", d.key)}>{d.label}</button>
               ))}
             </div>
