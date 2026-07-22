@@ -1,23 +1,16 @@
 /* Dymo 30336 label printing (1" x 2-1/8" multi-purpose).
 
-   Browser-native printing: we build a tiny HTML document sized to the label,
-   drop it in a hidden iframe, and call print(). The Dymo just needs to be the
-   selected/default printer in the print dialog. No SDK, no local web service.
+   Three stickers per ticket:
+     1. Customer    — name + phone, centered, maximised (always)
+     2. Password    — just the password, big mono text (only when a password is on file)
+     3. Job summary — first line of the description field, big text (always when desc present)
 
-   Two stickers per ticket:
-     1. Customer  — name + phone (goes on the outside / the ticket).
-     2. Password  — device login, in big mono type (goes inside the case).
-   The password sticker only prints when a password is on file. */
+   Browser-native: hidden iframe + window.print(). No SDK required. */
 
 import type { Ticket } from "@/lib/tickets";
 
 export const SHOP_PHONE = "(253) 853-3298";
-
-/* Solid-black wordmark (no tagline) — sharpest for the Dymo's black-only thermal
-   printing. Served from /public, same origin as the app, so the iframe loads it. */
 const LOGO_SRC = "/microlynx-logo-mark-bw.png";
-
-/* The 30336 prints landscape: 2-1/8" wide (54mm) x 1" tall (25.4mm). */
 const LABEL_W = "54mm";
 const LABEL_H = "25.4mm";
 
@@ -26,61 +19,77 @@ function esc(s: string): string {
     ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]!));
 }
 
-/* Auto-shrink the customer name so a long name never spills off the edge of the
-   label; the very longest names wrap to a second line instead of clipping. */
 function fitName(name: string): { size: number; wrap: boolean } {
   const n = name.trim().length;
-  if (n <= 15) return { size: 13.5, wrap: false };
-  if (n <= 19) return { size: 11.5, wrap: false };
-  if (n <= 25) return { size: 9.5, wrap: false };
+  if (n <= 10) return { size: 19, wrap: false };
+  if (n <= 15) return { size: 16, wrap: false };
+  if (n <= 20) return { size: 13, wrap: false };
+  if (n <= 28) return { size: 10, wrap: false };
   return { size: 9, wrap: true };
 }
 
-/* Same idea for the device password: long values step down in size and still
-   wrap (break-all in CSS) rather than running off the sticker. */
 function fitPw(pw: string): number {
   const n = pw.length;
-  if (n <= 10) return 13;
-  if (n <= 16) return 11;
-  if (n <= 24) return 9;
-  return 7.5;
+  if (n <= 6)  return 30;
+  if (n <= 10) return 26;
+  if (n <= 14) return 22;
+  if (n <= 20) return 17;
+  if (n <= 28) return 13;
+  return 10;
 }
 
-/* The shop logo + phone shown along the bottom of every sticker. */
-function footer(): string {
-  return `<div class="foot">
-    <img class="logo" src="${LOGO_SRC}" alt="Microlynx">
-    <span class="shop-phone">${esc(SHOP_PHONE)}</span>
-  </div>`;
+function fitDesc(text: string): { size: number; wrap: boolean } {
+  const n = text.length;
+  if (n <= 14) return { size: 24, wrap: false };
+  if (n <= 24) return { size: 19, wrap: false };
+  if (n <= 38) return { size: 14, wrap: false };
+  if (n <= 60) return { size: 11, wrap: false };
+  return { size: 9, wrap: true };
 }
 
+/* Sticker 1: name + phone centred, footer with logo + shop number. */
 function customerLabel(t: Ticket): string {
   const fit = fitName(t.name);
-  const nameStyle = `font-size:${fit.size}pt;${fit.wrap ? "white-space:normal;-webkit-line-clamp:2;" : "white-space:nowrap;"}`;
+  const nameStyle = `font-size:${fit.size}pt;${fit.wrap ? "" : "white-space:nowrap;"}`;
   return `<div class="label">
     <div class="top">
       <div class="cust-name${fit.wrap ? " wrap" : ""}" style="${nameStyle}">${esc(t.name)}</div>
       <div class="cust-phone">${esc(t.phone)}</div>
     </div>
-    ${footer()}
+    <div class="foot">
+      <img class="logo" src="${LOGO_SRC}" alt="Microlynx">
+      <span class="shop-phone">${esc(SHOP_PHONE)}</span>
+    </div>
   </div>`;
 }
 
+/* Sticker 2: password centred, footer with logo + shop number. */
 function passwordLabel(t: Ticket): string {
   const pw = t.password || "";
   return `<div class="label">
-    <div class="top">
-      <div class="pw-who">${esc(t.name)} &middot; ${esc(t.id)}</div>
-      <div class="pw-label">Device password</div>
-      <div class="pw-value" style="font-size:${fitPw(pw)}pt">${esc(pw)}</div>
+    <div class="pw-value" style="font-size:${fitPw(pw)}pt;text-align:center">${esc(pw)}</div>
+    <div class="foot">
+      <img class="logo" src="${LOGO_SRC}" alt="Microlynx">
+      <span class="shop-phone">${esc(SHOP_PHONE)}</span>
     </div>
-    ${footer()}
+  </div>`;
+}
+
+/* Sticker 3: first line of the description, fills the sticker edge-to-edge. */
+function descLabel(firstLine: string): string {
+  const fit = fitDesc(firstLine);
+  const style = `font-size:${fit.size}pt;${fit.wrap ? "" : "white-space:nowrap;overflow:hidden;text-overflow:ellipsis;"}`;
+  return `<div class="label label-plain label-desc">
+    <div class="desc-value${fit.wrap ? " wrap" : ""}" style="${style}">${esc(firstLine)}</div>
   </div>`;
 }
 
 function buildDoc(t: Ticket): string {
   const labels = [customerLabel(t)];
-  if (t.password && t.password.trim()) labels.push(passwordLabel(t));
+  if (t.password?.trim()) labels.push(passwordLabel(t));
+  const firstLine = (t.desc || "").split(/\r?\n/)[0].trim();
+  if (firstLine) labels.push(descLabel(firstLine));
+
   return `<!doctype html><html><head><meta charset="utf-8">
 <title>Labels ${esc(t.id)}</title>
 <style>
@@ -96,22 +105,26 @@ function buildDoc(t: Ticket): string {
     overflow: hidden; page-break-after: always;
   }
   .label:last-child { page-break-after: auto; }
-  .top { min-height: 0; }
-  .cust-name { font-weight: 800; line-height: 1.05; overflow: hidden;
-               text-overflow: ellipsis; }
-  /* Longest names wrap to two lines instead of clipping. */
+  /* Password + desc stickers: centred, no footer */
+  .label-plain { justify-content: center; align-items: center; text-align: center; }
+  /* Desc sticker gets tighter margins to maximise text area */
+  .label-desc { padding: 0.8mm 1.2mm; }
+  /* Customer label: top section centred */
+  .top { text-align: center; min-height: 0; }
+  .cust-name { font-weight: 800; line-height: 1.05; }
   .cust-name.wrap { display: -webkit-box; -webkit-box-orient: vertical;
-                    -webkit-line-clamp: 2; }
-  .cust-phone { font-size: 13.5pt; margin-top: 0.6mm; letter-spacing: 0.02em; }
-  .pw-who { font-size: 6.5pt; color: #555; white-space: nowrap;
-            overflow: hidden; text-overflow: ellipsis; }
-  .pw-label { font-size: 6pt; letter-spacing: 0.1em; text-transform: uppercase;
-              color: #666; margin-top: 0.4mm; }
+                    -webkit-line-clamp: 2; overflow: hidden; }
+  .cust-phone { font-size: 14pt; margin-top: 1mm; letter-spacing: 0.02em; }
+  /* Password sticker */
   .pw-value { font-family: "Courier New", monospace; font-weight: 700;
-              font-size: 13pt; line-height: 1.05; margin-top: 0.3mm;
-              word-break: break-all; }
+              line-height: 1.1; word-break: break-all; }
+  /* Desc sticker */
+  .desc-value { font-weight: 700; line-height: 1.15; }
+  .desc-value.wrap { display: -webkit-box; -webkit-box-orient: vertical;
+                     -webkit-line-clamp: 4; overflow: hidden; }
+  /* Footer (customer sticker only) */
   .foot { display: flex; flex-direction: column; align-items: center; gap: 0.6mm;
-          padding-top: 0; }
+          border-top: 0.3mm solid #bbb; padding-top: 0.9mm; }
   .logo { height: 3.4mm; width: auto; max-width: 47mm; }
   .shop-phone { font-size: 9.5pt; color: #333; white-space: nowrap; }
 </style></head><body>
@@ -119,8 +132,6 @@ ${labels.join("\n")}
 </body></html>`;
 }
 
-/* Render the labels in a throwaway hidden iframe and fire the print dialog.
-   The iframe is removed after printing so nothing lingers in the page. */
 export function printTicketLabels(t: Ticket): void {
   const iframe = document.createElement("iframe");
   iframe.setAttribute("aria-hidden", "true");
@@ -144,7 +155,6 @@ export function printTicketLabels(t: Ticket): void {
     window.setTimeout(() => iframe.remove(), 1000);
   };
 
-  // Don't print until the logo has loaded, or it can come out blank the first time.
   const imgs = Array.from(doc.images);
   let pending = imgs.filter((im) => !im.complete).length;
   if (pending === 0) {
