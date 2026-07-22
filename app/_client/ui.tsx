@@ -545,7 +545,6 @@ const QueueRow = React.memo(function QueueRow({ t, isNext, dragging, canReorder,
 
   const cls = [
     "lrow", `u${t.urgency}`,
-    isNext ? "next" : "",
     dragging ? "dragging" : "",
     expanded ? "expanded" : "",
     dropBefore ? "drop-before" : "",
