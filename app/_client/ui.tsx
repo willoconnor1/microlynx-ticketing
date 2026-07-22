@@ -421,12 +421,18 @@ export function ListView({ tickets, onMenu, onStatus, onMoveRequest, onPatch, ex
     pendingDrag.current = { t, startX: e.clientX, startY: e.clientY };
   }, []);
 
+  const dragOrigIdx = dragged
+    ? (byU.get(dragged.urgency) || []).findIndex((t) => t.id === dragged.id)
+    : -1;
+
   return (
     <div className="list-wrap" ref={listWrapRef}>
       {[1, 2, 3, 4, 5].map((u) => {
         const list = byU.get(u) || [];
         if (!list.length && !dragged) return null;
-        const lineAt = dragged && target && target.u === u ? target.index : -1;
+        const noOp = dragged && target && target.u === dragged.urgency
+          && (target.index === dragOrigIdx || target.index === dragOrigIdx + 1);
+        const lineAt = dragged && target && target.u === u && !noOp ? target.index : -1;
         return (
           <React.Fragment key={u}>
             <div className="list-group-label">
@@ -439,21 +445,23 @@ export function ListView({ tickets, onMenu, onStatus, onMoveRequest, onPatch, ex
                 drop here
               </div>
             )}
-            {list.map((t, i) => (
-              <QueueRow key={t.id} t={t}
+            {list.flatMap((t, i) => {
+              const row = <QueueRow key={t.id} t={t}
                 isNext={t.id === topId}
                 dragging={!!listDrag && listDrag.id === t.id}
                 canReorder={canReorder}
                 alert={getAlert(t.id)}
                 expanded={expandedId === t.id}
-                dropBefore={lineAt === i}
-                dropAfter={lineAt === list.length && i === list.length - 1}
+                dropBefore={false}
+                dropAfter={false}
                 groupU={u} index={i}
                 onToggle={onToggleExpand}
                 onPatch={onPatch}
                 onGripDown={onGripDown}
-                onStatus={onStatus} onMenu={onMenu} />
-            ))}
+                onStatus={onStatus} onMenu={onMenu} />;
+              return lineAt === i ? [<div key="dp" className="drop-phantom" />, row] : [row];
+            })}
+            {lineAt === list.length && list.length > 0 && <div className="drop-phantom" key="dp-end" />}
           </React.Fragment>
         );
       })}
@@ -995,6 +1003,10 @@ export function PartsView({ tickets, onStatus, onMenu, onPatch, expandedId, onTo
     );
   }
 
+  const dragOrigIdx = dragged ? list.findIndex((t) => t.id === dragged.id) : -1;
+  const noOpTarget = target !== null && dragOrigIdx >= 0
+    && (target === dragOrigIdx || target === dragOrigIdx + 1);
+
   return (
     <div className="list-wrap parts-list" ref={listWrapRef}>
       <div className="list-group-label">
@@ -1002,14 +1014,16 @@ export function PartsView({ tickets, onStatus, onMenu, onPatch, expandedId, onTo
         <span className="ln" />
         <span>{list.length}</span>
       </div>
-      {list.map((t, i) => (
-        <QueueRow key={t.id} t={t} isNext={false} dragging={!!partsDrag && partsDrag.id === t.id} canReorder={canReorder} alert={false}
-          dropBefore={target === i} dropAfter={target === i + 1 && i === list.length - 1}
+      {list.flatMap((t, i) => {
+        const row = <QueueRow key={t.id} t={t} isNext={false} dragging={!!partsDrag && partsDrag.id === t.id} canReorder={canReorder} alert={false}
+          dropBefore={false} dropAfter={false}
           groupU={0} index={i}
           expanded={expandedId === t.id} onToggle={onToggleExpand} onPatch={onPatch}
           onGripDown={onGripDown}
-          onStatus={onStatus} onMenu={onMenu} />
-      ))}
+          onStatus={onStatus} onMenu={onMenu} />;
+        return (!noOpTarget && target === i) ? [<div key="dp" className="drop-phantom" />, row] : [row];
+      })}
+      {!noOpTarget && target === list.length && list.length > 0 && <div className="drop-phantom" key="dp-end" />}
     </div>
   );
 }
