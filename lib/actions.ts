@@ -11,6 +11,7 @@ import {
   type NewTicketInput,
   type TicketPatch,
 } from "./store";
+import { broadcast } from "./broadcast";
 
 export async function fetchState(): Promise<AppState> {
   return getState();
@@ -20,16 +21,23 @@ export async function saveTicketAction(
   id: string | null,
   data: NewTicketInput
 ): Promise<{ state: AppState; id: string }> {
-  if (id) return { state: await updateTicket(id, data), id };
-  return createTicket(data);
+  const result = id
+    ? { state: await updateTicket(id, data), id }
+    : await createTicket(data);
+  broadcast();
+  return result;
 }
 
 export async function setUrgencyAction(id: string, urgency: number): Promise<AppState> {
-  return updateTicket(id, { urgency });
+  const state = await updateTicket(id, { urgency });
+  broadcast();
+  return state;
 }
 
 export async function setStatusAction(id: string, status: TicketPatch["status"]): Promise<AppState> {
-  return updateTicket(id, { status });
+  const state = await updateTicket(id, { status });
+  broadcast();
+  return state;
 }
 
 export async function moveTicketAction(
@@ -38,16 +46,22 @@ export async function moveTicketAction(
   prevId: string | null,
   nextId: string | null
 ): Promise<AppState> {
-  return moveTicket(id, urgency, prevId, nextId);
+  const state = await moveTicket(id, urgency, prevId, nextId);
+  broadcast();
+  return state;
 }
 
 export async function deleteTicketAction(id: string): Promise<AppState> {
-  return deleteTicket(id);
+  const state = await deleteTicket(id);
+  broadcast();
+  return state;
 }
 
 /* Inline edits from the expanded list row. */
 export async function patchTicketAction(id: string, patch: TicketPatch): Promise<AppState> {
-  return updateTicket(id, patch);
+  const state = await updateTicket(id, patch);
+  broadcast();
+  return state;
 }
 
 export async function sweepArchiveAction(): Promise<number> {

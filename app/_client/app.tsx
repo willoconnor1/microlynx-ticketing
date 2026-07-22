@@ -163,12 +163,16 @@ export default function App({ initialTickets, initialArchive }: { initialTickets
   }, [processAlerts]);
   const ticketsRef = React.useRef(tickets); ticketsRef.current = tickets;
 
-  /* keep the board fresh across devices: poll + refetch on focus */
+  /* Real-time sync: SSE push from the server on every mutation, with a 30 s poll
+     and a focus-refetch as fallback in case the SSE connection drops. */
   React.useEffect(() => {
     const refresh = async () => { if (!busy.current) apply(await fetchState()); };
-    const id = setInterval(refresh, 10000);
+    const es = new EventSource("/api/updates");
+    es.onmessage = refresh;
+    es.onerror = () => es.close(); // poll fallback takes over if SSE fails
+    const id = setInterval(refresh, 30000);
     window.addEventListener("focus", refresh);
-    return () => { clearInterval(id); window.removeEventListener("focus", refresh); };
+    return () => { es.close(); clearInterval(id); window.removeEventListener("focus", refresh); };
   }, []);
 
   // On mount, treat the server-rendered initial tickets as the baseline so the
