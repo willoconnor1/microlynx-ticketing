@@ -110,8 +110,8 @@ function buildDoc(t: Ticket): string {
   .pw-value { font-family: "Courier New", monospace; font-weight: 700;
               font-size: 13pt; line-height: 1.05; margin-top: 0.3mm;
               word-break: break-all; }
-  .foot { display: flex; flex-direction: column; align-items: center; gap: 1.4mm;
-          border-top: 0.3mm solid #bbb; padding-top: 0.9mm; }
+  .foot { display: flex; flex-direction: column; align-items: center; gap: 0.6mm;
+          padding-top: 0; }
   .logo { height: 3.4mm; width: auto; max-width: 47mm; }
   .shop-phone { font-size: 9.5pt; color: #333; white-space: nowrap; }
 </style></head><body>
