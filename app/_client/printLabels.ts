@@ -38,13 +38,29 @@ function fitPw(pw: string): number {
   return 10;
 }
 
-function fitDesc(text: string): { size: number; wrap: boolean } {
+/* Cascade: try to fill 1 line at max size, shrink until it fits,
+   then spill to 2 → 3 → 4 lines (which lets font grow again). */
+function fitDesc(text: string): { size: number; lines: number } {
   const n = text.length;
-  if (n <= 14) return { size: 24, wrap: false };
-  if (n <= 24) return { size: 19, wrap: false };
-  if (n <= 38) return { size: 14, wrap: false };
-  if (n <= 60) return { size: 11, wrap: false };
-  return { size: 9, wrap: true };
+  // 1 line
+  if (n <= 11) return { size: 24, lines: 1 };
+  if (n <= 14) return { size: 20, lines: 1 };
+  if (n <= 17) return { size: 17, lines: 1 };
+  if (n <= 20) return { size: 14, lines: 1 };
+  if (n <= 24) return { size: 12, lines: 1 };
+  if (n <= 28) return { size: 10, lines: 1 };
+  if (n <= 35) return { size:  8, lines: 1 };
+  // 2 lines
+  if (n <= 42) return { size: 14, lines: 2 };
+  if (n <= 54) return { size: 11, lines: 2 };
+  if (n <= 70) return { size:  9, lines: 2 };
+  // 3 lines
+  if (n <= 80) return { size: 11, lines: 3 };
+  if (n <= 99) return { size:  9, lines: 3 };
+  // 4 lines
+  if (n <= 115) return { size: 9, lines: 4 };
+  if (n <= 140) return { size: 8, lines: 4 };
+  return { size: 7, lines: 4 };
 }
 
 /* Sticker 1: name + phone centred, footer with logo + shop number. */
@@ -63,11 +79,13 @@ function customerLabel(t: Ticket): string {
   </div>`;
 }
 
-/* Sticker 2: password centred, footer with logo + shop number. */
+/* Sticker 2: password vertically centred above footer. */
 function passwordLabel(t: Ticket): string {
   const pw = t.password || "";
   return `<div class="label">
-    <div class="pw-value" style="font-size:${fitPw(pw)}pt;text-align:center">${esc(pw)}</div>
+    <div class="pw-wrap">
+      <div class="pw-value" style="font-size:${fitPw(pw)}pt">${esc(pw)}</div>
+    </div>
     <div class="foot">
       <img class="logo" src="${LOGO_SRC}" alt="Microlynx">
       <span class="shop-phone">${esc(SHOP_PHONE)}</span>
@@ -77,10 +95,12 @@ function passwordLabel(t: Ticket): string {
 
 /* Sticker 3: first line of the description, fills the sticker edge-to-edge. */
 function descLabel(firstLine: string): string {
-  const fit = fitDesc(firstLine);
-  const style = `font-size:${fit.size}pt;${fit.wrap ? "" : "white-space:nowrap;overflow:hidden;text-overflow:ellipsis;"}`;
+  const { size, lines } = fitDesc(firstLine);
+  const wrapCss = lines > 1
+    ? `display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:${lines};overflow:hidden;`
+    : `white-space:nowrap;overflow:hidden;text-overflow:ellipsis;`;
   return `<div class="label label-plain label-desc">
-    <div class="desc-value${fit.wrap ? " wrap" : ""}" style="${style}">${esc(firstLine)}</div>
+    <div class="desc-value" style="font-size:${size}pt;${wrapCss}">${esc(firstLine)}</div>
   </div>`;
 }
 
@@ -116,12 +136,11 @@ function buildDoc(t: Ticket): string {
                     -webkit-line-clamp: 2; overflow: hidden; }
   .cust-phone { font-size: 14pt; margin-top: 1mm; letter-spacing: 0.02em; }
   /* Password sticker */
+  .pw-wrap { flex: 1; display: flex; align-items: center; justify-content: center; }
   .pw-value { font-family: "Courier New", monospace; font-weight: 700;
-              line-height: 1.1; word-break: break-all; }
-  /* Desc sticker */
+              line-height: 1.1; word-break: break-all; text-align: center; }
+  /* Desc sticker — wrap/clamp applied inline per-label */
   .desc-value { font-weight: 700; line-height: 1.15; }
-  .desc-value.wrap { display: -webkit-box; -webkit-box-orient: vertical;
-                     -webkit-line-clamp: 4; overflow: hidden; }
   /* Footer (customer sticker only) */
   .foot { display: flex; flex-direction: column; align-items: center; gap: 0.6mm;
           border-top: 0.3mm solid #bbb; padding-top: 0.9mm; }
