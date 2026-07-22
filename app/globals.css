@@ -262,8 +262,8 @@ button{font-family:inherit}
 .tc-footL{display:flex;align-items:center;gap:11px;min-width:0}
 .tcard .menu-btn{opacity:0;transition:opacity .12s ease}
 .tcard:hover .menu-btn{opacity:1}
-.tcard.desktop{background:#e4edf8}
-.tcard.laptop{background:#ede8f8}
+.tcard.desktop{background:#cfe2f7}
+.tcard.laptop{background:#e2d4f5}
 .tcard.printer{background:#e2f4e6}
 .tcard.aio{background:#fde8f2}
 .tcard.misc{background:#ebebeb}
@@ -304,8 +304,8 @@ button{font-family:inherit}
 .toggle.device{width:100%}
 .toggle.device button{padding:10px 14px;flex:1;justify-content:center}
 .toggle.device button.on{font-weight:600}
-.toggle.device button.dt-desktop:hover,.toggle.device button.dt-desktop.on{background:#e4edf8;color:#1e3a6e}
-.toggle.device button.dt-laptop:hover,.toggle.device button.dt-laptop.on{background:#ede8f8;color:#4c1d95}
+.toggle.device button.dt-desktop:hover,.toggle.device button.dt-desktop.on{background:#cfe2f7;color:#0d3b7a}
+.toggle.device button.dt-laptop:hover,.toggle.device button.dt-laptop.on{background:#e2d4f5;color:#4c1d95}
 .toggle.device button.dt-printer:hover,.toggle.device button.dt-printer.on{background:#e2f4e6;color:#1b5e20}
 .toggle.device button.dt-aio:hover,.toggle.device button.dt-aio.on{background:#fde8f2;color:#8e1560}
 .toggle.device button.dt-misc:hover,.toggle.device button.dt-misc.on{background:#ebebeb;color:#444}
@@ -350,8 +350,8 @@ button{font-family:inherit}
    the long "Waiting on parts" label fits (the flexible name column absorbs it). */
 .parts-list .lrow-head{grid-template-columns:16px 30px minmax(0,1.7fr) 100px 100px 112px 160px 122px}
 /* Device-type row shades (state rules below win). Misc + unset stay plain white. */
-.lrow.desktop{background:#e4edf8}
-.lrow.laptop{background:#ede8f8}
+.lrow.desktop{background:#cfe2f7}
+.lrow.laptop{background:#e2d4f5}
 .lrow.printer{background:#e2f4e6}
 .lrow.aio{background:#fde8f2}
 .lrow.misc{background:#ebebeb}
@@ -506,8 +506,8 @@ button{font-family:inherit}
 .queue-stats{flex-basis:100%;display:flex;align-items:center;gap:14px;flex-wrap:wrap}
 .dev-count{display:inline-flex;align-items:center;gap:6px;font-family:var(--font-mono);font-size:11px;font-weight:600;color:var(--gray-500);white-space:nowrap}
 .dev-dot{width:11px;height:11px;border-radius:3px;border:1px solid rgba(0,0,0,.1);flex:none}
-.dev-dot.desktop{background:#e4edf8}
-.dev-dot.laptop{background:#ede8f8}
+.dev-dot.desktop{background:#cfe2f7}
+.dev-dot.laptop{background:#e2d4f5}
 .dev-dot.printer{background:#e2f4e6}
 .dev-dot.aio{background:#fde8f2}
 .dev-dot.misc{background:#d0d0d0}
