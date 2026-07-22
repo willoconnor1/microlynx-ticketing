@@ -71,11 +71,11 @@ button{font-family:inherit}
   --card-name:14.5px; --card-desc:13px;
 
   /* Urgency palette: dark navy (1) stepping to muted steel blue (5). */
-  --u1:#1e3a8a; --u1-bg:#d1dff7; --u1-tint:#e8f0fc;
-  --u2:#1d4ed8; --u2-bg:#d6e4f9; --u2-tint:#ebf2fd;
-  --u3:#2563eb; --u3-bg:#dae8fa; --u3-tint:#edf4fd;
-  --u4:#3578c4; --u4-bg:#ddeaf8; --u4-tint:#eff5fd;
-  --u5:#4b78b0; --u5-bg:#e0ecf6; --u5-tint:#f0f6fb;
+  --u1:#0a1c5c; --u1-bg:#cdd4ee; --u1-tint:#e6e9f7;
+  --u2:#1340a0; --u2-bg:#cdd9f2; --u2-tint:#e5ecfb;
+  --u3:#0b72cc; --u3-bg:#c8e2f6; --u3-tint:#e3f1fc;
+  --u4:#0299c8; --u4-bg:#c2ecf7; --u4-tint:#e0f5fc;
+  --u5:#00afc8; --u5-bg:#bceef6; --u5-tint:#dbf5fb;
 }
 .u1{--uc:var(--u1);--ubg:var(--u1-bg);--utint:var(--u1-tint)}
 .u2{--uc:var(--u2);--ubg:var(--u2-bg);--utint:var(--u2-tint)}
@@ -264,7 +264,9 @@ button{font-family:inherit}
 .tcard:hover .menu-btn{opacity:1}
 .tcard.desktop{background:#e4edf8}
 .tcard.laptop{background:#ede8f8}
-.tcard.aio{background:#ede0d4}
+.tcard.printer{background:#e2f4e6}
+.tcard.aio{background:#fde8f2}
+.tcard.misc{background:#ebebeb}
 .tcard.is-picked{background:var(--gray-100);border-color:var(--border);box-shadow:none;opacity:.92}
 .tcard.is-picked .tc-name{color:var(--gray-600)}
 .tcard.is-picked .tc-desc{color:var(--gray-500)}
@@ -304,9 +306,9 @@ button{font-family:inherit}
 .toggle.device button.on{font-weight:600}
 .toggle.device button.dt-desktop:hover,.toggle.device button.dt-desktop.on{background:#e4edf8;color:#1e3a6e}
 .toggle.device button.dt-laptop:hover,.toggle.device button.dt-laptop.on{background:#ede8f8;color:#4c1d95}
-.toggle.device button.dt-printer:hover,.toggle.device button.dt-printer.on{background:#f3ecdf;color:#92400e}
-.toggle.device button.dt-aio:hover,.toggle.device button.dt-aio.on{background:#ede0d4;color:#5c3a1e}
-.toggle.device button.dt-misc:hover,.toggle.device button.dt-misc.on{background:var(--gray-100);color:var(--ink-700)}
+.toggle.device button.dt-printer:hover,.toggle.device button.dt-printer.on{background:#e2f4e6;color:#1b5e20}
+.toggle.device button.dt-aio:hover,.toggle.device button.dt-aio.on{background:#fde8f2;color:#8e1560}
+.toggle.device button.dt-misc:hover,.toggle.device button.dt-misc.on{background:#ebebeb;color:#444}
 .lrow:hover{box-shadow:var(--shadow-sm);border-color:#f0a0a0}
 .lrow .nm{font-weight:700;color:var(--ink-900);font-size:14.5px;line-height:1.25}
 .lrow .ds{font-size:13px;color:var(--gray-600);margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -348,10 +350,11 @@ button{font-family:inherit}
    the long "Waiting on parts" label fits (the flexible name column absorbs it). */
 .parts-list .lrow-head{grid-template-columns:16px 30px minmax(0,1.7fr) 100px 100px 112px 160px 122px}
 /* Device-type row shades (state rules below win). Misc + unset stay plain white. */
-.lrow.desktop{background:#e4edf8} /* cool blue = desktop */
-.lrow.laptop{background:#ede8f8}  /* soft purple = laptop */
-.lrow.printer{background:#f3ecdf} /* warm sand = printer */
-.lrow.aio{background:#ede0d4}     /* soft coral = all-in-one */
+.lrow.desktop{background:#e4edf8}
+.lrow.laptop{background:#ede8f8}
+.lrow.printer{background:#e2f4e6}
+.lrow.aio{background:#fde8f2}
+.lrow.misc{background:#ebebeb}
 .lrow.done-row{border-left-color:var(--success);background:#fcfdfc}
 .lrow.done-row .nm{color:var(--gray-600)}
 
@@ -505,9 +508,9 @@ button{font-family:inherit}
 .dev-dot{width:11px;height:11px;border-radius:3px;border:1px solid rgba(0,0,0,.1);flex:none}
 .dev-dot.desktop{background:#e4edf8}
 .dev-dot.laptop{background:#ede8f8}
-.dev-dot.printer{background:#f3ecdf}
-.dev-dot.aio{background:#ede0d4}
-.dev-dot.misc{background:#fff}
+.dev-dot.printer{background:#e2f4e6}
+.dev-dot.aio{background:#fde8f2}
+.dev-dot.misc{background:#d0d0d0}
 
 /* ============ Expedite / contract tag ============ */
 .svc-tag{font-family:var(--font-mono);font-size:9px;font-weight:700;letter-spacing:.08em;padding:2px 7px;border-radius:var(--radius-pill);display:inline-block;vertical-align:middle;margin-left:9px}
