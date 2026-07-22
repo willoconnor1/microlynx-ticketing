@@ -264,6 +264,7 @@ button{font-family:inherit}
 .tcard:hover .menu-btn{opacity:1}
 .tcard.desktop{background:#e4edf8}
 .tcard.laptop{background:#ede8f8}
+.tcard.aio{background:#fce8e2}
 .tcard.is-picked{background:var(--gray-100);border-color:var(--border);box-shadow:none;opacity:.92}
 .tcard.is-picked .tc-name{color:var(--gray-600)}
 .tcard.is-picked .tc-desc{color:var(--gray-500)}
@@ -304,6 +305,7 @@ button{font-family:inherit}
 .toggle.device button.dt-desktop:hover,.toggle.device button.dt-desktop.on{background:#e4edf8;color:#1e3a6e}
 .toggle.device button.dt-laptop:hover,.toggle.device button.dt-laptop.on{background:#ede8f8;color:#4c1d95}
 .toggle.device button.dt-printer:hover,.toggle.device button.dt-printer.on{background:#f3ecdf;color:#92400e}
+.toggle.device button.dt-aio:hover,.toggle.device button.dt-aio.on{background:#fce8e2;color:#9b2c1a}
 .toggle.device button.dt-misc:hover,.toggle.device button.dt-misc.on{background:var(--gray-100);color:var(--ink-700)}
 .lrow:hover{box-shadow:var(--shadow-sm);border-color:#f0a0a0}
 .lrow .nm{font-weight:700;color:var(--ink-900);font-size:14.5px;line-height:1.25}
@@ -351,11 +353,12 @@ button{font-family:inherit}
 .lrow.desktop{background:#e4edf8} /* cool blue = desktop */
 .lrow.laptop{background:#ede8f8}  /* soft purple = laptop */
 .lrow.printer{background:#f3ecdf} /* warm sand = printer */
+.lrow.aio{background:#fce8e2}     /* soft coral = all-in-one */
 .lrow.done-row{border-left-color:var(--success);background:#fcfdfc}
 .lrow.done-row .nm{color:var(--gray-600)}
 
 /* New/moved ticket dot — small red badge in the top-right corner of the row. */
-.lrow.alert::after{content:"";position:absolute;top:-5px;right:-5px;width:10px;height:10px;border-radius:50%;background:#e5372c;box-shadow:0 0 0 2px var(--paper);pointer-events:none;z-index:1}
+.lrow.alert::after{content:"";position:absolute;top:-3px;right:-3px;width:7px;height:7px;border-radius:50%;background:#e5372c;opacity:.65;box-shadow:0 0 0 1.5px var(--paper);pointer-events:none;z-index:1}
 .list-group-label.done-label{color:#147a44;margin-top:26px}
 
 /* ============ Boards ============ */
@@ -505,6 +508,7 @@ button{font-family:inherit}
 .dev-dot.desktop{background:#e4edf8}
 .dev-dot.laptop{background:#ede8f8}
 .dev-dot.printer{background:#f3ecdf}
+.dev-dot.aio{background:#fce8e2}
 .dev-dot.misc{background:#fff}
 
 /* ============ Expedite / contract tag ============ */

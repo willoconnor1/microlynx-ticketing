@@ -2,7 +2,7 @@
 
 export type Status = "todo" | "prog" | "call" | "resp" | "parts" | "done" | "picked";
 export type Person = "keith" | "garrett" | "marisa";
-export type DeviceType = "desktop" | "laptop" | "printer" | "misc";
+export type DeviceType = "desktop" | "laptop" | "printer" | "aio" | "misc";
 export type ServiceTag = "expedite" | "contract";
 
 export const PEOPLE: { key: Person; label: string }[] = [
@@ -15,6 +15,7 @@ export const DEVICE_TYPES: { key: DeviceType; label: string }[] = [
   { key: "laptop", label: "Laptop" },
   { key: "desktop", label: "Desktop" },
   { key: "printer", label: "Printer" },
+  { key: "aio", label: "AIO" },
   { key: "misc", label: "Misc" },
 ];
 
