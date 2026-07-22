@@ -213,14 +213,59 @@ export default function App({ initialTickets, initialArchive }: { initialTickets
 
   React.useEffect(() => { setSearch(""); }, [view]);
 
+  /* ---- undo (Ctrl/Cmd+Z) ---- */
+  type UndoEntry = { label: string; undo: () => void };
+  const undoStack = React.useRef<UndoEntry[]>([]);
+  const isUndoing = React.useRef(false);
+  const [undoToast, setUndoToast] = React.useState<string | null>(null);
+  const toastTimer = React.useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const showToast = React.useCallback((msg: string) => {
+    setUndoToast(msg);
+    clearTimeout(toastTimer.current);
+    toastTimer.current = setTimeout(() => setUndoToast(null), 2200);
+  }, []);
+  const pushUndo = React.useCallback((label: string, fn: () => void) => {
+    if (isUndoing.current) return;
+    undoStack.current.push({ label, undo: fn });
+    if (undoStack.current.length > 20) undoStack.current.shift();
+  }, []);
+  React.useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (!(e.ctrlKey || e.metaKey) || e.key !== "z" || e.shiftKey) return;
+      const tgt = e.target as HTMLElement;
+      if (tgt.tagName === "INPUT" || tgt.tagName === "TEXTAREA" || tgt.isContentEditable) return;
+      const entry = undoStack.current.pop();
+      if (!entry) { showToast("Nothing to undo"); return; }
+      e.preventDefault();
+      isUndoing.current = true;
+      entry.undo();
+      isUndoing.current = false;
+      showToast(`Undone · ${entry.label}`);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [showToast]);
+
   /* ---- mutations (optimistic, then reconcile with the server) ---- */
   const setUrgency = React.useCallback((id: string, u: number) => {
+    const old = ticketsRef.current.find((x) => x.id === id);
+    if (old) pushUndo("urgency change", () => {
+      selfChangedIds.current.add(id);
+      setTickets((p) => p.map((x) => (x.id === id ? { ...x, urgency: old.urgency } : x)));
+      setUrgencyAction(id, old.urgency).then(apply);
+    });
     selfChangedIds.current.add(id);
     setTickets((p) => p.map((x) => (x.id === id ? { ...x, urgency: u } : x)));
     setUrgencyAction(id, u).then(apply);
-  }, [apply]);
+  }, [apply, pushUndo]);
   const setStatus = React.useCallback((id: string, s: Status) => {
-    if (s === "done" && ticketsRef.current.find((x) => x.id === id)?.status !== "done") celebrate();
+    const old = ticketsRef.current.find((x) => x.id === id);
+    if (old) pushUndo("status change", () => {
+      selfChangedIds.current.add(id);
+      setTickets((p) => p.map((x) => (x.id === id ? { ...x, status: old.status, pickedAt: old.pickedAt ?? null } : x)));
+      setStatusAction(id, old.status).then(apply);
+    });
+    if (s === "done" && old?.status !== "done") celebrate();
     setTickets((p) => p.map((x) => {
       if (x.id !== id) return x;
       const next: Ticket = { ...x, status: s, statusChangedAt: new Date().toISOString() };
@@ -228,8 +273,9 @@ export default function App({ initialTickets, initialArchive }: { initialTickets
       return next;
     }));
     setStatusAction(id, s).then(apply);
-  }, [apply, today]);
+  }, [apply, today, pushUndo]);
   const saveTicket = (data: FormDraft, print = false) => {
+    const oldTicket = data.id ? ticketsRef.current.find((x) => x.id === data.id) : null;
     setForm(null);
     saveTicketAction(data.id, {
       name: data.name, phone: data.phone, password: data.password, desc: data.desc,
@@ -237,27 +283,75 @@ export default function App({ initialTickets, initialArchive }: { initialTickets
       dropoffAmPm: data.dropoffAmPm, dueAt: data.dueAt, assignedTo: data.assignedTo,
       deviceType: data.deviceType, serviceTag: data.serviceTag,
     }).then(({ state, id }) => {
-      selfChangedIds.current.add(id); // our own create/edit — don't alert this screen
+      selfChangedIds.current.add(id);
       apply(state);
-      // Print with the real ticket id (server-assigned for new tickets).
       if (print) printTicketLabels({ ...data, id });
+      if (oldTicket) {
+        // edit — undo by restoring the old field values
+        pushUndo("ticket edit", () => {
+          saveTicketAction(id, {
+            name: oldTicket.name, phone: oldTicket.phone, password: oldTicket.password ?? "",
+            desc: oldTicket.desc, urgency: oldTicket.urgency, charger: oldTicket.charger,
+            status: oldTicket.status, dropoff: oldTicket.dropoff,
+            dropoffAmPm: oldTicket.dropoffAmPm ?? null, dueAt: oldTicket.dueAt ?? null,
+            assignedTo: oldTicket.assignedTo ?? [], deviceType: oldTicket.deviceType ?? null,
+            serviceTag: oldTicket.serviceTag ?? null,
+          }).then(({ state: s }) => { selfChangedIds.current.add(id); apply(s); });
+        });
+      } else {
+        // create — undo by deleting the new ticket
+        pushUndo("new ticket", () => {
+          setTickets((p) => p.filter((x) => x.id !== id));
+          deleteTicketAction(id).then(apply);
+        });
+      }
     });
   };
   const patchTicket = React.useCallback((id: string, patch: InlinePatch) => {
+    const old = ticketsRef.current.find((x) => x.id === id);
+    if (old) {
+      const revert = Object.fromEntries(Object.keys(patch).map((k) => [k, (old as unknown as Record<string, unknown>)[k]])) as InlinePatch;
+      pushUndo("edit", () => {
+        selfChangedIds.current.add(id);
+        setTickets((p) => p.map((x) => (x.id === id ? { ...x, ...revert } : x)));
+        patchTicketAction(id, revert).then(apply);
+      });
+    }
     selfChangedIds.current.add(id);
     setTickets((p) => p.map((x) => (x.id === id ? { ...x, ...patch } : x)));
     patchTicketAction(id, patch).then(apply);
-  }, [apply]);
+  }, [apply, pushUndo]);
   const toggleExpand = React.useCallback((id: string) => setExpandedId((p) => (p === id ? null : id)), []);
   const doDelete = (t: Ticket) => {
+    pushUndo("delete", () => {
+      saveTicketAction(null, {
+        name: t.name, phone: t.phone, password: t.password ?? "", desc: t.desc,
+        urgency: t.urgency, charger: t.charger, status: t.status, dropoff: t.dropoff,
+        dropoffAmPm: t.dropoffAmPm ?? null, dueAt: t.dueAt ?? null,
+        assignedTo: t.assignedTo ?? [], deviceType: t.deviceType ?? null,
+        serviceTag: t.serviceTag ?? null,
+      }).then(({ state }) => apply(state));
+    });
     setConfirmDelete(null);
     setTickets((p) => p.filter((x) => x.id !== t.id));
     deleteTicketAction(t.id).then(apply);
   };
   const commitMove = (m: PendingMove) => {
-    selfChangedIds.current.add(m.ticket.id); // we dragged it — don't alert this screen
-    // Optimistic: land the row where it was dropped; the server computes the
-    // authoritative position from the neighbor ids and reconciles via apply().
+    // Capture neighbors before the move so we can reverse it.
+    const grp = ticketsRef.current
+      .filter((x) => x.urgency === m.ticket.urgency &&
+        (x.status === "todo" || x.status === "prog" || x.status === "call" || x.status === "resp"))
+      .sort((a, b) => (a.sortPos ?? Infinity) - (b.sortPos ?? Infinity));
+    const gi = grp.findIndex((x) => x.id === m.ticket.id);
+    const oldPrevId = gi > 0 ? grp[gi - 1].id : null;
+    const oldNextId = gi < grp.length - 1 ? grp[gi + 1].id : null;
+    const oldUrgency = m.ticket.urgency;
+    pushUndo("move", () => {
+      selfChangedIds.current.add(m.ticket.id);
+      setTickets((p) => p.map((x) => (x.id === m.ticket.id ? { ...x, urgency: oldUrgency } : x)));
+      moveTicketAction(m.ticket.id, oldUrgency, oldPrevId, oldNextId).then(apply);
+    });
+    selfChangedIds.current.add(m.ticket.id);
     setTickets((p) => {
       const prev = m.prevId ? p.find((x) => x.id === m.prevId)?.sortPos : null;
       const next = m.nextId ? p.find((x) => x.id === m.nextId)?.sortPos : null;
@@ -376,6 +470,7 @@ export default function App({ initialTickets, initialArchive }: { initialTickets
       )}
       {sheet && <MobileSheet view={view} setView={setView} onClose={() => setSheet(false)} partsCount={partsCount} onOpenSettings={() => setSettingsOpen(true)} />}
       {settingsOpen && <SettingsModal notif={notif} onClose={() => setSettingsOpen(false)} />}
+      {undoToast && <div className="undo-toast">{undoToast}</div>}
     </>
   );
 }

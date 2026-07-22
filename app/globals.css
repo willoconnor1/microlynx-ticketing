@@ -739,3 +739,13 @@ button{font-family:inherit}
   .login-card{ padding:32px 22px 24px; }
   .login-logo{ height:44px; }
 }
+
+/* undo toast */
+.undo-toast{
+  position:fixed; bottom:24px; left:50%; transform:translateX(-50%);
+  background:var(--ink); color:var(--paper); font-size:13px; font-weight:500;
+  padding:8px 16px; border-radius:20px; white-space:nowrap; pointer-events:none;
+  box-shadow:0 4px 16px rgba(0,0,0,.22); z-index:9999;
+  animation:undo-in .18s ease;
+}
+@keyframes undo-in{ from{ opacity:0; transform:translateX(-50%) translateY(8px); } to{ opacity:1; transform:translateX(-50%) translateY(0); } }
