@@ -323,7 +323,7 @@ button{font-family:inherit}
 .lrow.drop-after::after{bottom:calc((var(--gap-cards) + 3px) / -2)}
 .ins-zone{border:1.5px dashed var(--border-strong);border-radius:var(--radius-md);min-height:46px;display:flex;align-items:center;justify-content:center;color:var(--gray-400);font-family:var(--font-mono);font-size:11px;font-weight:600}
 .ins-zone.on{border-color:var(--acc);background:var(--acc-soft);color:var(--acc)}
-.drop-phantom{min-height:66px;border-radius:var(--radius-md);background:var(--acc-soft);border:1.5px dashed var(--acc);pointer-events:none}
+.lrow.phantom{pointer-events:none;border-color:var(--acc);box-shadow:0 0 0 2px var(--acc-ring);opacity:.72}
 .iconbtn.tick{color:var(--success)}
 .iconbtn.tick:hover{background:var(--success-bg);color:#147a44}
 .btn.pickup{background:var(--success);color:#fff;padding:7px 11px;font-size:12.5px;box-shadow:none}

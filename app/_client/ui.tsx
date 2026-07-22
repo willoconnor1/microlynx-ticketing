@@ -367,7 +367,7 @@ export function ListView({ tickets, onMenu, onStatus, onMoveRequest, onPatch, ex
       }
       if (!listWrapRef.current || !draggedRef.current) return;
       // Scan every draggable row (and empty-group drop zones) by position.
-      const nodes = listWrapRef.current.querySelectorAll<HTMLElement>("[data-dgu]");
+      const nodes = listWrapRef.current.querySelectorAll<HTMLElement>("[data-dgu]:not([data-phantom])");
       let found: { u: number; index: number } | null = null;
       for (const node of nodes) {
         const r = node.getBoundingClientRect();
@@ -462,9 +462,21 @@ export function ListView({ tickets, onMenu, onStatus, onMoveRequest, onPatch, ex
                 onPatch={onPatch}
                 onGripDown={onGripDown}
                 onStatus={onStatus} onMenu={onMenu} />;
-              return lineAt === i ? [<div key="dp" className="drop-phantom" />, row] : [row];
+              return lineAt === i && dragged
+                ? [<QueueRow key="phantom" t={{ ...dragged, urgency: u }} phantom
+                    isNext={false} dragging={false} canReorder={false} alert={false}
+                    expanded={false} dropBefore={false} dropAfter={false}
+                    groupU={u} index={lineAt}
+                    onToggle={() => {}} onPatch={() => {}} onGripDown={() => {}} onStatus={() => {}} onMenu={() => {}} />, row]
+                : [row];
             })}
-            {lineAt === list.length && list.length > 0 && <div className="drop-phantom" key="dp-end" />}
+            {lineAt === list.length && list.length > 0 && dragged && (
+              <QueueRow key="phantom-end" t={{ ...dragged, urgency: u }} phantom
+                isNext={false} dragging={false} canReorder={false} alert={false}
+                expanded={false} dropBefore={false} dropAfter={false}
+                groupU={u} index={list.length}
+                onToggle={() => {}} onPatch={() => {}} onGripDown={() => {}} onStatus={() => {}} onMenu={() => {}} />
+            )}
           </React.Fragment>
         );
       })}
@@ -503,6 +515,7 @@ type QueueRowProps = {
   dropAfter: boolean; // ...or below it (end of an urgency group)
   groupU: number;
   index: number;
+  phantom?: boolean;
   onToggle: (id: string) => void;
   onPatch: (id: string, patch: InlinePatch) => void;
   onGripDown: (e: React.PointerEvent, t: Ticket) => void;
@@ -512,7 +525,7 @@ type QueueRowProps = {
 
 /* Memoized because dragover re-renders the list up to once per frame while a row is
    dragged — without memo every row repaints on each indicator move. */
-const QueueRow = React.memo(function QueueRow({ t, isNext, dragging, canReorder, alert, expanded, dropBefore, dropAfter, groupU, index, onToggle, onPatch, onGripDown, onStatus, onMenu }: QueueRowProps) {
+const QueueRow = React.memo(function QueueRow({ t, isNext, dragging, canReorder, alert, expanded, dropBefore, dropAfter, groupU, index, phantom, onToggle, onPatch, onGripDown, onStatus, onMenu }: QueueRowProps) {
   // Keep the expansion body mounted through the collapse animation, then unmount.
   const [bodyMounted, setBodyMounted] = React.useState(expanded);
   // Two stages: a compact read-only peek first; the pencil opens the full inline editor.
@@ -538,11 +551,12 @@ const QueueRow = React.memo(function QueueRow({ t, isNext, dragging, canReorder,
     dropBefore ? "drop-before" : "",
     dropAfter ? "drop-after" : "",
     alert ? "alert" : "",
+    phantom ? "phantom" : "",
     t.deviceType ?? "",
   ].join(" ");
 
   return (
-    <div className={cls} data-dgu={groupU} data-dgi={index}>
+    <div className={cls} data-dgu={groupU} data-dgi={index} data-phantom={phantom ? "" : undefined}>
       <div className="lrow-head" onClick={headClick}>
         <span className={`grip ${canReorder ? "" : "off"}`}
           title={canReorder ? "Drag to reorder" : "Reordering is off while filtering"}
@@ -942,7 +956,7 @@ export function PartsView({ tickets, onStatus, onMenu, onPatch, expandedId, onTo
         pillRef.current.style.top = (e.clientY - 24) + "px";
       }
       if (!listWrapRef.current || !draggedRef.current) return;
-      const nodes = listWrapRef.current.querySelectorAll<HTMLElement>("[data-dgi]");
+      const nodes = listWrapRef.current.querySelectorAll<HTMLElement>("[data-dgi]:not([data-phantom])");
       let found: number | null = null;
       for (const node of nodes) {
         const r = node.getBoundingClientRect();
@@ -1024,9 +1038,21 @@ export function PartsView({ tickets, onStatus, onMenu, onPatch, expandedId, onTo
           expanded={expandedId === t.id} onToggle={onToggleExpand} onPatch={onPatch}
           onGripDown={onGripDown}
           onStatus={onStatus} onMenu={onMenu} />;
-        return (!noOpTarget && target === i) ? [<div key="dp" className="drop-phantom" />, row] : [row];
+        return (!noOpTarget && target === i && dragged)
+          ? [<QueueRow key="phantom" t={dragged} phantom
+              isNext={false} dragging={false} canReorder={false} alert={false}
+              expanded={false} dropBefore={false} dropAfter={false}
+              groupU={0} index={i}
+              onToggle={() => {}} onPatch={() => {}} onGripDown={() => {}} onStatus={() => {}} onMenu={() => {}} />, row]
+          : [row];
       })}
-      {!noOpTarget && target === list.length && list.length > 0 && <div className="drop-phantom" key="dp-end" />}
+      {!noOpTarget && target === list.length && list.length > 0 && dragged && (
+        <QueueRow key="phantom-end" t={dragged} phantom
+          isNext={false} dragging={false} canReorder={false} alert={false}
+          expanded={false} dropBefore={false} dropAfter={false}
+          groupU={0} index={list.length}
+          onToggle={() => {}} onPatch={() => {}} onGripDown={() => {}} onStatus={() => {}} onMenu={() => {}} />
+      )}
     </div>
   );
 }
