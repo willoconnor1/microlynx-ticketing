@@ -1517,7 +1517,7 @@ export function TicketForm({ editing, today, onSave, onClose }: {
             <div className="field">
               <label className="lbl">Customer name<span className="req">*</span></label>
               <input className={`inp ${touched && errs.name ? "bad" : ""}`} placeholder="e.g. Dana Whitlock"
-                value={f.name} onChange={(e) => set("name", e.target.value)} />
+                autoFocus value={f.name} onChange={(e) => set("name", e.target.value)} />
               {touched && errs.name && <div className="err">{errs.name}</div>}
             </div>
             <div className="field">
