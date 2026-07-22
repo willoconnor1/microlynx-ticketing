@@ -113,7 +113,7 @@ function buildDoc(t: Ticket): string {
   .foot { display: flex; flex-direction: column; align-items: center; gap: 1.4mm;
           border-top: 0.3mm solid #bbb; padding-top: 0.9mm; }
   .logo { height: 3.4mm; width: auto; max-width: 47mm; }
-  .shop-phone { font-size: 7.5pt; color: #333; white-space: nowrap; }
+  .shop-phone { font-size: 9.5pt; color: #333; white-space: nowrap; }
 </style></head><body>
 ${labels.join("\n")}
 </body></html>`;
