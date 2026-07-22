@@ -102,7 +102,7 @@ function buildDoc(t: Ticket): string {
   /* Longest names wrap to two lines instead of clipping. */
   .cust-name.wrap { display: -webkit-box; -webkit-box-orient: vertical;
                     -webkit-line-clamp: 2; }
-  .cust-phone { font-size: 11.5pt; margin-top: 0.6mm; letter-spacing: 0.02em; }
+  .cust-phone { font-size: 13.5pt; margin-top: 0.6mm; letter-spacing: 0.02em; }
   .pw-who { font-size: 6.5pt; color: #555; white-space: nowrap;
             overflow: hidden; text-overflow: ellipsis; }
   .pw-label { font-size: 6pt; letter-spacing: 0.1em; text-transform: uppercase;
