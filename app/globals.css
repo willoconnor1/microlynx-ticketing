@@ -229,7 +229,7 @@ button{font-family:inherit}
 }
 .spill.done{background:var(--success-bg);color:#147a44} .spill.done .d{background:var(--success)}
 .spill.picked{background:var(--gray-100);color:var(--gray-500)} .spill.picked .d{background:var(--gray-400)}
-.spill.parts{background:#fed7aa;color:#9a3412} .spill.parts .d{background:#ea580c}
+.spill.parts{background:#ffedd5;color:#9a3412} .spill.parts .d{background:#ea580c}
 .spill.call{background:#cffafe;color:#0e7490} .spill.call .d{background:#0891b2}
 .spill.resp{background:#ede9fe;color:#6d28d9} .spill.resp .d{background:#7c3aed}
 .avchip{width:20px;height:20px;border-radius:50%;font-family:var(--font-mono);font-size:9.5px;font-weight:700;display:inline-flex;align-items:center;justify-content:center;flex:none}
@@ -512,7 +512,7 @@ button{font-family:inherit}
 .dev-dot.printer{background:#e2f4e6}
 .dev-dot.aio{background:#fde8f2}
 .dev-dot.misc{background:#d0d0d0}
-.dev-dot.parts-dot{background:#fed7aa}
+.dev-dot.parts-dot{background:#ffedd5}
 
 /* ============ Expedite / contract tag ============ */
 .svc-tag{font-family:var(--font-mono);font-size:9px;font-weight:700;letter-spacing:.08em;padding:2px 7px;border-radius:var(--radius-pill);display:inline-block;vertical-align:middle;margin-left:9px}
@@ -523,7 +523,7 @@ button{font-family:inherit}
 .av-stack .avchip+.avchip{margin-left:-6px;box-shadow:0 0 0 1.5px #fff}
 .toggle button.on.expedite,.toggle button.expedite:hover{background:#d1fae5;color:#065f46}
 .toggle button.on.contract,.toggle button.contract:hover{background:#1f2937;color:#d1d5db}
-.toggle button.on.parts,.toggle button.parts:hover{background:#fed7aa;color:#9a3412}
+.toggle button.on.parts,.toggle button.parts:hover{background:#ffedd5;color:#9a3412}
 
 /* Three options on one form line: expedite/contract, charger, waiting on parts */
 .field-grid.trio{grid-template-columns:auto auto auto;justify-content:space-between;gap:10px}
