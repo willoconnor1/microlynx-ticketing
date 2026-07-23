@@ -452,6 +452,7 @@ export function ListView({ tickets, onMenu, onStatus, onMoveRequest, onPatch, ex
               const row = <QueueRow key={t.id} t={t}
                 isNext={t.id === topId}
                 dragging={!!listDrag && listDrag.id === t.id}
+                noOp={!!(noOp && listDrag && listDrag.id === t.id)}
                 canReorder={canReorder}
                 alert={getAlert(t.id)}
                 expanded={expandedId === t.id}
@@ -516,6 +517,7 @@ type QueueRowProps = {
   groupU: number;
   index: number;
   phantom?: boolean;
+  noOp?: boolean;
   onToggle: (id: string) => void;
   onPatch: (id: string, patch: InlinePatch) => void;
   onGripDown: (e: React.PointerEvent, t: Ticket) => void;
@@ -525,7 +527,7 @@ type QueueRowProps = {
 
 /* Memoized because dragover re-renders the list up to once per frame while a row is
    dragged — without memo every row repaints on each indicator move. */
-const QueueRow = React.memo(function QueueRow({ t, isNext, dragging, canReorder, alert, expanded, dropBefore, dropAfter, groupU, index, phantom, onToggle, onPatch, onGripDown, onStatus, onMenu }: QueueRowProps) {
+const QueueRow = React.memo(function QueueRow({ t, isNext, dragging, canReorder, alert, expanded, dropBefore, dropAfter, groupU, index, phantom, noOp, onToggle, onPatch, onGripDown, onStatus, onMenu }: QueueRowProps) {
   // Keep the expansion body mounted through the collapse animation, then unmount.
   const [bodyMounted, setBodyMounted] = React.useState(expanded);
   // Two stages: a compact read-only peek first; the pencil opens the full inline editor.
@@ -545,7 +547,7 @@ const QueueRow = React.memo(function QueueRow({ t, isNext, dragging, canReorder,
 
   const cls = [
     "lrow", `u${t.urgency}`,
-    dragging ? "dragging" : "",
+    dragging ? (noOp ? "dragging dragging-noop" : "dragging") : "",
     expanded ? "expanded" : "",
     dropBefore ? "drop-before" : "",
     dropAfter ? "drop-after" : "",
@@ -1031,7 +1033,7 @@ export function PartsView({ tickets, onStatus, onMenu, onPatch, expandedId, onTo
         <span>{list.length}</span>
       </div>
       {list.flatMap((t, i) => {
-        const row = <QueueRow key={t.id} t={t} isNext={false} dragging={!!partsDrag && partsDrag.id === t.id} canReorder={canReorder} alert={false}
+        const row = <QueueRow key={t.id} t={t} isNext={false} dragging={!!partsDrag && partsDrag.id === t.id} noOp={!!(noOpTarget && partsDrag && partsDrag.id === t.id)} canReorder={canReorder} alert={false}
           dropBefore={false} dropAfter={false}
           groupU={0} index={i}
           expanded={expandedId === t.id} onToggle={onToggleExpand} onPatch={onPatch}
