@@ -6,7 +6,7 @@ import type { Ticket } from "@/lib/tickets";
 export type AlertKind = "new" | "reorder";
 
 /* How long a new/reordered ticket stays highlighted if nobody clears it. */
-export const ALERT_WINDOW_MS = 2 * 60 * 60 * 1000; // 2 hours
+export const ALERT_WINDOW_MS = 15 * 60 * 1000; // 15 minutes
 
 /* Active = still in the working queue (matches the List's own filter). */
 export function isActiveStatus(t: Ticket): boolean {

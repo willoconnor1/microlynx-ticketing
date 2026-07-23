@@ -321,7 +321,14 @@ export default function App({ initialTickets, initialArchive }: { initialTickets
     setTickets((p) => p.map((x) => (x.id === id ? { ...x, ...patch } : x)));
     patchTicketAction(id, patch).then(apply);
   }, [apply, pushUndo]);
-  const toggleExpand = React.useCallback((id: string) => setExpandedId((p) => (p === id ? null : id)), []);
+  const toggleExpand = React.useCallback((id: string) => {
+    setExpandedId((p) => (p === id ? null : id));
+    const t = ticketsRef.current.find((x) => x.id === id);
+    if (t) {
+      const r = alertReason(t, Date.now());
+      if (r) setResolved((prev) => ({ ...prev, [id]: alertSignature(t, r) }));
+    }
+  }, []);
   const doDelete = (t: Ticket) => {
     pushUndo("delete", () => {
       saveTicketAction(null, {
