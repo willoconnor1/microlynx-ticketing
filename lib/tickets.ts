@@ -11,6 +11,8 @@ export interface Ticket {
   charger: boolean;
   status: Status;
   dropoff: string; // YYYY-MM-DD
+  dueDate?: string | null;  // YYYY-MM-DD optional deadline; drives initial list placement
+  sortOrder?: number;       // manual drag order within urgency group (0 = natural sort)
   pickedAt?: string | null; // YYYY-MM-DD set when status === 'picked'
   statusChangedAt?: string | null; // ISO timestamp, updated on any status change
   createdAt?: string | null; // ISO timestamp
@@ -54,8 +56,22 @@ export function daysBetween(isoA: string, isoB: string): number {
 
 /* ---- sorting ---- */
 export function sortUrgencyOldest(a: Ticket, b: Ticket): number {
-  if (a.urgency !== b.urgency) return a.urgency - b.urgency; // 1 first
-  return a.dropoff.localeCompare(b.dropoff); // oldest first
+  if (a.urgency !== b.urgency) return a.urgency - b.urgency;
+  // Manual drag order (0 = not yet ordered; ties fall through to natural rule below)
+  const aOrd = a.sortOrder ?? 0;
+  const bOrd = b.sortOrder ?? 0;
+  if (aOrd !== bOrd) return aOrd - bOrd;
+  // Natural ranking rule tiebreak: due-date tickets first, then by date, then by dropoff
+  const aHasDue = !!a.dueDate;
+  const bHasDue = !!b.dueDate;
+  if (aHasDue !== bHasDue) return aHasDue ? -1 : 1;
+  if (aHasDue && bHasDue) {
+    const d = a.dueDate!.localeCompare(b.dueDate!);
+    if (d !== 0) return d;
+  }
+  const dd = a.dropoff.localeCompare(b.dropoff);
+  if (dd !== 0) return dd;
+  return a.id.localeCompare(b.id);
 }
 export function sortOldest(a: Ticket, b: Ticket): number {
   return a.dropoff.localeCompare(b.dropoff);

@@ -3,7 +3,7 @@
 import React from "react";
 import { todayISO, type Ticket, type Status } from "@/lib/tickets";
 import {
-  fetchState, saveTicketAction, setUrgencyAction, setStatusAction,
+  fetchState, saveTicketAction, setUrgencyAction, setStatusAction, reorderTicketAction,
 } from "@/lib/actions";
 import {
   Icon, ListView, UrgencyBoard, StatusBoard, ArchiveView, TopNav, QuickMenu,
@@ -66,8 +66,12 @@ export default function App({ initialTickets, initialArchive }: { initialTickets
     setForm(null);
     saveTicketAction(data.id, {
       name: data.name, phone: data.phone, desc: data.desc,
-      urgency: data.urgency, charger: data.charger, status: data.status, dropoff: data.dropoff,
+      urgency: data.urgency, charger: data.charger, status: data.status,
+      dropoff: data.dropoff, dueDate: data.dueDate,
     }).then(apply);
+  };
+  const reorderTicket = (id: string, prevId: string | null) => {
+    reorderTicketAction(id, prevId).then(apply);
   };
   const openMenu = (e: React.MouseEvent, ticket: Ticket) => setMenu({ x: e.clientX, y: e.clientY, ticket });
 
@@ -83,7 +87,7 @@ export default function App({ initialTickets, initialArchive }: { initialTickets
   const showSearch = view === "list" || view === "archive";
 
   let body: React.ReactNode;
-  if (view === "list") body = <ListView tickets={listTickets} onMenu={openMenu} onEdit={(tk) => setForm(tk)} />;
+  if (view === "list") body = <ListView tickets={listTickets} onMenu={openMenu} onEdit={(tk) => setForm(tk)} onReorder={reorderTicket} />;
   else if (view === "urgency") body = <UrgencyBoard tickets={tickets} onMenu={openMenu} onOpen={(tk) => setForm(tk)} onUrgency={setUrgency} drag={drag} setDrag={setDrag} />;
   else if (view === "status") body = <StatusBoard tickets={tickets} onMenu={openMenu} onOpen={(tk) => setForm(tk)} onStatus={setStatus} drag={drag} setDrag={setDrag} />;
   else body = <ArchiveView archive={archive} search={search} />;

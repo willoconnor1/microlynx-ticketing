@@ -4,6 +4,7 @@ import {
   getState,
   createTicket,
   updateTicket,
+  reorderTicket,
   sweepArchive,
   type AppState,
   type NewTicketInput,
@@ -28,6 +29,10 @@ export async function setUrgencyAction(id: string, urgency: number): Promise<App
 
 export async function setStatusAction(id: string, status: TicketPatch["status"]): Promise<AppState> {
   return updateTicket(id, { status });
+}
+
+export async function reorderTicketAction(id: string, prevId: string | null): Promise<AppState> {
+  return reorderTicket(id, prevId);
 }
 
 export async function sweepArchiveAction(): Promise<number> {

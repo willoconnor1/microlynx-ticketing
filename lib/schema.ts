@@ -9,6 +9,8 @@ export const tickets = pgTable("tickets", {
   charger: boolean("charger").notNull().default(false),
   status: text("status").notNull().default("todo"), // todo | prog | done | picked
   dropoff: text("dropoff").notNull(), // YYYY-MM-DD
+  dueDate: text("due_date"),           // YYYY-MM-DD optional deadline; drives initial placement
+  sortOrder: integer("sort_order").notNull().default(0), // manual drag order within urgency group
   pickedAt: text("picked_at"), // YYYY-MM-DD, set when status = picked
   statusChangedAt: timestamp("status_changed_at", { withTimezone: true }).notNull().defaultNow(),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),

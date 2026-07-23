@@ -4,7 +4,7 @@ import React from "react";
 import {
   Calendar, Phone, Plug, PlugZap, Search, Pencil, EllipsisVertical, Check, X,
   List, SignalHigh, Columns3, Archive, Plus, Menu, Inbox, Wrench, CircleCheck,
-  PackageCheck, Clock, Circle, Loader, type LucideIcon,
+  PackageCheck, Clock, Circle, Loader, GripVertical, type LucideIcon,
 } from "lucide-react";
 import {
   URGENCY, STATUS, STATUS_ORDER, fmtDate, sortUrgencyOldest, sortOldest,
@@ -20,7 +20,7 @@ const ICONS: Record<string, LucideIcon> = {
   pencil: Pencil, "ellipsis-vertical": EllipsisVertical, check: Check, x: X, list: List,
   "signal-high": SignalHigh, "columns-3": Columns3, archive: Archive, plus: Plus, menu: Menu,
   inbox: Inbox, wrench: Wrench, "circle-check": CircleCheck, "package-check": PackageCheck,
-  clock: Clock, circle: Circle, loader: Loader,
+  clock: Clock, circle: Circle, loader: Loader, "grip-vertical": GripVertical,
 };
 
 export function Icon({ name, size, className = "", style = {} }: { name: string; size?: number; className?: string; style?: React.CSSProperties }) {
@@ -154,12 +154,36 @@ type ListProps = {
   tickets: Ticket[];
   onMenu: (e: React.MouseEvent, t: Ticket) => void;
   onEdit: (t: Ticket) => void;
+  onReorder: (id: string, prevId: string | null) => void;
 };
-export function ListView({ tickets, onMenu, onEdit }: ListProps) {
+export function ListView({ tickets, onMenu, onEdit, onReorder }: ListProps) {
+  const [listDragId, setListDragId] = React.useState<string | null>(null);
+  const [dropTarget, setDropTarget] = React.useState<string | null>(null);
+  // dropTarget: ticket id (drop before that row) or "end-{urgency}" (drop at bottom of group)
+
   const active = tickets.filter((t) => t.status !== "picked");
   const sorted = [...active].sort(sortUrgencyOldest);
   const groups = [1, 2, 3, 4, 5].map((u) => [u, sorted.filter((t) => t.urgency === u)] as const).filter(([, l]) => l.length);
   const topId = sorted[0] && sorted[0].id;
+  const draggedUrgency = listDragId ? (sorted.find((t) => t.id === listDragId)?.urgency ?? null) : null;
+
+  const clearDrag = () => { setListDragId(null); setDropTarget(null); };
+
+  const handleDrop = (e: React.DragEvent, targetKey: string, targetUrgency: number) => {
+    e.preventDefault();
+    if (!listDragId || draggedUrgency !== targetUrgency) return;
+    const group = sorted.filter((t) => t.urgency === targetUrgency);
+    const others = group.filter((t) => t.id !== listDragId);
+    let prevId: string | null;
+    if (targetKey.startsWith("end-")) {
+      prevId = others.length > 0 ? others[others.length - 1].id : null;
+    } else {
+      const idx = others.findIndex((t) => t.id === targetKey);
+      prevId = idx > 0 ? others[idx - 1].id : null;
+    }
+    onReorder(listDragId, prevId);
+    clearDrag();
+  };
 
   return (
     <div className="list-wrap">
@@ -172,24 +196,51 @@ export function ListView({ tickets, onMenu, onEdit }: ListProps) {
           </div>
           {list.map((t) => {
             const isNext = t.id === topId;
+            const isDragging = t.id === listDragId;
+            const isTarget = dropTarget === t.id;
             return (
-              <div key={t.id} className={`lrow u${t.urgency} ${isNext ? "next" : ""}`}>
+              <div
+                key={t.id}
+                className={`lrow u${t.urgency} ${isNext ? "next" : ""}`}
+                draggable
+                style={{ cursor: isDragging ? "grabbing" : "pointer", opacity: isDragging ? 0.4 : 1, borderTop: isTarget ? "2px solid var(--blue, #3b82f6)" : undefined }}
+                onClick={() => onEdit(t)}
+                onDragStart={(e) => { try { e.dataTransfer.effectAllowed = "move"; } catch {} setListDragId(t.id); }}
+                onDragOver={(e) => { if (draggedUrgency !== t.urgency) return; e.preventDefault(); setDropTarget(t.id); }}
+                onDrop={(e) => handleDrop(e, t.id, t.urgency)}
+                onDragEnd={clearDrag}
+              >
+                <span style={{ color: "var(--gray-400,#9ca3af)", display: "flex", flexShrink: 0, cursor: "grab" }}
+                  onClick={(e) => e.stopPropagation()}>
+                  <Icon name="grip-vertical" size={14} />
+                </span>
                 <UrgencyChip u={t.urgency} />
-                <div style={{ minWidth: 0 }}>
+                <div style={{ minWidth: 0, flex: 1 }}>
                   <div className="nm">{t.name}</div>
                   <div className="ds">{t.desc}</div>
                 </div>
                 <span className="meta-mono l-date"><Icon name="calendar" />{fmtDate(t.dropoff)}</span>
+                {t.dueDate && (
+                  <span className="meta-mono" style={{ color: "var(--amber-500,#f59e0b)" }}>
+                    <Icon name="clock" />Due {fmtDate(t.dueDate)}
+                  </span>
+                )}
                 <span className="meta-mono l-phone"><Icon name="phone" />{t.phone}</span>
                 <Charger yes={t.charger} />
                 <StatusPill status={t.status} />
-                <span className="acts">
+                <span className="acts" onClick={(e) => e.stopPropagation()}>
                   <button className="iconbtn" title="Edit" onClick={() => onEdit(t)}><Icon name="pencil" /></button>
                   <button className="iconbtn" title="Quick change" onClick={(e) => onMenu(e, t)}><Icon name="ellipsis-vertical" /></button>
                 </span>
               </div>
             );
           })}
+          {/* Drop zone at the end of each urgency group */}
+          <div
+            style={{ height: 8, borderTop: dropTarget === `end-${u}` ? "2px solid var(--blue,#3b82f6)" : "2px solid transparent" }}
+            onDragOver={(e) => { if (draggedUrgency !== u) return; e.preventDefault(); setDropTarget(`end-${u}`); }}
+            onDrop={(e) => handleDrop(e, `end-${u}`, u)}
+          />
         </React.Fragment>
       ))}
       {sorted.length === 0 && (
@@ -436,6 +487,7 @@ export type FormDraft = {
   charger: boolean;
   status: Status;
   dropoff: string;
+  dueDate: string | null;
 };
 export function TicketForm({ editing, today, onSave, onClose }: {
   editing: Partial<Ticket>;
@@ -453,6 +505,7 @@ export function TicketForm({ editing, today, onSave, onClose }: {
     charger: editing?.charger ?? false,
     status: editing?.status || "todo",
     dropoff: editing?.dropoff || today,
+    dueDate: editing?.dueDate ?? null,
   }));
   const [touched, setTouched] = React.useState(false);
   const set = <K extends keyof FormDraft>(k: K, v: FormDraft[K]) => setF((p) => ({ ...p, [k]: v }));
@@ -496,6 +549,11 @@ export function TicketForm({ editing, today, onSave, onClose }: {
               <label className="lbl">Phone</label>
               <input className="inp mono" type="tel" placeholder="(253) 555-0000" value={f.phone} onChange={(e) => set("phone", e.target.value)} />
             </div>
+          </div>
+
+          <div className="field">
+            <label className="lbl">Due date <span style={{ fontWeight: 400, opacity: 0.55 }}>(optional — sets deadline priority)</span></label>
+            <input className="inp mono" type="date" value={f.dueDate || ""} onChange={(e) => set("dueDate", e.target.value || null)} />
           </div>
 
           <div className="field">

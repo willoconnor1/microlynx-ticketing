@@ -14,9 +14,15 @@ each level. Three views over the same data:
 Picked Up tickets auto-archive after 3 days into a permanent, searchable **Archive**.
 
 ## The ranking rule (do not break this)
-- Default order: **urgency ASC, then date ASC** (oldest drop-off first).
-- A level-N ticket never sorts above any level-(N-1) ticket.
-- **To Do** and **In Progress** columns use the default order.
+Within each urgency level, tickets sort in this exact order:
+1. **Tickets WITH a due date** come before tickets without one (urgency boundary is never crossed)
+2. **Among due-date tickets**: earliest due date first; AM beats PM on the same day
+3. **Among no-due-date tickets**: oldest drop-off date first; if same day, lowest `id` wins (creation order)
+
+SQL equivalent: `ORDER BY urgency ASC, (due_date IS NULL) ASC, due_date ASC NULLS LAST, received_at ASC, id ASC`
+
+- A level-N ticket never sorts above any level-(N-1) ticket, even with a due date.
+- **To Do** and **In Progress** columns use the default order above.
 - **Complete** and **Picked Up** columns order by `statusChangedAt` (the moment they entered
   that column), NOT urgency.
 - The Urgency board shows active tickets only (To Do, In Progress, Complete); Picked Up devices
@@ -24,8 +30,8 @@ Picked Up tickets auto-archive after 3 days into a permanent, searchable **Archi
 - Auto-archive: `status = picked_up` AND in that status for more than 3 days.
 
 ## Ticket fields
-`date` (drop-off), `name`, `description`, `urgency` (1-5), `phone`, `hasCharger` (bool),
-`status`, `createdAt`, `statusChangedAt`, `archived`.
+`date` (drop-off), `dueDate` (optional deadline), `name`, `description`, `urgency` (1-5),
+`phone`, `hasCharger` (bool), `status`, `createdAt`, `statusChangedAt`, `archived`.
 
 ## Stack
 Next.js App Router + TypeScript, plain CSS design system (from Claude design, in
