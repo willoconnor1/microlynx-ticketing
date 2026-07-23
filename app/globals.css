@@ -71,11 +71,11 @@ button{font-family:inherit}
   --card-name:14.5px; --card-desc:13px;
 
   /* Urgency palette: dark navy (1) stepping to muted steel blue (5). */
-  --u1:#0a1c5c; --u1-bg:#cdd4ee; --u1-tint:#e6e9f7;
-  --u2:#1340a0; --u2-bg:#cdd9f2; --u2-tint:#e5ecfb;
-  --u3:#0b72cc; --u3-bg:#c8e2f6; --u3-tint:#e3f1fc;
-  --u4:#0299c8; --u4-bg:#c2ecf7; --u4-tint:#e0f5fc;
-  --u5:#00afc8; --u5-bg:#bceef6; --u5-tint:#dbf5fb;
+  --u1:#0d1f6e; --u1-bg:#ced5ee; --u1-tint:#e7eaf6;
+  --u2:#1a3ea8; --u2-bg:#d2dbf3; --u2-tint:#e9edf9;
+  --u3:#2e65cc; --u3-bg:#d6e0f5; --u3-tint:#ebf0fa;
+  --u4:#5489d8; --u4-bg:#dae6f7; --u4-tint:#edf3fb;
+  --u5:#7aaee6; --u5-bg:#deeaf9; --u5-tint:#eff5fc;
 }
 .u1{--uc:var(--u1);--ubg:var(--u1-bg);--utint:var(--u1-tint)}
 .u2{--uc:var(--u2);--ubg:var(--u2-bg);--utint:var(--u2-tint)}
