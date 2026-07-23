@@ -438,9 +438,9 @@ button{font-family:inherit}
 .toggle button{border:0;background:#fff;cursor:pointer;font-size:13.5px;font-weight:600;color:var(--gray-600);padding:10px 20px;display:inline-flex;align-items:center;gap:8px;transition:all .12s ease}
 .toggle button i,.toggle button svg{width:16px;height:16px}
 .toggle button+button{border-left:1px solid var(--border-strong)}
-.toggle button.on.yes{background:var(--blue-50);color:var(--blue-700)}
-.toggle button.on.no{background:var(--gray-100);color:var(--ink-800)}
-.toggle button.on.am,.toggle button.on.pm{background:var(--blue-50);color:var(--blue-700)}
+.toggle button.on.yes,.toggle button.yes:hover{background:var(--blue-50);color:var(--blue-700)}
+.toggle button.on.no,.toggle button.no:hover{background:var(--gray-100);color:var(--ink-800)}
+.toggle button.on.am,.toggle button.on.pm,.toggle button.am:hover,.toggle button.pm:hover{background:var(--blue-50);color:var(--blue-700)}
 .toggle button:disabled{opacity:.45;cursor:default}
 .toggle.ampm button{font-family:var(--font-mono);font-size:12.5px;padding:10px 14px}
 .toggle.people button{padding:10px 16px}
@@ -521,9 +521,9 @@ button{font-family:inherit}
 .peek-item .svc-tag{margin-left:0}
 .av-stack{display:inline-flex}
 .av-stack .avchip+.avchip{margin-left:-6px;box-shadow:0 0 0 1.5px #fff}
-.toggle button.on.expedite{background:#d1fae5;color:#065f46}
-.toggle button.on.contract{background:#1f2937;color:#9ca3af}
-.toggle button.on.parts{background:#fed7aa;color:#9a3412}
+.toggle button.on.expedite,.toggle button.expedite:hover{background:#d1fae5;color:#065f46}
+.toggle button.on.contract,.toggle button.contract:hover{background:#1f2937;color:#9ca3af}
+.toggle button.on.parts,.toggle button.parts:hover{background:#fed7aa;color:#9a3412}
 
 /* Three options on one form line: expedite/contract, charger, waiting on parts */
 .field-grid.trio{grid-template-columns:auto auto auto;justify-content:space-between;gap:10px}
