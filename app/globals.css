@@ -514,13 +514,13 @@ button{font-family:inherit}
 
 /* ============ Expedite / contract tag ============ */
 .svc-tag{font-family:var(--font-mono);font-size:9px;font-weight:700;letter-spacing:.08em;padding:2px 7px;border-radius:var(--radius-pill);display:inline-block;vertical-align:middle;margin-left:9px}
-.svc-tag.expedite{background:#fef3c7;color:#b45309}
-.svc-tag.contract{background:var(--gray-100);color:var(--gray-600)}
+.svc-tag.expedite{background:#d1fae5;color:#065f46}
+.svc-tag.contract{background:#1f2937;color:#9ca3af}
 .peek-item .svc-tag{margin-left:0}
 .av-stack{display:inline-flex}
 .av-stack .avchip+.avchip{margin-left:-6px;box-shadow:0 0 0 1.5px #fff}
-.toggle button.on.expedite{background:#fef3c7;color:#b45309}
-.toggle button.on.contract{background:var(--gray-100);color:var(--ink-800)}
+.toggle button.on.expedite{background:#d1fae5;color:#065f46}
+.toggle button.on.contract{background:#1f2937;color:#9ca3af}
 .toggle button.on.parts{background:#fef3c7;color:#b45309}
 
 /* Three options on one form line: expedite/contract, charger, waiting on parts */
