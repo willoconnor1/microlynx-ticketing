@@ -511,6 +511,7 @@ button{font-family:inherit}
 .dev-dot.printer{background:#e2f4e6}
 .dev-dot.aio{background:#fde8f2}
 .dev-dot.misc{background:#d0d0d0}
+.dev-dot.parts-dot{background:#fed7aa}
 
 /* ============ Expedite / contract tag ============ */
 .svc-tag{font-family:var(--font-mono);font-size:9px;font-weight:700;letter-spacing:.08em;padding:2px 7px;border-radius:var(--radius-pill);display:inline-block;vertical-align:middle;margin-left:9px}

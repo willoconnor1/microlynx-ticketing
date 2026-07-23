@@ -390,14 +390,18 @@ export default function App({ initialTickets, initialArchive }: { initialTickets
   // Picked Up, and Waiting on Parts all drop out of these numbers (Garrett's request).
   const isActive = (x: Ticket) => x.status === "todo" || x.status === "prog" || x.status === "resp";
   const activeCount = byPerson.filter(isActive).length;
+  // Device dot counts include "Call Customer" tickets (still physically in the shop).
+  const isInShop = (x: Ticket) => x.status === "todo" || x.status === "prog" || x.status === "resp" || x.status === "call";
   const deviceCounts = React.useMemo(() => {
-    const active = byPerson.filter(isActive);
+    const inShop = byPerson.filter(isInShop);
     return DEVICE_TYPES
-      .map((d) => ({ ...d, n: active.filter((x) => x.deviceType === d.key).length }))
+      .map((d) => ({ ...d, n: inShop.filter((x) => x.deviceType === d.key).length }))
       .filter((d) => d.n > 0);
   }, [byPerson]);
   // The tab badge reflects the whole shop, ignoring the person filter.
   const partsCount = tickets.filter((t) => t.status === "parts").length;
+  // Parts count for the stats bar respects the person filter.
+  const partsCountForStats = byPerson.filter((x) => x.status === "parts").length;
   const showSearch = view === "list" || view === "archive";
 
   const notif = {
@@ -448,6 +452,12 @@ export default function App({ initialTickets, initialArchive }: { initialTickets
                     {d.n} {d.key === "misc" ? "misc" : d.key === "aio" ? (d.n === 1 ? "AIO" : "AIOs") : d.label.toLowerCase() + (d.n === 1 ? "" : "s")}
                   </span>
                 ))}
+                {partsCountForStats > 0 && (
+                  <span className="dev-count parts-count">
+                    <span className="dev-dot parts-dot" />
+                    {partsCountForStats} on parts
+                  </span>
+                )}
               </div>
             )}
           </div>
