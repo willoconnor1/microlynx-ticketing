@@ -445,7 +445,7 @@ export default function App({ initialTickets, initialArchive }: { initialTickets
                 {deviceCounts.map((d) => (
                   <span key={d.key} className="dev-count">
                     <span className={`dev-dot ${d.key}`} />
-                    {d.n} {d.key === "misc" ? "misc" : d.label.toLowerCase() + (d.n === 1 ? "" : "s")}
+                    {d.n} {d.key === "misc" ? "misc" : d.key === "aio" ? (d.n === 1 ? "AIO" : "AIOs") : d.label.toLowerCase() + (d.n === 1 ? "" : "s")}
                   </span>
                 ))}
               </div>
