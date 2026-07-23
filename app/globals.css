@@ -167,7 +167,7 @@ button{font-family:inherit}
 .page-head .eyebrow{margin-bottom:6px}
 .page-head h1{font-family:var(--font-display);font-size:26px;font-weight:800;color:var(--ink-900);letter-spacing:-.02em}
 .page-head .sub{font-size:14px;color:var(--gray-600);margin-top:5px}
-.page-tools{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.page-tools{display:flex;align-items:center;gap:10px;flex-wrap:wrap;flex:1 1 auto;min-width:0}
 .searchbox{display:flex;align-items:center;gap:8px;background:#fff;border:1px solid var(--border-strong);border-radius:var(--radius-sm);padding:9px 12px;width:240px}
 .searchbox:focus-within{border-color:var(--acc);box-shadow:0 0 0 3px var(--acc-ring)}
 .searchbox i,.searchbox svg{width:16px;height:16px;color:var(--gray-400)}
