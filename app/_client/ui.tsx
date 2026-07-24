@@ -664,7 +664,7 @@ const DoneRow = React.memo(function DoneRow({ t, onStatus, expanded, onToggle, o
 
 /* Compact read-only peek shown first when a row expands: the full description plus
    the details the collapsed row hides, with an Edit button to open the inline editor. */
-function RowPeek({ t, onEdit }: { t: Ticket; onEdit: () => void }) {
+function RowPeek({ t, onEdit }: { t: Ticket; onEdit?: () => void }) {
   return (
     <div className="exp-peek">
       <div className="peek-desc">{t.desc || <span className="muted">No description</span>}</div>
@@ -691,9 +691,9 @@ function RowPeek({ t, onEdit }: { t: Ticket; onEdit: () => void }) {
           <Icon name="printer" />{t.password ? "Print labels" : "Print label"}
         </button>
         {/* Mobile only — desktop edits via the pencil in the row (CSS hides this above 860px). */}
-        <button type="button" className="btn ghost peek-edit" onClick={onEdit}>
+        {onEdit && <button type="button" className="btn ghost peek-edit" onClick={onEdit}>
           <Icon name="pencil" />Edit
-        </button>
+        </button>}
       </div>
     </div>
   );
@@ -1064,6 +1064,40 @@ export function PartsView({ tickets, onStatus, onMenu, onPatch, expandedId, onTo
    history is never out of reach. */
 const ARCHIVE_WINDOW_DAYS = 7;
 
+const ArchiveRow = React.memo(function ArchiveRow({ t, onStatus }: {
+  t: Ticket; onStatus: (id: string, s: Status) => void;
+}) {
+  const [expanded, setExpanded] = React.useState(false);
+  const [bodyMounted, setBodyMounted] = React.useState(false);
+  React.useEffect(() => { if (expanded) setBodyMounted(true); }, [expanded]);
+  const toggle = () => { if (window.getSelection()?.toString()) return; setExpanded((p) => !p); };
+  return (
+    <div className={`arow ${expanded ? "expanded" : ""}`}>
+      <div className="arow-head" onClick={toggle}>
+        <UrgencyChip u={t.urgency} />
+        <div style={{ minWidth: 0 }}>
+          <div className="nm">{t.name} <span style={{ fontFamily: "var(--font-mono)", fontSize: 11, color: "var(--gray-400)", fontWeight: 400 }}>· {t.id}</span></div>
+          <div className="ds">{t.desc}</div>
+        </div>
+        <span className="meta-mono l-phone"><Icon name="phone" />{t.phone}</span>
+        <span className="meta-mono a-in"><Icon name="calendar" />In {fmtDate(t.dropoff)}{t.dropoffAmPm ? ` · ${t.dropoffAmPm}` : ""}</span>
+        <Charger yes={t.charger} />
+        <span className="archd"><span className="lbl2">Picked up</span>{t.archivedAt ? fmtDate(t.archivedAt) : "—"}</span>
+        <button className="iconbtn" title="Picked up by mistake? Send back to Completed"
+          onClick={(e) => { e.stopPropagation(); onStatus(t.id, "done"); }}>
+          <Icon name="rotate-ccw" size={15} />
+        </button>
+      </div>
+      <div className="lrow-exp"
+        onTransitionEnd={(e) => { if (e.propertyName === "grid-template-rows" && !expanded) setBodyMounted(false); }}>
+        <div className="lrow-exp-clip">
+          {bodyMounted && <div className="lrow-exp-body"><RowPeek t={t} /></div>}
+        </div>
+      </div>
+    </div>
+  );
+});
+
 export function ArchiveView({ archive, search, onStatus }: {
   archive: Ticket[]; search: string; onStatus: (id: string, s: Status) => void;
 }) {
@@ -1091,21 +1125,7 @@ export function ArchiveView({ archive, search, onStatus }: {
           <div className="es">{q ? "Try a different name, device, or ticket number." : "Tickets land here the moment they're marked picked up. Older records are still on file — search to find them."}</div>
         </div>
       ) : list.map((t) => (
-        <div key={t.id} className={`arow u${t.urgency}`}>
-          <UrgencyChip u={t.urgency} />
-          <div style={{ minWidth: 0 }}>
-            <div className="nm">{t.name} <span style={{ fontFamily: "var(--font-mono)", fontSize: 11, color: "var(--gray-400)", fontWeight: 400 }}>· {t.id}</span></div>
-            <div className="ds">{t.desc}</div>
-          </div>
-          <span className="meta-mono l-phone"><Icon name="phone" />{t.phone}</span>
-          <span className="meta-mono a-in"><Icon name="calendar" />In {fmtDate(t.dropoff)}{t.dropoffAmPm ? ` · ${t.dropoffAmPm}` : ""}</span>
-          <Charger yes={t.charger} />
-          <span className="archd"><span className="lbl2">Picked up</span>{t.archivedAt ? fmtDate(t.archivedAt) : "—"}</span>
-          <button className="iconbtn" title="Picked up by mistake? Send back to Completed"
-            onClick={() => onStatus(t.id, "done")}>
-            <Icon name="rotate-ccw" size={15} />
-          </button>
-        </div>
+        <ArchiveRow key={t.id} t={t} onStatus={onStatus} />
       ))}
     </div>
   );
