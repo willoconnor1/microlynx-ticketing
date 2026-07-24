@@ -136,8 +136,8 @@ export function cmpDue(a: Ticket, b: Ticket): number {
     return ad.localeCompare(bd);
   }
   if (a.dropoff !== b.dropoff) return a.dropoff.localeCompare(b.dropoff);
-  // Same drop-off day: morning drop-offs ahead of afternoon (unknown sits between).
-  const half = (t: Ticket) => (t.dropoffAmPm === "AM" ? 0 : t.dropoffAmPm === "PM" ? 2 : 1);
+  // Same drop-off day: AM first, PM next, unknown last.
+  const half = (t: Ticket) => (t.dropoffAmPm === "AM" ? 0 : t.dropoffAmPm === "PM" ? 1 : 2);
   if (half(a) !== half(b)) return half(a) - half(b);
   return a.id.localeCompare(b.id);
 }
