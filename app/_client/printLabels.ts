@@ -106,6 +106,7 @@ function descLabel(firstLine: string): string {
 
 function buildDoc(t: Ticket): string {
   const labels = [customerLabel(t)];
+  if (t.charger) labels.push(customerLabel(t));
   if (t.password?.trim()) labels.push(passwordLabel(t));
   const firstLine = (t.desc || "").split(/\r?\n/)[0].trim();
   if (firstLine) labels.push(descLabel(firstLine));
