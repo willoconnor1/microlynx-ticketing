@@ -8,6 +8,7 @@
    Browser-native: hidden iframe + window.print(). No SDK required. */
 
 import type { Ticket } from "@/lib/tickets";
+import { fmtPacific } from "@/lib/tickets";
 
 export const SHOP_PHONE = "(253) 853-3298";
 const LOGO_SRC = "/microlynx-logo-mark-bw.png";
@@ -38,29 +39,14 @@ function fitPw(pw: string): number {
   return 10;
 }
 
-/* Cascade: try to fill 1 line at max size, shrink until it fits,
-   then spill to 2 → 3 → 4 lines (which lets font grow again). */
-function fitDesc(text: string): { size: number; lines: number } {
+/* Initial font size guess before JS auto-scale kicks in (avoids jarring reflow). */
+function descStartSize(text: string): number {
   const n = text.length;
-  // 1 line
-  if (n <= 11) return { size: 24, lines: 1 };
-  if (n <= 14) return { size: 20, lines: 1 };
-  if (n <= 17) return { size: 17, lines: 1 };
-  if (n <= 20) return { size: 14, lines: 1 };
-  if (n <= 24) return { size: 12, lines: 1 };
-  if (n <= 28) return { size: 10, lines: 1 };
-  if (n <= 35) return { size:  8, lines: 1 };
-  // 2 lines
-  if (n <= 42) return { size: 14, lines: 2 };
-  if (n <= 54) return { size: 11, lines: 2 };
-  if (n <= 70) return { size:  9, lines: 2 };
-  // 3 lines
-  if (n <= 80) return { size: 11, lines: 3 };
-  if (n <= 99) return { size:  9, lines: 3 };
-  // 4 lines
-  if (n <= 115) return { size: 9, lines: 4 };
-  if (n <= 140) return { size: 8, lines: 4 };
-  return { size: 7, lines: 4 };
+  if (n <= 14) return 24;
+  if (n <= 28) return 18;
+  if (n <= 55) return 13;
+  if (n <= 90) return 9;
+  return 7;
 }
 
 /* Sticker 1: name + phone centred, footer with logo + shop number. */
@@ -93,14 +79,21 @@ function passwordLabel(t: Ticket): string {
   </div>`;
 }
 
-/* Sticker 3: first line of the description, fills the sticker edge-to-edge. */
-function descLabel(firstLine: string): string {
-  const { size, lines } = fitDesc(firstLine);
-  const wrapCss = lines > 1
-    ? `display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:${lines};overflow:hidden;`
-    : `white-space:nowrap;overflow:hidden;text-overflow:ellipsis;`;
-  return `<div class="label label-plain label-desc">
-    <div class="desc-value" style="font-size:${size}pt;${wrapCss}">${esc(firstLine)}</div>
+/* Sticker 3: full description, wraps freely — JS shrinks font until it fits vertically.
+   Footer shows ticket ID on the left and entry timestamp (Pacific) on the right. */
+function descLabel(t: Ticket): string {
+  const text = (t.desc || "").trim();
+  const startSize = descStartSize(text);
+  const entryTime = fmtPacific(t.createdAt)
+    || (t.dropoff ? t.dropoff.slice(5).replace("-", "/") : "");
+  return `<div class="label label-desc">
+    <div class="desc-body">
+      <div class="desc-value" id="dv" style="font-size:${startSize}pt">${esc(text)}</div>
+    </div>
+    <div class="desc-foot">
+      <span class="desc-id">${esc(t.id)}</span>
+      <span class="desc-time">${esc(entryTime)}</span>
+    </div>
   </div>`;
 }
 
@@ -108,8 +101,7 @@ function buildDoc(t: Ticket): string {
   const labels = [customerLabel(t)];
   if (t.charger) labels.push(customerLabel(t));
   if (t.password?.trim()) labels.push(passwordLabel(t));
-  const firstLine = (t.desc || "").split(/\r?\n/)[0].trim();
-  if (firstLine) labels.push(descLabel(firstLine));
+  if ((t.desc || "").trim()) labels.push(descLabel(t));
 
   return `<!doctype html><html><head><meta charset="utf-8">
 <title>Labels ${esc(t.id)}</title>
@@ -123,32 +115,44 @@ function buildDoc(t: Ticket): string {
     width: ${LABEL_W}; height: ${LABEL_H};
     padding: 1.8mm 2.4mm;
     display: flex; flex-direction: column; justify-content: space-between;
-    overflow: hidden; page-break-after: always;
+    page-break-after: always;
   }
   .label:last-child { page-break-after: auto; }
-  /* Password + desc stickers: centred, no footer */
-  .label-plain { justify-content: center; align-items: center; text-align: center; }
-  /* Desc sticker gets tighter margins to maximise text area */
-  .label-desc { padding: 0.8mm 1.2mm; }
   /* Customer label: top section centred */
   .top { text-align: center; min-height: 0; }
   .cust-name { font-weight: 800; line-height: 1.05; }
-  .cust-name.wrap { display: -webkit-box; -webkit-box-orient: vertical;
-                    -webkit-line-clamp: 2; overflow: hidden; }
+  .cust-name.wrap { word-break: break-word; }
   .cust-phone { font-size: 14pt; margin-top: 1mm; letter-spacing: 0.02em; }
   /* Password sticker */
   .pw-wrap { flex: 1; display: flex; align-items: center; justify-content: center; }
   .pw-value { font-family: "Courier New", monospace; font-weight: 700;
               line-height: 1.1; word-break: break-all; text-align: center; }
-  /* Desc sticker — wrap/clamp applied inline per-label */
-  .desc-value { font-weight: 700; line-height: 1.15; }
-  /* Footer (customer sticker only) */
+  /* Desc sticker */
+  .label-desc { padding: 0.8mm 1.2mm; }
+  .desc-body { flex: 1; display: flex; align-items: center; justify-content: center;
+               padding-bottom: 0.5mm; min-height: 0; }
+  .desc-value { font-weight: 700; line-height: 1.15; text-align: center;
+                word-break: break-word; overflow-wrap: break-word; display: block; width: 100%; }
+  .desc-foot { flex-shrink: 0; display: flex; justify-content: space-between; align-items: center;
+               border-top: 0.3mm solid #bbb; padding-top: 0.6mm; }
+  .desc-id   { font-size: 6pt; color: #555; white-space: nowrap; }
+  .desc-time { font-size: 6pt; color: #555; white-space: nowrap; font-variant-numeric: tabular-nums; }
+  /* Customer/password footer */
   .foot { display: flex; flex-direction: column; align-items: center; gap: 0.6mm;
           border-top: 0.3mm solid #bbb; padding-top: 0.9mm; }
   .logo { height: 3.4mm; width: auto; max-width: 47mm; }
   .shop-phone { font-size: 9.5pt; color: #333; white-space: nowrap; }
 </style></head><body>
 ${labels.join("\n")}
+<script>
+(function(){
+  var el=document.getElementById('dv');
+  if(!el)return;
+  var parent=el.parentElement;
+  var size=parseFloat(el.style.fontSize)||14;
+  while(el.scrollHeight>parent.clientHeight&&size>4){size-=0.5;el.style.fontSize=size+'pt';}
+})();
+</script>
 </body></html>`;
 }
 
