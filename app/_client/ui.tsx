@@ -4,7 +4,7 @@ import React from "react";
 import {
   Calendar, Phone, Plug, PlugZap, Search, Pencil, EllipsisVertical, Check, X,
   List, SignalHigh, Columns3, Archive, Plus, Menu, Inbox, Wrench, CircleCheck,
-  PackageCheck, Clock, Circle, Loader, GripVertical, type LucideIcon,
+  PackageCheck, Clock, Circle, Loader, GripVertical, Printer, type LucideIcon,
 } from "lucide-react";
 import {
   URGENCY, STATUS, STATUS_ORDER, fmtDate, sortUrgencyOldest, sortOldest,
@@ -20,7 +20,7 @@ const ICONS: Record<string, LucideIcon> = {
   pencil: Pencil, "ellipsis-vertical": EllipsisVertical, check: Check, x: X, list: List,
   "signal-high": SignalHigh, "columns-3": Columns3, archive: Archive, plus: Plus, menu: Menu,
   inbox: Inbox, wrench: Wrench, "circle-check": CircleCheck, "package-check": PackageCheck,
-  clock: Clock, circle: Circle, loader: Loader, "grip-vertical": GripVertical,
+  clock: Clock, circle: Circle, loader: Loader, "grip-vertical": GripVertical, printer: Printer,
 };
 
 export function Icon({ name, size, className = "", style = {} }: { name: string; size?: number; className?: string; style?: React.CSSProperties }) {
@@ -149,6 +149,55 @@ function BoardColumn({ className, header, footNote, items, variant, colKey, comp
   );
 }
 
+/* ================= LABEL PRINTING ================= */
+function printTicketLabel(ticket: Ticket) {
+  const esc = (s: string) =>
+    s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+
+  const nl = ticket.name.length;
+  const namePt = nl <= 8 ? 22 : nl <= 12 ? 17 : nl <= 18 ? 13 : nl <= 25 ? 10 : 8;
+
+  const dl = ticket.desc.length;
+  const descPt = dl <= 12 ? 22 : dl <= 25 ? 15 : dl <= 50 ? 10 : dl <= 90 ? 7 : dl <= 140 ? 5.5 : 4.5;
+
+  const html = `<!DOCTYPE html>
+<html><head><meta charset="utf-8"><title>${esc(ticket.id)}</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+@page{size:2.125in 1in;margin:0}
+body{font-family:Arial,Helvetica,sans-serif;color:#000;background:#fff}
+.label{width:2.125in;height:1in;display:flex;flex-direction:column;page-break-after:always}
+.cust-body{flex:1;padding:4pt 8pt 2pt;display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center}
+.cust-name{font-weight:900;white-space:nowrap;line-height:1;font-size:${namePt}pt}
+.cust-phone{white-space:nowrap;line-height:1.1;letter-spacing:.02em;font-size:13pt}
+.foot{flex-shrink:0;display:flex;align-items:center;justify-content:space-between;border-top:.5pt solid #ccc;padding:1.5pt 8pt 2pt}
+.logo-text{font-weight:900;font-size:4pt;letter-spacing:.2em;text-transform:uppercase;color:#555}
+.shop-phone{font-size:8.5pt;color:#444;white-space:nowrap}
+.label-desc{justify-content:center;align-items:center;padding:5pt 8pt}
+.desc-value{font-weight:700;font-size:${descPt}pt;line-height:1.18;word-break:break-word;overflow-wrap:break-word;text-align:center}
+</style></head><body>
+<div class="label">
+  <div class="cust-body">
+    <div class="cust-name">${esc(ticket.name)}</div>
+    <div class="cust-phone">${esc(ticket.phone)}</div>
+  </div>
+  <div class="foot">
+    <span class="logo-text">Microlynx</span>
+    <span class="shop-phone">(253) 853-3298</span>
+  </div>
+</div>
+<div class="label label-desc">
+  <div class="desc-value">${esc(ticket.desc)}</div>
+</div>
+<script>setTimeout(function(){window.print();},300);</script>
+</body></html>`;
+
+  const w = window.open("", "_blank");
+  if (!w) { alert("Allow pop-ups to print labels."); return; }
+  w.document.write(html);
+  w.document.close();
+}
+
 /* ================= LIST VIEW ================= */
 type ListProps = {
   tickets: Ticket[];
@@ -229,6 +278,7 @@ export function ListView({ tickets, onMenu, onEdit, onReorder }: ListProps) {
                 <Charger yes={t.charger} />
                 <StatusPill status={t.status} />
                 <span className="acts" onClick={(e) => e.stopPropagation()}>
+                  <button className="iconbtn" title="Print labels" onClick={() => printTicketLabel(t)}><Icon name="printer" /></button>
                   <button className="iconbtn" title="Edit" onClick={() => onEdit(t)}><Icon name="pencil" /></button>
                   <button className="iconbtn" title="Quick change" onClick={(e) => onMenu(e, t)}><Icon name="ellipsis-vertical" /></button>
                 </span>
