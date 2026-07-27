@@ -7,7 +7,7 @@ import {
   PackageCheck, Clock, Circle, Loader, GripVertical, Printer, type LucideIcon,
 } from "lucide-react";
 import {
-  URGENCY, STATUS, STATUS_ORDER, fmtDate, sortUrgencyOldest, sortOldest,
+  URGENCY, STATUS, STATUS_ORDER, fmtDate, fmtPacific, sortUrgencyOldest, sortOldest,
   sortEntryOrder, type Ticket, type Status,
 } from "@/lib/tickets";
 
@@ -153,9 +153,7 @@ function BoardColumn({ className, header, footNote, items, variant, colKey, comp
 function printTicketLabel(ticket: Ticket) {
   const esc = (s: string) =>
     s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-
-  const dl = ticket.desc.length;
-  const descPt = dl <= 12 ? 22 : dl <= 25 ? 15 : dl <= 50 ? 10 : dl <= 90 ? 7 : dl <= 140 ? 5.5 : 4.5;
+  const entryTime = fmtPacific(ticket.createdAt);
 
   const html = `<!DOCTYPE html>
 <html><head><meta charset="utf-8"><title>${esc(ticket.id)}</title>
@@ -164,14 +162,15 @@ function printTicketLabel(ticket: Ticket) {
 @page{size:2.125in 1in;margin:0}
 body{font-family:Arial,Helvetica,sans-serif;color:#000;background:#fff}
 .label{width:2.125in;height:1in;display:flex;flex-direction:column;page-break-after:always}
-.cust-body{flex:1;padding:4pt 8pt 2pt;display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center}
-.cust-name{font-weight:900;white-space:nowrap;line-height:1;display:block;width:100%}
-.cust-phone{white-space:nowrap;line-height:1.1;letter-spacing:.02em;display:block;width:100%}
-.foot{flex-shrink:0;display:flex;align-items:center;justify-content:space-between;border-top:.5pt solid #ccc;padding:1.5pt 8pt 2pt}
+.cust-body{flex:1;padding:3pt 4pt 2pt;display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center}
+.cust-name{font-weight:900;white-space:nowrap;line-height:1;display:block;width:100%;text-align:center}
+.cust-phone{white-space:nowrap;line-height:1.1;letter-spacing:.02em;display:block;width:100%;text-align:center}
+.foot{flex-shrink:0;display:flex;align-items:center;justify-content:space-between;border-top:.5pt solid #ccc;padding:1.5pt 4pt 2pt}
 .logo-text{font-weight:900;font-size:4pt;letter-spacing:.2em;text-transform:uppercase;color:#555}
 .shop-phone{font-size:8.5pt;color:#444;white-space:nowrap}
-.label-desc{justify-content:center;align-items:center;padding:5pt 8pt}
-.desc-value{font-weight:700;font-size:${descPt}pt;line-height:1.18;word-break:break-word;overflow-wrap:break-word;text-align:center}
+.desc-body{flex:1;display:flex;align-items:center;justify-content:center;padding:3pt 4pt 2pt}
+.desc-value{font-weight:700;line-height:1.18;word-break:break-word;overflow-wrap:break-word;text-align:center;display:block;width:100%}
+.entry-time{font-size:7pt;color:#444;white-space:nowrap;font-variant-numeric:tabular-nums}
 </style></head><body>
 <div class="label">
   <div class="cust-body">
@@ -183,20 +182,38 @@ body{font-family:Arial,Helvetica,sans-serif;color:#000;background:#fff}
     <span class="shop-phone">(253) 853-3298</span>
   </div>
 </div>
-<div class="label label-desc">
-  <div class="desc-value">${esc(ticket.desc)}</div>
+<div class="label">
+  <div class="desc-body">
+    <div class="desc-value" id="dv">${esc(ticket.desc)}</div>
+  </div>
+  <div class="foot">
+    <span class="logo-text">Microlynx</span>
+    <span class="entry-time">${entryTime}</span>
+  </div>
 </div>
 <script>
 (function(){
-  function fit(id,maxPt){
+  // Horizontal fit for nowrap elements: temporarily left-align so scrollWidth is accurate
+  function fitH(id,maxPt){
     var el=document.getElementById(id);
     if(!el)return;
+    el.style.textAlign='left';
     var size=maxPt;
     el.style.fontSize=size+'pt';
     while(el.scrollWidth>el.clientWidth&&size>5){size-=0.5;el.style.fontSize=size+'pt';}
+    el.style.textAlign='';
   }
-  fit('nm',22);
-  fit('ph',13);
+  // Vertical fit for wrapping text: shrink until content height fits parent
+  function fitV(){
+    var el=document.getElementById('dv');
+    var parent=el.parentElement;
+    var size=22;
+    el.style.fontSize=size+'pt';
+    while(el.scrollHeight>parent.clientHeight&&size>4){size-=0.5;el.style.fontSize=size+'pt';}
+  }
+  fitH('nm',22);
+  fitH('ph',13);
+  fitV();
   setTimeout(function(){window.print();},300);
 })();
 </script>

@@ -53,6 +53,19 @@ export function daysBetween(isoA: string, isoB: string): number {
   const b = new Date(isoB + "T12:00:00").getTime();
   return Math.round((b - a) / 86400000);
 }
+// MM/DD HH:MM in 24-hour Pacific time — used on printed labels
+export function fmtPacific(iso: string | null | undefined): string {
+  if (!iso) return "";
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone: "America/Los_Angeles",
+    month: "2-digit", day: "2-digit",
+    hour: "2-digit", minute: "2-digit",
+    hour12: false,
+  }).formatToParts(new Date(iso));
+  const p: Record<string, string> = {};
+  for (const { type, value } of parts) p[type] = value;
+  return `${p.month}/${p.day} ${p.hour === "24" ? "00" : p.hour}:${p.minute}`;
+}
 
 /* ---- sorting ---- */
 export function sortUrgencyOldest(a: Ticket, b: Ticket): number {
