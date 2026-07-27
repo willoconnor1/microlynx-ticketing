@@ -264,9 +264,9 @@ button{font-family:inherit}
 .tcard:hover .menu-btn{opacity:1}
 .tcard.desktop{background:#cfe2f7}
 .tcard.laptop{background:#e2d4f5}
-.tcard.printer{background:#f2fbf3}
+.tcard.printer{background:#f6f6f6}
 .tcard.aio{background:#fde8f2}
-.tcard.misc{background:#efefef}
+.tcard.misc{background:#e0e0e0}
 .tcard.is-picked{background:var(--gray-100);border-color:var(--border);box-shadow:none;opacity:.92}
 .tcard.is-picked .tc-name{color:var(--gray-600)}
 .tcard.is-picked .tc-desc{color:var(--gray-500)}
@@ -306,7 +306,7 @@ button{font-family:inherit}
 .toggle.device button.on{font-weight:600}
 .toggle.device button.dt-desktop:hover,.toggle.device button.dt-desktop.on{background:#cfe2f7;color:#0d3b7a}
 .toggle.device button.dt-laptop:hover,.toggle.device button.dt-laptop.on{background:#e2d4f5;color:#4c1d95}
-.toggle.device button.dt-printer:hover,.toggle.device button.dt-printer.on{background:#f2fbf3;color:#1b5e20}
+.toggle.device button.dt-printer:hover,.toggle.device button.dt-printer.on{background:#f6f6f6;color:#1b5e20}
 .toggle.device button.dt-aio:hover,.toggle.device button.dt-aio.on{background:#fde8f2;color:#8e1560}
 .toggle.device button.dt-misc:hover,.toggle.device button.dt-misc.on{background:#ebebeb;color:#444}
 .lrow:hover{box-shadow:var(--shadow-sm);border-color:#f0a0a0}
@@ -353,9 +353,9 @@ button{font-family:inherit}
 /* Device-type row shades (state rules below win). Misc + unset stay plain white. */
 .lrow.desktop{background:#cfe2f7}
 .lrow.laptop{background:#e2d4f5}
-.lrow.printer{background:#f2fbf3}
+.lrow.printer{background:#f6f6f6}
 .lrow.aio{background:#fde8f2}
-.lrow.misc{background:#efefef}
+.lrow.misc{background:#e0e0e0}
 .lrow.done-row{border-left-color:var(--success);background:#fcfdfc}
 .lrow.done-row .nm{color:var(--gray-600)}
 
@@ -512,7 +512,7 @@ button{font-family:inherit}
 .dev-dot{width:11px;height:11px;border-radius:3px;border:1px solid rgba(0,0,0,.1);flex:none}
 .dev-dot.desktop{background:#cfe2f7}
 .dev-dot.laptop{background:#e2d4f5}
-.dev-dot.printer{background:#d4f0d8}
+.dev-dot.printer{background:#d8d8d8}
 .dev-dot.aio{background:#fde8f2}
 .dev-dot.misc{background:#d0d0d0}
 .dev-dot.parts-dot{background:#ffedd5}
