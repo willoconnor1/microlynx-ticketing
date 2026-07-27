@@ -154,9 +154,6 @@ function printTicketLabel(ticket: Ticket) {
   const esc = (s: string) =>
     s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 
-  const nl = ticket.name.length;
-  const namePt = nl <= 8 ? 22 : nl <= 12 ? 17 : nl <= 18 ? 13 : nl <= 25 ? 10 : 8;
-
   const dl = ticket.desc.length;
   const descPt = dl <= 12 ? 22 : dl <= 25 ? 15 : dl <= 50 ? 10 : dl <= 90 ? 7 : dl <= 140 ? 5.5 : 4.5;
 
@@ -168,8 +165,8 @@ function printTicketLabel(ticket: Ticket) {
 body{font-family:Arial,Helvetica,sans-serif;color:#000;background:#fff}
 .label{width:2.125in;height:1in;display:flex;flex-direction:column;page-break-after:always}
 .cust-body{flex:1;padding:4pt 8pt 2pt;display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center}
-.cust-name{font-weight:900;white-space:nowrap;line-height:1;font-size:${namePt}pt}
-.cust-phone{white-space:nowrap;line-height:1.1;letter-spacing:.02em;font-size:13pt}
+.cust-name{font-weight:900;white-space:nowrap;line-height:1;display:block;width:100%}
+.cust-phone{white-space:nowrap;line-height:1.1;letter-spacing:.02em;display:block;width:100%}
 .foot{flex-shrink:0;display:flex;align-items:center;justify-content:space-between;border-top:.5pt solid #ccc;padding:1.5pt 8pt 2pt}
 .logo-text{font-weight:900;font-size:4pt;letter-spacing:.2em;text-transform:uppercase;color:#555}
 .shop-phone{font-size:8.5pt;color:#444;white-space:nowrap}
@@ -178,8 +175,8 @@ body{font-family:Arial,Helvetica,sans-serif;color:#000;background:#fff}
 </style></head><body>
 <div class="label">
   <div class="cust-body">
-    <div class="cust-name">${esc(ticket.name)}</div>
-    <div class="cust-phone">${esc(ticket.phone)}</div>
+    <div class="cust-name" id="nm">${esc(ticket.name)}</div>
+    <div class="cust-phone" id="ph">${esc(ticket.phone)}</div>
   </div>
   <div class="foot">
     <span class="logo-text">Microlynx</span>
@@ -189,7 +186,20 @@ body{font-family:Arial,Helvetica,sans-serif;color:#000;background:#fff}
 <div class="label label-desc">
   <div class="desc-value">${esc(ticket.desc)}</div>
 </div>
-<script>setTimeout(function(){window.print();},300);</script>
+<script>
+(function(){
+  function fit(id,maxPt){
+    var el=document.getElementById(id);
+    if(!el)return;
+    var size=maxPt;
+    el.style.fontSize=size+'pt';
+    while(el.scrollWidth>el.clientWidth&&size>5){size-=0.5;el.style.fontSize=size+'pt';}
+  }
+  fit('nm',22);
+  fit('ph',13);
+  setTimeout(function(){window.print();},300);
+})();
+</script>
 </body></html>`;
 
   const w = window.open("", "_blank");
