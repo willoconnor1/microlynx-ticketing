@@ -91,7 +91,6 @@ function descLabel(t: Ticket): string {
       <div class="desc-value" id="dv" style="font-size:${startSize}pt">${esc(text)}</div>
     </div>
     <div class="desc-foot">
-      <span class="desc-id">${esc(t.id)}</span>
       <span class="desc-time">${esc(entryTime)}</span>
     </div>
   </div>`;
@@ -135,7 +134,6 @@ function buildDoc(t: Ticket): string {
                 word-break: break-word; overflow-wrap: break-word; display: block; width: 100%; }
   .desc-foot { flex-shrink: 0; display: flex; justify-content: space-between; align-items: center;
                border-top: 0.3mm solid #bbb; padding-top: 0.6mm; }
-  .desc-id   { font-size: 6pt; color: #555; white-space: nowrap; }
   .desc-time { font-size: 6pt; color: #555; white-space: nowrap; font-variant-numeric: tabular-nums; }
   /* Customer/password footer */
   .foot { display: flex; flex-direction: column; align-items: center; gap: 0.6mm;
