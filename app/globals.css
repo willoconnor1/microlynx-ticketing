@@ -266,7 +266,7 @@ button{font-family:inherit}
 .tcard.laptop{background:#e2d4f5}
 .tcard.printer{background:#f2fbf3}
 .tcard.aio{background:#fde8f2}
-.tcard.misc{background:#e0e0e0}
+.tcard.misc{background:#efefef}
 .tcard.is-picked{background:var(--gray-100);border-color:var(--border);box-shadow:none;opacity:.92}
 .tcard.is-picked .tc-name{color:var(--gray-600)}
 .tcard.is-picked .tc-desc{color:var(--gray-500)}
@@ -355,7 +355,7 @@ button{font-family:inherit}
 .lrow.laptop{background:#e2d4f5}
 .lrow.printer{background:#f2fbf3}
 .lrow.aio{background:#fde8f2}
-.lrow.misc{background:#e0e0e0}
+.lrow.misc{background:#efefef}
 .lrow.done-row{border-left-color:var(--success);background:#fcfdfc}
 .lrow.done-row .nm{color:var(--gray-600)}
 
