@@ -233,9 +233,9 @@ button{font-family:inherit}
 .spill.call{background:#cffafe;color:#0e7490} .spill.call .d{background:#0891b2}
 .spill.resp{background:#ede9fe;color:#6d28d9} .spill.resp .d{background:#7c3aed}
 .avchip{width:20px;height:20px;border-radius:50%;font-family:var(--font-mono);font-size:9.5px;font-weight:700;display:inline-flex;align-items:center;justify-content:center;flex:none}
-.avchip.keith{background:#ede9fe;color:#6d28d9}
-.avchip.garrett{background:#ccfbf1;color:#0f766e}
-.avchip.marisa{background:#fce7f3;color:#9d174d}
+.avchip.keith{background:#e8e0f7;color:#4c1d95}
+.avchip.garrett{background:#cceef2;color:#0e6e82}
+.avchip.marisa{background:#fad8ec;color:#9b2c68}
 .who-tabs{display:flex;align-items:center;gap:4px;background:var(--gray-100);border-radius:var(--radius-pill);padding:4px}
 .who-tab{border:0;background:none;cursor:pointer;font-size:12.5px;font-weight:600;color:var(--gray-600);padding:6px 13px;border-radius:var(--radius-pill);white-space:nowrap;transition:all .15s ease}
 .who-tab:hover{color:var(--ink-800)}
@@ -312,15 +312,12 @@ button{font-family:inherit}
 .toggle.people{width:100%}
 .toggle.people button{padding:10px 14px;flex:1;justify-content:center}
 .toggle.people button.on{font-weight:600}
-.toggle.people button.keith:hover{background:#ede9fe;color:#6d28d9}
-.toggle.people button.keith.on{background:#6d28d9;color:#fff}
-.toggle.people button.keith.on:hover{background:#c4b5fd;color:#4c1d95}
-.toggle.people button.garrett:hover{background:#ccfbf1;color:#0f766e}
-.toggle.people button.garrett.on{background:#0d9488;color:#fff}
-.toggle.people button.garrett.on:hover{background:#99f6e4;color:#0f766e}
-.toggle.people button.marisa:hover{background:#fce7f3;color:#9d174d}
-.toggle.people button.marisa.on{background:#db2777;color:#fff}
-.toggle.people button.marisa.on:hover{background:#fbcfe8;color:#9d174d}
+.toggle.people button.keith:hover,.toggle.people button.keith.on{background:#e8e0f7;color:#4c1d95}
+.toggle.people button.keith.on:hover{background:#f2edfb;color:#6d35b8}
+.toggle.people button.garrett:hover,.toggle.people button.garrett.on{background:#cceef2;color:#0e6e82}
+.toggle.people button.garrett.on:hover{background:#e3f6f9;color:#0e6e82}
+.toggle.people button.marisa:hover,.toggle.people button.marisa.on{background:#fad8ec;color:#9b2c68}
+.toggle.people button.marisa.on:hover{background:#fdedf6;color:#9b2c68}
 .lrow:hover{box-shadow:var(--shadow-sm);border-color:#f0a0a0}
 .lrow .nm{font-weight:700;color:var(--ink-900);font-size:14.5px;line-height:1.25}
 .lrow .ds{font-size:13px;color:var(--gray-600);margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
