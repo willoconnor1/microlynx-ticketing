@@ -153,7 +153,8 @@ function BoardColumn({ className, header, footNote, items, variant, colKey, comp
 function printTicketLabel(ticket: Ticket) {
   const esc = (s: string) =>
     s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-  const entryTime = fmtPacific(ticket.createdAt);
+  const entryTime = fmtPacific(ticket.createdAt)
+    || ticket.dropoff.slice(5).replace("-", "/"); // fallback: MM/DD from drop-off date
 
   const html = `<!DOCTYPE html>
 <html><head><meta charset="utf-8"><title>${esc(ticket.id)}</title>
@@ -187,7 +188,7 @@ body{font-family:Arial,Helvetica,sans-serif;color:#000;background:#fff}
     <div class="desc-value" id="dv">${esc(ticket.desc)}</div>
   </div>
   <div class="foot">
-    <span class="logo-text">Microlynx</span>
+    <span class="entry-time">${esc(ticket.id)}</span>
     <span class="entry-time">${entryTime}</span>
   </div>
 </div>
