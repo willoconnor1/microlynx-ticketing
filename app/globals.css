@@ -309,6 +309,12 @@ button{font-family:inherit}
 .toggle.device button.dt-printer:hover,.toggle.device button.dt-printer.on{background:#d4f0ed;color:#0f4f4a}
 .toggle.device button.dt-aio:hover,.toggle.device button.dt-aio.on{background:#fde8f2;color:#8e1560}
 .toggle.device button.dt-misc:hover,.toggle.device button.dt-misc.on{background:#ebebeb;color:#444}
+.toggle.people{width:100%}
+.toggle.people button{padding:10px 14px;flex:1;justify-content:center}
+.toggle.people button.on{font-weight:600}
+.toggle.people button.keith:hover,.toggle.people button.keith.on{background:#dde7f5;color:#1b4488}
+.toggle.people button.garrett:hover,.toggle.people button.garrett.on{background:#e7f6ee;color:#147a44}
+.toggle.people button.marisa:hover,.toggle.people button.marisa.on{background:#2b2f37;color:#fff}
 .lrow:hover{box-shadow:var(--shadow-sm);border-color:#f0a0a0}
 .lrow .nm{font-weight:700;color:var(--ink-900);font-size:14.5px;line-height:1.25}
 .lrow .ds{font-size:13px;color:var(--gray-600);margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
