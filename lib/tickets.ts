@@ -83,7 +83,13 @@ export function fmtDateLong(iso: string): string {
   return d.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" });
 }
 export function todayISO(): string {
-  return new Date().toISOString().slice(0, 10);
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone: "America/Los_Angeles",
+    year: "numeric", month: "2-digit", day: "2-digit",
+  }).formatToParts(new Date());
+  const p: Record<string, string> = {};
+  for (const { type, value } of parts) p[type] = value;
+  return `${p.year}-${p.month}-${p.day}`;
 }
 export function daysBetween(isoA: string, isoB: string): number {
   const a = new Date(isoA + "T12:00:00").getTime();

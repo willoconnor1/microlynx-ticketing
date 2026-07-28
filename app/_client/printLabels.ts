@@ -132,7 +132,7 @@ function buildDoc(t: Ticket): string {
                padding-bottom: 0.5mm; min-height: 0; }
   .desc-value { font-weight: 700; line-height: 1.15; text-align: center;
                 word-break: break-word; overflow-wrap: break-word; display: block; width: 100%; }
-  .desc-foot { flex-shrink: 0; display: flex; justify-content: space-between; align-items: center;
+  .desc-foot { flex-shrink: 0; display: flex; justify-content: center; align-items: center;
                border-top: 0.3mm solid #bbb; padding-top: 0.6mm; }
   .desc-time { font-size: 6pt; color: #555; white-space: nowrap; font-variant-numeric: tabular-nums; }
   /* Customer/password footer */
