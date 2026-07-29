@@ -139,7 +139,7 @@ function rowToTicket(r: TicketRow): Ticket {
     phone: r.phone,
     password: r.password ?? "",
     desc: r.desc,
-    notes: r.notes ?? null,
+    notes: null, // column not yet in DB — add via db:push then restore r.notes
     urgency: r.urgency,
     charger: r.charger,
     // Defensive: tolerate a legacy single-string value during the text -> text[] cutover.
@@ -288,7 +288,6 @@ export async function createTicket(input: NewTicketInput): Promise<{ state: AppS
     dueAt: dueAt ? new Date(dueAt) : null,
     sortPos: placed.pos,
     pickedAt: input.status === "picked" ? todayISO() : null,
-    notes: input.notes ?? null,
   });
   return { state: await getState(), id };
 }
@@ -344,7 +343,6 @@ export async function updateTicket(id: string, patch: TicketPatch): Promise<AppS
   if (patch.phone !== undefined) set.phone = patch.phone;
   if (patch.password !== undefined) set.password = patch.password;
   if (patch.desc !== undefined) set.desc = patch.desc;
-  if (patch.notes !== undefined) set.notes = patch.notes ?? null;
   if (patch.urgency !== undefined) set.urgency = patch.urgency;
   if (patch.charger !== undefined) set.charger = patch.charger;
   if (patch.assignedTo !== undefined) set.assignedTo = patch.assignedTo.length ? patch.assignedTo : ["keith"];

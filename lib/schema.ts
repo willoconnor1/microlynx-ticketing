@@ -22,7 +22,6 @@ export const tickets = pgTable("tickets", {
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   archived: boolean("archived").notNull().default(false),
   archivedAt: text("archived_at"), // YYYY-MM-DD, set when archived
-  notes: text("notes"), // internal shop notes, not shown to customer
 });
 
 // Counter used to generate sequential ticket ids (MLX-####).
