@@ -668,7 +668,7 @@ function RowPeek({ t, onEdit }: { t: Ticket; onEdit?: () => void }) {
   return (
     <div className="exp-peek">
       <div className="peek-desc">{t.desc || <span className="muted">No description</span>}</div>
-      {t.notes && <div className="peek-notes"><Icon name="lock" size={12} />{t.notes}</div>}
+      {t.notes && <div className="peek-notes">{t.notes}</div>}
       <div className="peek-meta">
         {t.phone && <span className="peek-item"><Icon name="phone" />{t.phone}</span>}
         {/* dates live here too: the phone-width row hides its date columns */}
@@ -1655,16 +1655,12 @@ export function TicketForm({ editing, today, onSave, onClose }: {
             <textarea className="ta"
               placeholder="Device and the problem in plain words — e.g. &ldquo;MacBook Air, liquid spill, won't boot.&rdquo;"
               value={f.desc} onChange={(e) => set("desc", e.target.value)} />
-          </div>
-
-          <div className="field">
-            <label className="lbl">Device password <span className="opt-hint">optional · for getting into the device</span></label>
-            <input className="inp mono" placeholder="Login / PIN for the device" value={f.password} onChange={(e) => set("password", e.target.value)} />
+            <textarea className="ta notes-inp" rows={2} placeholder="Notes…" value={f.notes} onChange={(e) => set("notes", e.target.value)} />
           </div>
 
           <div className="field" style={{ marginBottom: 0 }}>
-            <label className="lbl notes-lbl"><Icon name="lock" size={13} />Internal notes <span className="opt-hint">not printed · shop eyes only</span></label>
-            <textarea className="inp notes-inp" rows={2} placeholder="Price sensitivity, client history, anything to jog your memory…" value={f.notes} onChange={(e) => set("notes", e.target.value)} />
+            <label className="lbl">Device password <span className="opt-hint">optional · for getting into the device</span></label>
+            <input className="inp mono" placeholder="Login / PIN for the device" value={f.password} onChange={(e) => set("password", e.target.value)} />
           </div>
         </div>
 
