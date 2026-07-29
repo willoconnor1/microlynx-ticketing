@@ -31,6 +31,7 @@ export interface Ticket {
   phone: string;
   password?: string; // device login password so techs can get into the customer's computer
   desc: string;
+  notes?: string | null; // internal shop notes — not customer-facing
   urgency: number; // 1-5, 1 = most urgent
   charger: boolean;
   assignedTo?: Person[]; // one or more; defaults to [keith]

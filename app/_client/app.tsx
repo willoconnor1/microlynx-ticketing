@@ -279,6 +279,7 @@ export default function App({ initialTickets, initialArchive }: { initialTickets
     setForm(null);
     saveTicketAction(data.id, {
       name: data.name, phone: data.phone, password: data.password, desc: data.desc,
+      notes: data.notes || null,
       urgency: data.urgency, charger: data.charger, status: data.status, dropoff: data.dropoff,
       dropoffAmPm: data.dropoffAmPm, dueAt: data.dueAt, assignedTo: data.assignedTo,
       deviceType: data.deviceType, serviceTag: data.serviceTag,
@@ -291,7 +292,8 @@ export default function App({ initialTickets, initialArchive }: { initialTickets
         pushUndo("ticket edit", () => {
           saveTicketAction(id, {
             name: oldTicket.name, phone: oldTicket.phone, password: oldTicket.password ?? "",
-            desc: oldTicket.desc, urgency: oldTicket.urgency, charger: oldTicket.charger,
+            desc: oldTicket.desc, notes: oldTicket.notes ?? null,
+            urgency: oldTicket.urgency, charger: oldTicket.charger,
             status: oldTicket.status, dropoff: oldTicket.dropoff,
             dropoffAmPm: oldTicket.dropoffAmPm ?? null, dueAt: oldTicket.dueAt ?? null,
             assignedTo: oldTicket.assignedTo ?? [], deviceType: oldTicket.deviceType ?? null,
@@ -333,6 +335,7 @@ export default function App({ initialTickets, initialArchive }: { initialTickets
     pushUndo("delete", () => {
       saveTicketAction(null, {
         name: t.name, phone: t.phone, password: t.password ?? "", desc: t.desc,
+        notes: t.notes ?? null,
         urgency: t.urgency, charger: t.charger, status: t.status, dropoff: t.dropoff,
         dropoffAmPm: t.dropoffAmPm ?? null, dueAt: t.dueAt ?? null,
         assignedTo: t.assignedTo ?? [], deviceType: t.deviceType ?? null,

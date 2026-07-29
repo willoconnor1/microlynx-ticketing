@@ -668,6 +668,7 @@ function RowPeek({ t, onEdit }: { t: Ticket; onEdit?: () => void }) {
   return (
     <div className="exp-peek">
       <div className="peek-desc">{t.desc || <span className="muted">No description</span>}</div>
+      {t.notes && <div className="peek-notes"><Icon name="lock" size={12} />{t.notes}</div>}
       <div className="peek-meta">
         {t.phone && <span className="peek-item"><Icon name="phone" />{t.phone}</span>}
         {/* dates live here too: the phone-width row hides its date columns */}
@@ -1458,6 +1459,7 @@ export type FormDraft = {
   phone: string;
   password: string;
   desc: string;
+  notes: string;
   urgency: number;
   charger: boolean;
   status: Status;
@@ -1482,6 +1484,7 @@ export function TicketForm({ editing, today, onSave, onClose }: {
     phone: editing?.phone || "",
     password: editing?.password || "",
     desc: editing?.desc || "",
+    notes: editing?.notes || "",
     urgency: editing?.urgency || 3,
     charger: editing?.charger ?? false,
     status: editing?.status || "todo",
@@ -1654,9 +1657,14 @@ export function TicketForm({ editing, today, onSave, onClose }: {
               value={f.desc} onChange={(e) => set("desc", e.target.value)} />
           </div>
 
-          <div className="field" style={{ marginBottom: 0 }}>
+          <div className="field">
             <label className="lbl">Device password <span className="opt-hint">optional · for getting into the device</span></label>
             <input className="inp mono" placeholder="Login / PIN for the device" value={f.password} onChange={(e) => set("password", e.target.value)} />
+          </div>
+
+          <div className="field" style={{ marginBottom: 0 }}>
+            <label className="lbl notes-lbl"><Icon name="lock" size={13} />Internal notes <span className="opt-hint">not printed · shop eyes only</span></label>
+            <textarea className="inp notes-inp" rows={2} placeholder="Price sensitivity, client history, anything to jog your memory…" value={f.notes} onChange={(e) => set("notes", e.target.value)} />
           </div>
         </div>
 
