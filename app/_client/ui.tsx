@@ -9,7 +9,7 @@ import {
   Bell, Volume2, VolumeX, Play, CheckCheck, Settings, type LucideIcon,
 } from "lucide-react";
 import { logoutAction } from "@/lib/auth-actions";
-import { printTicketLabels } from "./printLabels";
+import { printSelectedLabels, type PrintSel } from "./printLabels";
 import { NEW_PRESETS, REORDER_PRESETS, previewChime } from "./chime";
 import type { FeedItem } from "./notifStore";
 import {
@@ -248,6 +248,7 @@ type ListProps = {
   onStatus: (id: string, s: Status) => void;
   onMoveRequest: (m: PendingMove) => void;
   onPatch: (id: string, patch: InlinePatch) => void;
+  onPrint: (t: Ticket) => void;
   expandedId: string | null;
   onToggleExpand: (id: string) => void;
   drag: Drag;
@@ -255,7 +256,7 @@ type ListProps = {
   canReorder: boolean; // off while a person filter or search hides rows
   getAlert: (id: string) => boolean; // true while a row should glow (new/moved, unresolved)
 };
-export function ListView({ tickets, onMenu, onStatus, onMoveRequest, onPatch, expandedId, onToggleExpand, drag, setDrag, canReorder, getAlert }: ListProps) {
+export function ListView({ tickets, onMenu, onStatus, onMoveRequest, onPatch, onPrint, expandedId, onToggleExpand, drag, setDrag, canReorder, getAlert }: ListProps) {
   const sorted = React.useMemo(
     () => tickets.filter((t) => t.status === "todo" || t.status === "prog" || t.status === "call" || t.status === "resp").sort(sortQueue),
     [tickets]
@@ -462,7 +463,7 @@ export function ListView({ tickets, onMenu, onStatus, onMoveRequest, onPatch, ex
                 onToggle={onToggleExpand}
                 onPatch={onPatch}
                 onGripDown={onGripDown}
-                onStatus={onStatus} onMenu={onMenu} />;
+                onStatus={onStatus} onMenu={onMenu} onPrint={onPrint} />;
               return lineAt === i && dragged
                 ? [<QueueRow key="phantom" t={{ ...dragged, urgency: u }} phantom
                     isNext={false} dragging={false} canReorder={false} alert={false}
@@ -489,7 +490,7 @@ export function ListView({ tickets, onMenu, onStatus, onMoveRequest, onPatch, ex
             <span className="ln" />
             <span>{done.length}</span>
           </div>
-          {done.map((t) => <DoneRow key={t.id} t={t} onStatus={onStatus} expanded={expandedId === t.id} onToggle={onToggleExpand} onPatch={onPatch} />)}
+          {done.map((t) => <DoneRow key={t.id} t={t} onStatus={onStatus} expanded={expandedId === t.id} onToggle={onToggleExpand} onPatch={onPatch} onPrint={onPrint} />)}
         </>
       )}
 
@@ -523,11 +524,12 @@ type QueueRowProps = {
   onGripDown: (e: React.PointerEvent, t: Ticket) => void;
   onStatus: (id: string, s: Status) => void;
   onMenu: (e: React.MouseEvent, t: Ticket) => void;
+  onPrint?: (t: Ticket) => void;
 };
 
 /* Memoized because dragover re-renders the list up to once per frame while a row is
    dragged — without memo every row repaints on each indicator move. */
-const QueueRow = React.memo(function QueueRow({ t, isNext, dragging, canReorder, alert, expanded, dropBefore, dropAfter, groupU, index, phantom, noOp, onToggle, onPatch, onGripDown, onStatus, onMenu }: QueueRowProps) {
+const QueueRow = React.memo(function QueueRow({ t, isNext, dragging, canReorder, alert, expanded, dropBefore, dropAfter, groupU, index, phantom, noOp, onToggle, onPatch, onGripDown, onStatus, onMenu, onPrint }: QueueRowProps) {
   // Keep the expansion body mounted through the collapse animation, then unmount.
   const [bodyMounted, setBodyMounted] = React.useState(expanded);
   // Two stages: a compact read-only peek first; the pencil opens the full inline editor.
@@ -583,7 +585,7 @@ const QueueRow = React.memo(function QueueRow({ t, isNext, dragging, canReorder,
         <StatusPillMenu t={t} onStatus={onStatus} />
         <span className="acts">
           <button className="iconbtn tick" title="Mark complete" onClick={(e) => { e.stopPropagation(); onStatus(t.id, "done"); }}><Icon name="check" /></button>
-          <button className="iconbtn" title={t.password ? "Print labels (customer + password)" : "Print customer label"} onClick={(e) => { e.stopPropagation(); printTicketLabels(t); }}><Icon name="printer" /></button>
+          <button className="iconbtn" title="Print labels" onClick={(e) => { e.stopPropagation(); onPrint?.(t); }}><Icon name="printer" /></button>
           <button className="iconbtn" title="Edit" onClick={openEditor}><Icon name="pencil" /></button>
           <button className="iconbtn" title="Quick change" onClick={(e) => { e.stopPropagation(); onMenu(e, t); }}><Icon name="ellipsis-vertical" /></button>
         </span>
@@ -595,7 +597,7 @@ const QueueRow = React.memo(function QueueRow({ t, isNext, dragging, canReorder,
             <div className="lrow-exp-body">
               {mode === "edit"
                 ? <RowExpansion t={t} onPatch={onPatch} />
-                : <RowPeek t={t} onEdit={() => setMode("edit")} />}
+                : <RowPeek t={t} onEdit={() => setMode("edit")} onPrint={onPrint} />}
             </div>
           )}
         </div>
@@ -605,12 +607,13 @@ const QueueRow = React.memo(function QueueRow({ t, isNext, dragging, canReorder,
 });
 
 /* Completed-section row. Memoized for the same reason as QueueRow. */
-const DoneRow = React.memo(function DoneRow({ t, onStatus, expanded, onToggle, onPatch }: {
+const DoneRow = React.memo(function DoneRow({ t, onStatus, expanded, onToggle, onPatch, onPrint }: {
   t: Ticket;
   onStatus: (id: string, s: Status) => void;
   expanded: boolean;
   onToggle: (id: string) => void;
   onPatch: (id: string, patch: InlinePatch) => void;
+  onPrint?: (t: Ticket) => void;
 }) {
   const [bodyMounted, setBodyMounted] = React.useState(expanded);
   const [mode, setMode] = React.useState<"info" | "edit">("info");
@@ -653,7 +656,7 @@ const DoneRow = React.memo(function DoneRow({ t, onStatus, expanded, onToggle, o
             <div className="lrow-exp-body">
               {mode === "edit"
                 ? <RowExpansion t={t} onPatch={onPatch} />
-                : <RowPeek t={t} onEdit={() => setMode("edit")} />}
+                : <RowPeek t={t} onEdit={() => setMode("edit")} onPrint={onPrint} />}
             </div>
           )}
         </div>
@@ -664,7 +667,7 @@ const DoneRow = React.memo(function DoneRow({ t, onStatus, expanded, onToggle, o
 
 /* Compact read-only peek shown first when a row expands: the full description plus
    the details the collapsed row hides, with an Edit button to open the inline editor. */
-function RowPeek({ t, onEdit }: { t: Ticket; onEdit?: () => void }) {
+function RowPeek({ t, onEdit, onPrint }: { t: Ticket; onEdit?: () => void; onPrint?: (t: Ticket) => void }) {
   return (
     <div className="exp-peek">
       <div className="peek-desc">{t.desc || <span className="muted">No description</span>}</div>
@@ -688,7 +691,7 @@ function RowPeek({ t, onEdit }: { t: Ticket; onEdit?: () => void }) {
           </span>
         )}
         <span className="peek-spacer" />
-        <button type="button" className="btn ghost peek-print" onClick={() => printTicketLabels(t)}>
+        <button type="button" className="btn ghost peek-print" onClick={() => onPrint?.(t)}>
           <Icon name="printer" />{t.password ? "Print labels" : "Print label"}
         </button>
         {/* Mobile only — desktop edits via the pencil in the row (CSS hides this above 860px). */}
@@ -879,11 +882,12 @@ function sortPartsOrder(a: Ticket, b: Ticket): number {
   if (ap !== bp) return ap - bp;
   return sortEntryOrder(a, b);
 }
-export function PartsView({ tickets, onStatus, onMenu, onPatch, expandedId, onToggleExpand, drag, setDrag, onMoveRequest, canReorder }: {
+export function PartsView({ tickets, onStatus, onMenu, onPatch, onPrint, expandedId, onToggleExpand, drag, setDrag, onMoveRequest, canReorder }: {
   tickets: Ticket[];
   onStatus: (id: string, s: Status) => void;
   onMenu: (e: React.MouseEvent, t: Ticket) => void;
   onPatch: (id: string, patch: InlinePatch) => void;
+  onPrint: (t: Ticket) => void;
   expandedId: string | null;
   onToggleExpand: (id: string) => void;
   drag: Drag;
@@ -1039,7 +1043,7 @@ export function PartsView({ tickets, onStatus, onMenu, onPatch, expandedId, onTo
           groupU={0} index={i}
           expanded={expandedId === t.id} onToggle={onToggleExpand} onPatch={onPatch}
           onGripDown={onGripDown}
-          onStatus={onStatus} onMenu={onMenu} />;
+          onStatus={onStatus} onMenu={onMenu} onPrint={onPrint} />;
         return (!noOpTarget && target === i && dragged)
           ? [<QueueRow key="phantom" t={dragged} phantom
               isNext={false} dragging={false} canReorder={false} alert={false}
@@ -1380,6 +1384,62 @@ export function QuickMenu({ ctx, onClose, onUrgency, onStatus, onEdit, onDelete 
 }
 
 /* ================= CONFIRM DELETE DIALOG ================= */
+export function PrintPanel({ ticket, onClose }: { ticket: Ticket; onClose: () => void }) {
+  const [sel, setSel] = React.useState<PrintSel>({
+    name: true,
+    charger: ticket.charger,
+    password: !!ticket.password?.trim(),
+    desc: !!(ticket.desc || "").split(/\r?\n/)[0].trim(),
+  });
+
+  React.useEffect(() => {
+    const k = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
+    window.addEventListener("keydown", k);
+    return () => window.removeEventListener("keydown", k);
+  }, [onClose]);
+
+  const toggle = (key: keyof PrintSel) => setSel((s) => ({ ...s, [key]: !s[key] }));
+  const anySelected = sel.name || sel.charger || sel.password || sel.desc;
+
+  const labels: { key: keyof PrintSel; label: string; disabled?: boolean }[] = [
+    { key: "name", label: "Name & phone" },
+    { key: "charger", label: "Charger bag" },
+    { key: "password", label: "Password", disabled: !ticket.password?.trim() },
+    { key: "desc", label: "Description", disabled: !(ticket.desc || "").split(/\r?\n/)[0].trim() },
+  ];
+
+  return (
+    <div className="scrim-dark" onMouseDown={onClose}>
+      <div className="modal confirm" onMouseDown={(e) => e.stopPropagation()}>
+        <div className="modal-head">
+          <div>
+            <div className="eyebrow">PRINT LABELS</div>
+            <h2>{ticket.name}</h2>
+          </div>
+          <button className="iconbtn" onClick={onClose} style={{ width: 34, height: 34 }}><Icon name="x" size={18} /></button>
+        </div>
+        <div className="modal-body">
+          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+            {labels.map(({ key, label, disabled }) => (
+              <label key={key} style={{ display: "flex", alignItems: "center", gap: 10, cursor: disabled ? "default" : "pointer", opacity: disabled ? 0.4 : 1 }}>
+                <input type="checkbox" checked={sel[key]} disabled={disabled} onChange={() => toggle(key)}
+                  style={{ width: 18, height: 18, cursor: disabled ? "default" : "pointer" }} />
+                <span style={{ fontSize: 15, fontWeight: 500 }}>{label}</span>
+              </label>
+            ))}
+          </div>
+        </div>
+        <div className="modal-foot">
+          <button className="btn ghost" onClick={onClose}>Cancel</button>
+          <button className="btn" disabled={!anySelected} onClick={() => { printSelectedLabels(ticket, sel); onClose(); }}>
+            <Icon name="printer" />Print
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function ConfirmDeleteDialog({ ticket, onCancel, onConfirm }: {
   ticket: Ticket;
   onCancel: () => void;

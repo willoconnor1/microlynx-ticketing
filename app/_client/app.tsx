@@ -8,11 +8,10 @@ import {
 } from "@/lib/actions";
 import {
   Icon, ListView, PartsView, ArchiveView, TopNav, QuickMenu,
-  MobileSheet, TicketForm, ConfirmMoveDialog, ConfirmDeleteDialog, SettingsModal,
+  MobileSheet, TicketForm, ConfirmMoveDialog, ConfirmDeleteDialog, SettingsModal, PrintPanel,
   type View, type Drag, type FormDraft, type PendingMove, type InlinePatch,
 } from "./ui";
 import { celebrate } from "./confetti";
-import { printTicketLabels } from "./printLabels";
 import { alertReason, alertSignature, alertTime, type AlertKind } from "./alerts";
 import { playChime, unlockAudio, DEFAULT_NEW, DEFAULT_REORDER } from "./chime";
 import {
@@ -39,12 +38,14 @@ export default function App({ initialTickets, initialArchive }: { initialTickets
   const [drag, setDrag] = React.useState<Drag>(null);
   const [pendingMove, setPendingMove] = React.useState<PendingMove | null>(null);
   const [confirmDelete, setConfirmDelete] = React.useState<Ticket | null>(null);
+  const [printTicket, setPrintTicket] = React.useState<Ticket | null>(null);
+  const onPrint = React.useCallback((t: Ticket) => setPrintTicket(t), []);
   const [who, setWho] = React.useState<"all" | Person>("all");
   const [expandedId, setExpandedId] = React.useState<string | null>(null);
   const today = todayISO();
 
   const busy = React.useRef(false); // suppress polling while the user is mid-interaction
-  busy.current = !!drag || !!form || !!menu || !!pendingMove || !!confirmDelete;
+  busy.current = !!drag || !!form || !!menu || !!pendingMove || !!confirmDelete || !!printTicket;
 
   /* ---- notifications (all per-screen, saved in this browser) ---- */
   const [resolved, setResolved] = React.useState<Record<string, string>>(loadResolved);
@@ -286,7 +287,7 @@ export default function App({ initialTickets, initialArchive }: { initialTickets
     }).then(({ state, id }) => {
       selfChangedIds.current.add(id);
       apply(state);
-      if (print) printTicketLabels({ ...data, id });
+      if (print) setPrintTicket({ ...data, id });
       if (oldTicket) {
         // edit — undo by restoring the old field values
         pushUndo("ticket edit", () => {
@@ -422,8 +423,8 @@ export default function App({ initialTickets, initialArchive }: { initialTickets
   };
 
   let body: React.ReactNode;
-  if (view === "list") body = <ListView tickets={listTickets} onMenu={openMenu} onStatus={setStatus} onMoveRequest={requestMove} onPatch={patchTicket} expandedId={expandedId} onToggleExpand={toggleExpand} drag={drag} setDrag={setDrag} canReorder={canReorder} getAlert={getAlert} />;
-  else if (view === "parts") body = <PartsView tickets={byPerson} onStatus={setStatus} onMenu={openMenu} onPatch={patchTicket} expandedId={expandedId} onToggleExpand={toggleExpand} drag={drag} setDrag={setDrag} onMoveRequest={requestMove} canReorder={canReorder} />;
+  if (view === "list") body = <ListView tickets={listTickets} onMenu={openMenu} onStatus={setStatus} onMoveRequest={requestMove} onPatch={patchTicket} onPrint={onPrint} expandedId={expandedId} onToggleExpand={toggleExpand} drag={drag} setDrag={setDrag} canReorder={canReorder} getAlert={getAlert} />;
+  else if (view === "parts") body = <PartsView tickets={byPerson} onStatus={setStatus} onMenu={openMenu} onPatch={patchTicket} onPrint={onPrint} expandedId={expandedId} onToggleExpand={toggleExpand} drag={drag} setDrag={setDrag} onMoveRequest={requestMove} canReorder={canReorder} />;
   else body = <ArchiveView archive={visibleArchive} search={search} onStatus={setStatus} />;
 
   return (
@@ -490,6 +491,7 @@ export default function App({ initialTickets, initialArchive }: { initialTickets
       )}
       {sheet && <MobileSheet view={view} setView={setView} onClose={() => setSheet(false)} partsCount={partsCount} onOpenSettings={() => setSettingsOpen(true)} />}
       {settingsOpen && <SettingsModal notif={notif} onClose={() => setSettingsOpen(false)} />}
+      {printTicket && <PrintPanel ticket={printTicket} onClose={() => setPrintTicket(null)} />}
       {undoToast && <div className="undo-toast">{undoToast}</div>}
     </>
   );
