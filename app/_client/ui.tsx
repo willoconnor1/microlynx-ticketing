@@ -1715,7 +1715,7 @@ export function TicketForm({ editing, today, onSave, onClose }: {
             <textarea className="ta"
               placeholder="Device and the problem in plain words — e.g. &ldquo;MacBook Air, liquid spill, won't boot.&rdquo;"
               value={f.desc} onChange={(e) => set("desc", e.target.value)} />
-            <textarea className="ta notes-inp" rows={2} placeholder="Notes…" value={f.notes} onChange={(e) => set("notes", e.target.value)} />
+            <input className="inp notes-inp" placeholder="Internal notes…" value={f.notes} onChange={(e) => set("notes", e.target.value)} />
           </div>
 
           <div className="field" style={{ marginBottom: 0 }}>
