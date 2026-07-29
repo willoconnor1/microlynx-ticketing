@@ -59,7 +59,7 @@ const SHARED_CSS = `
   body { font-family: Arial, "Helvetica Neue", sans-serif; color: #000; }
   .label { width: ${LABEL_W}; height: ${LABEL_H}; padding: 1.8mm 2.4mm;
     display: flex; flex-direction: column; justify-content: space-between;
-    page-break-after: always; break-after: page; }
+    page-break-after: always; break-after: page; overflow: hidden; }
   .top { text-align: center; min-height: 0; }
   .cust-name { font-weight: 800; line-height: 1.05; }
   .cust-name.wrap { word-break: break-word; }
@@ -76,10 +76,10 @@ const SHARED_CSS = `
     border-top: 0.3mm solid #bbb; padding-top: 0.6mm; }
   .desc-time { font-size: 6pt; color: #555; white-space: nowrap;
     font-variant-numeric: tabular-nums; }
-  .foot { display: flex; flex-direction: column; align-items: center; gap: 0.6mm;
-    border-top: 0.3mm solid #bbb; padding-top: 0.9mm; }
-  .logo { height: 3.4mm; width: auto; max-width: 47mm; }
-  .shop-phone { font-size: 9.5pt; color: #333; white-space: nowrap; }
+  .foot { display: flex; flex-direction: column; align-items: center; gap: 0.3mm;
+    border-top: 0.3mm solid #bbb; padding-top: 0.5mm; flex-shrink: 0; }
+  .logo { height: 2.8mm; width: auto; max-width: 47mm; }
+  .shop-phone { font-size: 7.5pt; color: #333; white-space: nowrap; }
 `;
 
 /* ── Per-label HTML bodies ── */
