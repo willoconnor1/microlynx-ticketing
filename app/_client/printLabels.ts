@@ -58,7 +58,8 @@ const SHARED_CSS = `
   html, body { width: ${LABEL_W}; background: #fff; }
   body { font-family: Arial, "Helvetica Neue", sans-serif; color: #000; }
   .label { width: ${LABEL_W}; height: ${LABEL_H}; padding: 1.8mm 2.4mm;
-    display: flex; flex-direction: column; justify-content: space-between; }
+    display: flex; flex-direction: column; justify-content: space-between;
+    page-break-after: always; break-after: page; }
   .top { text-align: center; min-height: 0; }
   .cust-name { font-weight: 800; line-height: 1.05; }
   .cust-name.wrap { word-break: break-word; }
@@ -163,18 +164,19 @@ function firePrint(html: string): void {
 /* ── Public API ── */
 
 export function printSelectedLabels(t: Ticket, sel: PrintSel): void {
-  const jobs: string[] = [];
-  if (sel.name) jobs.push(singleDoc(customerHtml(t)));
-  if (sel.charger) jobs.push(singleDoc(customerHtml(t)));
-  if (sel.password && t.password?.trim()) jobs.push(singleDoc(passwordHtml(t)));
+  const bodies: string[] = [];
+  if (sel.name) bodies.push(customerHtml(t));
+  if (sel.charger) bodies.push(customerHtml(t));
+  if (sel.password && t.password?.trim()) bodies.push(passwordHtml(t));
   if (sel.desc) {
     const firstLine = (t.desc || "").split(/\r?\n/)[0].trim();
     if (firstLine) {
       const entryTime = fmtPacific(t.createdAt) || (t.dropoff ? t.dropoff.slice(5).replace("-", "/") : "");
-      jobs.push(singleDoc(descHtml(firstLine, entryTime), DESC_SCRIPT));
+      bodies.push(descHtml(firstLine, entryTime));
     }
   }
-  jobs.forEach((html, i) => window.setTimeout(() => firePrint(html), i * 700));
+  if (!bodies.length) return;
+  firePrint(singleDoc(bodies.join("\n"), bodies.some((b) => b.includes("id=\"dv\"")) ? DESC_SCRIPT : undefined));
 }
 
 /* Kept for the save-and-print path — prints all applicable labels with no dialog. */
