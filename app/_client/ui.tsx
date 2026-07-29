@@ -1404,8 +1404,8 @@ export function PrintPanel({ ticket, onClose }: { ticket: Ticket; onClose: () =>
   const labels: { key: keyof PrintSel; label: string; disabled?: boolean }[] = [
     { key: "name", label: "Name Tag" },
     { key: "charger", label: "Name Tag (2)" },
-    { key: "password", label: "Password", disabled: !ticket.password?.trim() },
     { key: "desc", label: "Description", disabled: !(ticket.desc || "").split(/\r?\n/)[0].trim() },
+    { key: "password", label: "Password", disabled: !ticket.password?.trim() },
   ];
 
   return (

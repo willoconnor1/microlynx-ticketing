@@ -167,7 +167,6 @@ export function printSelectedLabels(t: Ticket, sel: PrintSel): void {
   const bodies: string[] = [];
   if (sel.name) bodies.push(customerHtml(t));
   if (sel.charger) bodies.push(customerHtml(t));
-  if (sel.password && t.password?.trim()) bodies.push(passwordHtml(t));
   if (sel.desc) {
     const firstLine = (t.desc || "").split(/\r?\n/)[0].trim();
     if (firstLine) {
@@ -175,6 +174,7 @@ export function printSelectedLabels(t: Ticket, sel: PrintSel): void {
       bodies.push(descHtml(firstLine, entryTime));
     }
   }
+  if (sel.password && t.password?.trim()) bodies.push(passwordHtml(t));
   if (!bodies.length) return;
   firePrint(singleDoc(bodies.join("\n"), bodies.some((b) => b.includes("id=\"dv\"")) ? DESC_SCRIPT : undefined));
 }
