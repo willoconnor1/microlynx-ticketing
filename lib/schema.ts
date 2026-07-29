@@ -6,7 +6,6 @@ export const tickets = pgTable("tickets", {
   phone: text("phone").notNull().default(""),
   password: text("password").notNull().default(""), // device login password (blank on older tickets)
   desc: text("description").notNull(),
-  notes: text("notes"), // internal shop notes — not customer-facing
   urgency: integer("urgency").notNull().default(3),
   charger: boolean("charger").notNull().default(false),
   assignedTo: text("assigned_to").array().notNull().default(["keith"]), // one or more of keith | garrett | marisa
