@@ -234,6 +234,7 @@ button{font-family:inherit}
 .spill.resp{background:#ede9fe;color:#6d28d9} .spill.resp .d{background:#7c3aed}
 .avchip{width:20px;height:20px;border-radius:50%;font-family:var(--font-mono);font-size:9.5px;font-weight:700;display:inline-flex;align-items:center;justify-content:center;flex:none}
 .avchip.keith{background:#e8e0f7;color:#4c1d95}
+.avchip.eddie{background:#fde8e8;color:#991b1b}
 .avchip.garrett{background:#cceef2;color:#0e6e82}
 .avchip.marisa{background:#fad8ec;color:#9b2c68}
 .who-tabs{display:flex;align-items:center;gap:4px;background:var(--gray-100);border-radius:var(--radius-pill);padding:4px}
@@ -315,6 +316,8 @@ button{font-family:inherit}
 .toggle.people button.on{font-weight:600}
 .toggle.people button.keith:hover,.toggle.people button.keith.on{background:#e8e0f7;color:#4c1d95}
 .toggle.people button.keith.on:hover{background:#f2edfb;color:#6d35b8}
+.toggle.people button.eddie:hover,.toggle.people button.eddie.on{background:#fde8e8;color:#991b1b}
+.toggle.people button.eddie.on:hover{background:#fef2f2;color:#991b1b}
 .toggle.people button.garrett:hover,.toggle.people button.garrett.on{background:#cceef2;color:#0e6e82}
 .toggle.people button.garrett.on:hover{background:#e3f6f9;color:#0e6e82}
 .toggle.people button.marisa:hover,.toggle.people button.marisa.on{background:#fad8ec;color:#9b2c68}

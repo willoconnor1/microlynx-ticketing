@@ -1,12 +1,13 @@
 /* Shared ticket types, config, and helpers (server + client safe). */
 
 export type Status = "todo" | "prog" | "call" | "resp" | "parts" | "done" | "picked";
-export type Person = "keith" | "garrett" | "marisa";
+export type Person = "keith" | "eddie" | "garrett" | "marisa";
 export type DeviceType = "desktop" | "laptop" | "printer" | "aio" | "misc";
 export type ServiceTag = "expedite" | "contract";
 
 export const PEOPLE: { key: Person; label: string }[] = [
   { key: "keith", label: "Keith" },
+  { key: "eddie", label: "Eddie" },
   { key: "garrett", label: "Garrett" },
   { key: "marisa", label: "Marisa" },
 ];
