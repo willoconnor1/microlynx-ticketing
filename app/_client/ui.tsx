@@ -490,7 +490,7 @@ export function ListView({ tickets, onMenu, onStatus, onMoveRequest, onPatch, on
             <span className="ln" />
             <span>{done.length}</span>
           </div>
-          {done.map((t) => <DoneRow key={t.id} t={t} onStatus={onStatus} expanded={expandedId === t.id} onToggle={onToggleExpand} onPatch={onPatch} onPrint={onPrint} />)}
+          {done.map((t) => <DoneRow key={t.id} t={t} onStatus={onStatus} expanded={expandedId === t.id} onToggle={onToggleExpand} onPatch={onPatch} onPrint={onPrint} onMenu={onMenu} />)}
         </>
       )}
 
@@ -607,13 +607,14 @@ const QueueRow = React.memo(function QueueRow({ t, isNext, dragging, canReorder,
 });
 
 /* Completed-section row. Memoized for the same reason as QueueRow. */
-const DoneRow = React.memo(function DoneRow({ t, onStatus, expanded, onToggle, onPatch, onPrint }: {
+const DoneRow = React.memo(function DoneRow({ t, onStatus, expanded, onToggle, onPatch, onPrint, onMenu }: {
   t: Ticket;
   onStatus: (id: string, s: Status) => void;
   expanded: boolean;
   onToggle: (id: string) => void;
   onPatch: (id: string, patch: InlinePatch) => void;
   onPrint?: (t: Ticket) => void;
+  onMenu?: (e: React.MouseEvent, t: Ticket) => void;
 }) {
   const [bodyMounted, setBodyMounted] = React.useState(expanded);
   const [mode, setMode] = React.useState<"info" | "edit">("info");
@@ -647,6 +648,7 @@ const DoneRow = React.memo(function DoneRow({ t, onStatus, expanded, onToggle, o
           <button className="btn pickup" onClick={() => onStatus(t.id, "picked")}>
             <Icon name="package-check" />Picked up
           </button>
+          <button className="iconbtn" title="Quick change" onClick={(e) => { e.stopPropagation(); onMenu?.(e, t); }}><Icon name="ellipsis-vertical" /></button>
         </span>
       </div>
       <div className="lrow-exp"
@@ -1069,8 +1071,9 @@ export function PartsView({ tickets, onStatus, onMenu, onPatch, onPrint, expande
    history is never out of reach. */
 const ARCHIVE_WINDOW_DAYS = 7;
 
-const ArchiveRow = React.memo(function ArchiveRow({ t, onStatus }: {
+const ArchiveRow = React.memo(function ArchiveRow({ t, onStatus, onMenu }: {
   t: Ticket; onStatus: (id: string, s: Status) => void;
+  onMenu?: (e: React.MouseEvent, t: Ticket) => void;
 }) {
   const [expanded, setExpanded] = React.useState(false);
   const [bodyMounted, setBodyMounted] = React.useState(false);
@@ -1092,6 +1095,7 @@ const ArchiveRow = React.memo(function ArchiveRow({ t, onStatus }: {
           onClick={(e) => { e.stopPropagation(); onStatus(t.id, "done"); }}>
           <Icon name="rotate-ccw" size={15} />
         </button>
+        <button className="iconbtn" title="Quick change" onClick={(e) => { e.stopPropagation(); onMenu?.(e, t); }}><Icon name="ellipsis-vertical" /></button>
       </div>
       <div className="lrow-exp"
         onTransitionEnd={(e) => { if (e.propertyName === "grid-template-rows" && !expanded) setBodyMounted(false); }}>
@@ -1103,8 +1107,9 @@ const ArchiveRow = React.memo(function ArchiveRow({ t, onStatus }: {
   );
 });
 
-export function ArchiveView({ archive, search, onStatus }: {
+export function ArchiveView({ archive, search, onStatus, onMenu }: {
   archive: Ticket[]; search: string; onStatus: (id: string, s: Status) => void;
+  onMenu: (e: React.MouseEvent, t: Ticket) => void;
 }) {
   const q = (search || "").trim().toLowerCase();
   const today = todayISO();
@@ -1130,7 +1135,7 @@ export function ArchiveView({ archive, search, onStatus }: {
           <div className="es">{q ? "Try a different name, device, or ticket number." : "Tickets land here the moment they're marked picked up. Older records are still on file — search to find them."}</div>
         </div>
       ) : list.map((t) => (
-        <ArchiveRow key={t.id} t={t} onStatus={onStatus} />
+        <ArchiveRow key={t.id} t={t} onStatus={onStatus} onMenu={onMenu} />
       ))}
     </div>
   );
