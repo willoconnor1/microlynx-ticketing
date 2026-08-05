@@ -21,7 +21,7 @@ import {
 
 /* Field-level edits the expanded row can save. */
 export type InlinePatch = Partial<Pick<Ticket,
-  "name" | "phone" | "password" | "desc" | "urgency" | "charger" | "assignedTo" | "deviceType" |
+  "name" | "phone" | "password" | "desc" | "notes" | "urgency" | "charger" | "assignedTo" | "deviceType" |
   "serviceTag" | "dropoff" | "dropoffAmPm" | "dueAt">>;
 
 export type View = "list" | "parts" | "archive";
@@ -708,7 +708,7 @@ function RowPeek({ t, onEdit, onPrint }: { t: Ticket; onEdit?: () => void; onPri
 /* Inline editor inside the expanded row. Buttons save instantly; text saves on blur
    (and on unmount, so collapsing mid-edit never loses typing). */
 function RowExpansion({ t, onPatch }: { t: Ticket; onPatch: (id: string, p: InlinePatch) => void }) {
-  const [draft, setDraft] = React.useState({ name: t.name, phone: t.phone, password: t.password ?? "", desc: t.desc });
+  const [draft, setDraft] = React.useState({ name: t.name, phone: t.phone, password: t.password ?? "", desc: t.desc, notes: t.notes ?? "" });
   const draftRef = React.useRef(draft); draftRef.current = draft;
   const tRef = React.useRef(t); tRef.current = t;
   const onPatchRef = React.useRef(onPatch); onPatchRef.current = onPatch;
@@ -720,6 +720,7 @@ function RowExpansion({ t, onPatch }: { t: Ticket; onPatch: (id: string, p: Inli
     if (d.phone.trim() !== cur.phone) p.phone = d.phone.trim();
     if (d.password.trim() !== (cur.password ?? "")) p.password = d.password.trim();
     if (d.desc.trim() !== cur.desc) p.desc = d.desc.trim();
+    if (d.notes.trim() !== (cur.notes ?? "")) p.notes = d.notes.trim();
     if (Object.keys(p).length) onPatchRef.current(cur.id, p);
   }, []);
   React.useEffect(() => () => flush(), [flush]);
@@ -748,6 +749,11 @@ function RowExpansion({ t, onPatch }: { t: Ticket; onPatch: (id: string, p: Inli
         <label className="lbl">What&apos;s wrong?</label>
         <textarea className="ta" value={draft.desc} onBlur={flush}
           onChange={(e) => setDraft((p) => ({ ...p, desc: e.target.value }))} />
+      </div>
+      <div className="exp-field full">
+        <label className="lbl">Internal notes</label>
+        <input className="inp" placeholder="Internal notes…" value={draft.notes} onBlur={flush}
+          onChange={(e) => setDraft((p) => ({ ...p, notes: e.target.value }))} />
       </div>
       <div className="exp-field">
         <label className="lbl">Drop-off</label>
