@@ -400,7 +400,7 @@ export default function App({ initialTickets, initialArchive }: { initialTickets
 
   // "Active" = work still to be done: To Do + In Progress + Awaiting Response. Complete,
   // Picked Up, and Waiting on Parts all drop out of these numbers (Garrett's request).
-  const isActive = (x: Ticket) => x.status === "todo" || x.status === "prog" || x.status === "resp";
+  const isActive = (x: Ticket) => x.status === "todo" || x.status === "prog" || x.status === "resp" || x.status === "parts";
   const activeCount = byPerson.filter(isActive).length;
   // Device dot counts include "Call Customer" tickets (still physically in the shop).
   const isInShop = (x: Ticket) => x.status === "todo" || x.status === "prog" || x.status === "resp" || x.status === "call";
