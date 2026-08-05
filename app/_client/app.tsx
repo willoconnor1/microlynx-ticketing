@@ -7,7 +7,7 @@ import {
   deleteTicketAction, patchTicketAction,
 } from "@/lib/actions";
 import {
-  Icon, ListView, PartsView, ArchiveView, TopNav, QuickMenu,
+  Icon, ListView, PartsView, MaybeView, ArchiveView, TopNav, QuickMenu,
   MobileSheet, TicketForm, ConfirmMoveDialog, ConfirmDeleteDialog, SettingsModal, PrintPanel,
   type View, type Drag, type FormDraft, type PendingMove, type InlinePatch,
 } from "./ui";
@@ -22,6 +22,7 @@ import {
 const VIEW_META: Record<View, [string, string, string]> = {
   list: ["ACTIVE QUEUE", "Repair tickets", "Most urgent first, then soonest due — grab the top of the list."],
   parts: ["ON HOLD", "Waiting on parts", "Parked until parts arrive — set a ticket's status to bring it back to the queue."],
+  maybe: ["MAYBE LATER", "Maybe later", "Tickets parked here aren't urgent — set any active status to bring one back."],
   archive: ["RECORDS VAULT", "Archive", "Picked-up tickets from the last 7 days. Search to find older records."],
 };
 
@@ -411,6 +412,7 @@ export default function App({ initialTickets, initialArchive }: { initialTickets
   }, [byPerson]);
   // The tab badge reflects the whole shop, ignoring the person filter.
   const partsCount = tickets.filter((t) => t.status === "parts").length;
+  const maybeCount = tickets.filter((t) => t.status === "maybe").length;
   // Parts count for the stats bar respects the person filter.
   const partsCountForStats = byPerson.filter((x) => x.status === "parts").length;
   const showSearch = view === "list" || view === "archive";
@@ -425,11 +427,12 @@ export default function App({ initialTickets, initialArchive }: { initialTickets
   let body: React.ReactNode;
   if (view === "list") body = <ListView tickets={listTickets} onMenu={openMenu} onStatus={setStatus} onMoveRequest={requestMove} onPatch={patchTicket} onPrint={onPrint} expandedId={expandedId} onToggleExpand={toggleExpand} drag={drag} setDrag={setDrag} canReorder={canReorder} getAlert={getAlert} />;
   else if (view === "parts") body = <PartsView tickets={byPerson} onStatus={setStatus} onMenu={openMenu} onPatch={patchTicket} onPrint={onPrint} expandedId={expandedId} onToggleExpand={toggleExpand} drag={drag} setDrag={setDrag} onMoveRequest={requestMove} canReorder={canReorder} />;
+  else if (view === "maybe") body = <MaybeView tickets={byPerson} onStatus={setStatus} onMenu={openMenu} onPatch={patchTicket} onPrint={onPrint} expandedId={expandedId} onToggleExpand={toggleExpand} drag={drag} setDrag={setDrag} onMoveRequest={requestMove} canReorder={canReorder} />;
   else body = <ArchiveView archive={visibleArchive} search={search} onStatus={setStatus} onMenu={openMenu} />;
 
   return (
     <>
-      <TopNav view={view} setView={setView} onNew={() => setForm({})} onMobileMenu={() => setSheet(true)} partsCount={partsCount} notif={notif} />
+      <TopNav view={view} setView={setView} onNew={() => setForm({})} onMobileMenu={() => setSheet(true)} partsCount={partsCount} maybeCount={maybeCount} notif={notif} />
 
       <main className="page">
         <div className="page-head">
@@ -489,7 +492,7 @@ export default function App({ initialTickets, initialArchive }: { initialTickets
           onCancel={() => setConfirmDelete(null)}
           onConfirm={() => doDelete(confirmDelete)} />
       )}
-      {sheet && <MobileSheet view={view} setView={setView} onClose={() => setSheet(false)} partsCount={partsCount} onOpenSettings={() => setSettingsOpen(true)} />}
+      {sheet && <MobileSheet view={view} setView={setView} onClose={() => setSheet(false)} partsCount={partsCount} maybeCount={maybeCount} onOpenSettings={() => setSettingsOpen(true)} />}
       {settingsOpen && <SettingsModal notif={notif} onClose={() => setSettingsOpen(false)} />}
       {printTicket && <PrintPanel ticket={printTicket} onClose={() => setPrintTicket(null)} />}
       {undoToast && <div className="undo-toast">{undoToast}</div>}

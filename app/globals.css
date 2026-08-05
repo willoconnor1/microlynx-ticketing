@@ -230,6 +230,7 @@ button{font-family:inherit}
 .spill.done{background:var(--success-bg);color:#147a44} .spill.done .d{background:var(--success)}
 .spill.picked{background:var(--gray-100);color:var(--gray-500)} .spill.picked .d{background:var(--gray-400)}
 .spill.parts{background:#ffedd5;color:#9a3412} .spill.parts .d{background:#ea580c}
+.spill.maybe{background:#e5e7eb;color:#374151} .spill.maybe .d{background:#6b7280}
 .spill.call{background:#cffafe;color:#0e7490} .spill.call .d{background:#0891b2}
 .spill.resp{background:#ede9fe;color:#6d28d9} .spill.resp .d{background:#7c3aed}
 .avchip{width:20px;height:20px;border-radius:50%;font-family:var(--font-mono);font-size:9.5px;font-weight:700;display:inline-flex;align-items:center;justify-content:center;flex:none}
@@ -362,7 +363,7 @@ button{font-family:inherit}
 .done-ic{color:var(--success);display:inline-flex;justify-content:center;width:16px}
 /* Waiting on Parts tab: identical rows to the List, with a wider pill column so
    the long "Waiting on parts" label fits (the flexible name column absorbs it). */
-.parts-list .lrow-head{grid-template-columns:16px 30px minmax(0,1.7fr) 100px 100px 112px 160px 122px}
+.parts-list .lrow-head,.maybe-list .lrow-head{grid-template-columns:16px 30px minmax(0,1.7fr) 100px 100px 112px 160px 122px}
 /* Device-type row shades (state rules below win). Misc + unset stay plain white. */
 .lrow.desktop{background:#cfe2f7}
 .lrow.laptop{background:#e2d4f5}
@@ -596,7 +597,7 @@ button{font-family:inherit}
   .lrow.done-row .done-at{display:none}
   .lrow.done-row .acts{display:flex}
   .lrow.done-row .spill-sel{display:none}
-  .parts-list .lrow-head{grid-template-columns:16px 30px minmax(0,1fr) 116px 160px}
+  .parts-list .lrow-head,.maybe-list .lrow-head{grid-template-columns:16px 30px minmax(0,1fr) 116px 160px}
   .arow-head{grid-template-columns:26px minmax(0,1fr) 116px 32px 120px 34px;gap:14px}
   .arow .a-in{display:none}
   .btn.peek-edit{display:inline-flex} /* row pencil is gone, so the peek carries Edit */
@@ -636,7 +637,7 @@ button{font-family:inherit}
   .lrow .l-drop,.lrow .l-due,.lrow .l-phone{display:none}
   .nm-phone{display:flex} /* phone shows as a line under the name instead of a column */
   .lrow.done-row .lrow-head{grid-template-columns:30px minmax(0,1fr) auto}
-  .parts-list .lrow-head{grid-template-columns:30px minmax(0,1fr) auto}
+  .parts-list .lrow-head,.maybe-list .lrow-head{grid-template-columns:30px minmax(0,1fr) auto}
   .arow-head{grid-template-columns:26px minmax(0,1fr) 96px 34px;gap:10px}
   .arow .l-phone,.arow .chg{display:none}
   .vault-head .vault-note{display:none}

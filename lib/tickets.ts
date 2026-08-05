@@ -1,6 +1,6 @@
 /* Shared ticket types, config, and helpers (server + client safe). */
 
-export type Status = "todo" | "prog" | "call" | "resp" | "parts" | "done" | "picked";
+export type Status = "todo" | "prog" | "call" | "resp" | "parts" | "maybe" | "done" | "picked";
 export type Person = "keith" | "eddie" | "garrett" | "marisa";
 export type DeviceType = "desktop" | "laptop" | "printer" | "aio" | "misc";
 export type ServiceTag = "expedite" | "contract";
@@ -64,11 +64,12 @@ export const STATUS: Record<Status, { label: string; cls: string }> = {
   call: { label: "Need to call", cls: "call" },
   resp: { label: "Awaiting response", cls: "resp" },
   parts: { label: "Waiting on parts", cls: "parts" },
+  maybe: { label: "Maybe later", cls: "maybe" },
   done: { label: "Complete", cls: "done" },
   picked: { label: "Picked up", cls: "picked" },
 };
 
-export const STATUS_ORDER: Status[] = ["todo", "prog", "call", "resp", "parts", "done", "picked"];
+export const STATUS_ORDER: Status[] = ["todo", "prog", "call", "resp", "parts", "maybe", "done", "picked"];
 
 /* Single source for the "default Keith" rule: every ticket has at least one assignee. */
 export function assignees(t: { assignedTo?: Person[] | null }): Person[] {

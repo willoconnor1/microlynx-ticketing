@@ -24,7 +24,7 @@ export type InlinePatch = Partial<Pick<Ticket,
   "name" | "phone" | "password" | "desc" | "notes" | "urgency" | "charger" | "assignedTo" | "deviceType" |
   "serviceTag" | "dropoff" | "dropoffAmPm" | "dueAt">>;
 
-export type View = "list" | "parts" | "archive";
+export type View = "list" | "parts" | "maybe" | "archive";
 export type Drag = { id: string; from: string; over: string } | null;
 
 /* ---------- icons ---------- */
@@ -890,7 +890,7 @@ function sortPartsOrder(a: Ticket, b: Ticket): number {
   if (ap !== bp) return ap - bp;
   return sortEntryOrder(a, b);
 }
-export function PartsView({ tickets, onStatus, onMenu, onPatch, onPrint, expandedId, onToggleExpand, drag, setDrag, onMoveRequest, canReorder }: {
+export function PartsView({ tickets, onStatus, onMenu, onPatch, onPrint, expandedId, onToggleExpand, drag, setDrag, onMoveRequest, canReorder, statusFilter = "parts", groupLabel = "Waiting on parts", dragFrom = "parts", listClass = "parts-list", emptyTitle = "Nothing waiting on parts", emptyBody = "Set a ticket’s status to “Waiting on parts” and it will park here until the parts arrive." }: {
   tickets: Ticket[];
   onStatus: (id: string, s: Status) => void;
   onMenu: (e: React.MouseEvent, t: Ticket) => void;
@@ -902,10 +902,16 @@ export function PartsView({ tickets, onStatus, onMenu, onPatch, onPrint, expande
   setDrag: (d: Drag) => void;
   onMoveRequest: (m: PendingMove) => void;
   canReorder: boolean;
+  statusFilter?: string;
+  groupLabel?: string;
+  dragFrom?: string;
+  listClass?: string;
+  emptyTitle?: string;
+  emptyBody?: string;
 }) {
-  const list = tickets.filter((t) => t.status === "parts").sort(sortPartsOrder);
+  const list = tickets.filter((t) => t.status === statusFilter).sort(sortPartsOrder);
 
-  const partsDrag = drag && drag.from === "parts" ? drag : null;
+  const partsDrag = drag && drag.from === dragFrom ? drag : null;
   const dragged = partsDrag ? list.find((t) => t.id === partsDrag.id) || null : null;
   const [target, setTarget] = React.useState<number | null>(null);
 
@@ -960,7 +966,7 @@ export function PartsView({ tickets, onStatus, onMenu, onPatch, onPrint, expande
         pill.style.top = (e.clientY - 24) + "px";
         document.body.appendChild(pill);
         pillRef.current = pill;
-        setDrag({ id: t.id, from: "parts", over: "parts" });
+        setDrag({ id: t.id, from: dragFrom, over: dragFrom });
         return;
       }
       if (!isDraggingRef.current) return;
@@ -1028,8 +1034,8 @@ export function PartsView({ tickets, onStatus, onMenu, onPatch, onPrint, expande
     return (
       <div className="empty">
         <div className="mark">{"<"}<b>/</b>{">"}</div>
-        <div className="et">Nothing waiting on parts</div>
-        <div className="es">Set a ticket&apos;s status to &ldquo;Waiting on parts&rdquo; and it will park here until the parts arrive.</div>
+        <div className="et">{emptyTitle}</div>
+        <div className="es">{emptyBody}</div>
       </div>
     );
   }
@@ -1039,9 +1045,9 @@ export function PartsView({ tickets, onStatus, onMenu, onPatch, onPrint, expande
     && (target === dragOrigIdx || target === dragOrigIdx + 1);
 
   return (
-    <div className="list-wrap parts-list" ref={listWrapRef}>
+    <div className={`list-wrap ${listClass}`} ref={listWrapRef}>
       <div className="list-group-label">
-        <span>Waiting on parts</span>
+        <span>{groupLabel}</span>
         <span className="ln" />
         <span>{list.length}</span>
       </div>
@@ -1069,6 +1075,10 @@ export function PartsView({ tickets, onStatus, onMenu, onPatch, onPrint, expande
       )}
     </div>
   );
+}
+
+export function MaybeView(props: Omit<Parameters<typeof PartsView>[0], "statusFilter" | "groupLabel" | "dragFrom" | "listClass" | "emptyTitle" | "emptyBody">) {
+  return <PartsView {...props} statusFilter="maybe" groupLabel="Maybe later" dragFrom="maybe" listClass="maybe-list" emptyTitle="Nothing parked here yet" emptyBody={"Set a ticket’s status to “Maybe later” to move it out of the queue and store it here."} />;
 }
 
 /* ================= ARCHIVE ================= */
@@ -1296,9 +1306,10 @@ export function SettingsModal({ notif, onClose }: { notif: NotifProps; onClose: 
 const TABS: [View, string, string][] = [
   ["list", "list", "List"],
   ["parts", "package-search", "Waiting on Parts"],
+  ["maybe", "bookmark", "Maybe Later"],
 ];
-export function TopNav({ view, setView, onNew, onMobileMenu, partsCount, notif }: {
-  view: View; setView: (v: View) => void; onNew: () => void; onMobileMenu: () => void; partsCount: number;
+export function TopNav({ view, setView, onNew, onMobileMenu, partsCount, maybeCount, notif }: {
+  view: View; setView: (v: View) => void; onNew: () => void; onMobileMenu: () => void; partsCount: number; maybeCount: number;
   notif: NotifProps;
 }) {
   const isArchive = view === "archive";
@@ -1316,6 +1327,7 @@ export function TopNav({ view, setView, onNew, onMobileMenu, partsCount, notif }
           <button key={id} className={`nav-tab ${view === id ? "on" : ""}`} onClick={() => setView(id)}>
             <Icon name={ic} />{label}
             {id === "parts" && partsCount > 0 && <span className="tab-badge">{partsCount}</span>}
+            {id === "maybe" && maybeCount > 0 && <span className="tab-badge">{maybeCount}</span>}
           </button>
         ))}
       </nav>
@@ -1346,9 +1358,9 @@ export function TopNav({ view, setView, onNew, onMobileMenu, partsCount, notif }
 }
 
 /* ================= QUICK MENU ================= */
-const STATUS_ICON: Record<Status, string> = { todo: "circle", prog: "loader", call: "phone", resp: "message-circle", parts: "package-search", done: "circle-check", picked: "package-check" };
+const STATUS_ICON: Record<Status, string> = { todo: "circle", prog: "loader", call: "phone", resp: "message-circle", parts: "package-search", maybe: "bookmark", done: "circle-check", picked: "package-check" };
 /* Garrett wants "Waiting on parts" at the top of the 3-dots menu (the pill menu keeps flow order). */
-const QUICK_STATUS_ORDER: Status[] = ["parts", "todo", "prog", "call", "resp", "done", "picked"];
+const QUICK_STATUS_ORDER: Status[] = ["parts", "maybe", "todo", "prog", "call", "resp", "done", "picked"];
 export function QuickMenu({ ctx, onClose, onUrgency, onStatus, onEdit, onDelete }: {
   ctx: { x: number; y: number; ticket: Ticket };
   onClose: () => void;
@@ -1490,13 +1502,14 @@ export function ConfirmDeleteDialog({ ticket, onCancel, onConfirm }: {
 /* ================= MOBILE SHEET ================= */
 /* The small-screen menu. Holds the three views and — since they leave the top
    bar on phones/tablets — Settings and Lock workspace. */
-export function MobileSheet({ view, setView, onClose, partsCount, onOpenSettings }: {
-  view: View; setView: (v: View) => void; onClose: () => void; partsCount: number;
+export function MobileSheet({ view, setView, onClose, partsCount, maybeCount, onOpenSettings }: {
+  view: View; setView: (v: View) => void; onClose: () => void; partsCount: number; maybeCount: number;
   onOpenSettings: () => void;
 }) {
   const items: [View, string, string][] = [
     ["list", "list", "List"],
     ["parts", "package-search", "Waiting on Parts"],
+    ["maybe", "bookmark", "Maybe Later"],
     ["archive", "archive", "Archive"],
   ];
   return (
@@ -1507,6 +1520,7 @@ export function MobileSheet({ view, setView, onClose, partsCount, onOpenSettings
             onClick={() => { setView(id); onClose(); }}>
             <Icon name={ic} />{label}
             {id === "parts" && partsCount > 0 && <span className="tab-badge">{partsCount}</span>}
+            {id === "maybe" && maybeCount > 0 && <span className="tab-badge">{maybeCount}</span>}
           </button>
         ))}
         <div className="msheet-div" />
