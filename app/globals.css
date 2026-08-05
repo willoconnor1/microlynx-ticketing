@@ -460,6 +460,7 @@ button{font-family:inherit}
 .toggle button i,.toggle button svg{width:16px;height:16px}
 .toggle button+button{border-left:1px solid var(--border-strong)}
 .toggle button.on.yes,.toggle button.yes:hover{background:var(--blue-50);color:var(--blue-700)}
+.toggle button.on.maybe,.toggle button.maybe:hover{background:#e5e7eb;color:#374151}
 .toggle button.on.no,.toggle button.no:hover{background:var(--gray-100);color:var(--ink-800)}
 .toggle button.on.am,.toggle button.on.pm,.toggle button.am:hover,.toggle button.pm:hover{background:var(--blue-50);color:var(--blue-700)}
 .toggle button:disabled{opacity:.45;cursor:default}
@@ -516,7 +517,7 @@ button{font-family:inherit}
 .arow.printer{background:#d4f0ed}
 .arow.aio{background:#fde8f2}
 .arow.misc{background:#f6f6f6}
-.arow-head{display:grid;grid-template-columns:26px minmax(0,1.7fr) 110px 116px 32px 120px 34px;align-items:center;gap:16px;padding:13px 20px;cursor:pointer}
+.arow-head{display:grid;grid-template-columns:26px minmax(0,1.7fr) 110px 116px 32px 120px 34px 34px;align-items:center;gap:16px;padding:13px 20px;cursor:pointer}
 .arow .nm{font-weight:600;color:var(--ink-800);font-size:14px}
 .arow .ds{font-size:12.5px;color:var(--gray-500);margin-top:1px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .arow .archd{font-family:var(--font-mono);font-size:11px;color:var(--gray-500);text-align:right}
@@ -598,7 +599,7 @@ button{font-family:inherit}
   .lrow.done-row .acts{display:flex}
   .lrow.done-row .spill-sel{display:none}
   .parts-list .lrow-head,.maybe-list .lrow-head{grid-template-columns:16px 30px minmax(0,1fr) 116px 160px}
-  .arow-head{grid-template-columns:26px minmax(0,1fr) 116px 32px 120px 34px;gap:14px}
+  .arow-head{grid-template-columns:26px minmax(0,1fr) 116px 32px 120px 34px 34px;gap:14px}
   .arow .a-in{display:none}
   .btn.peek-edit{display:inline-flex} /* row pencil is gone, so the peek carries Edit */
 }
@@ -638,7 +639,7 @@ button{font-family:inherit}
   .nm-phone{display:flex} /* phone shows as a line under the name instead of a column */
   .lrow.done-row .lrow-head{grid-template-columns:30px minmax(0,1fr) auto}
   .parts-list .lrow-head,.maybe-list .lrow-head{grid-template-columns:30px minmax(0,1fr) auto}
-  .arow-head{grid-template-columns:26px minmax(0,1fr) 96px 34px;gap:10px}
+  .arow-head{grid-template-columns:26px minmax(0,1fr) 96px 34px 34px;gap:10px}
   .arow .l-phone,.arow .chg{display:none}
   .vault-head .vault-note{display:none}
   .exp-grid{grid-template-columns:1fr}
