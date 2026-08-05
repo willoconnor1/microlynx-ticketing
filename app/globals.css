@@ -369,8 +369,13 @@ button{font-family:inherit}
 .lrow.printer{background:#d4f0ed}
 .lrow.aio{background:#fde8f2}
 .lrow.misc{background:#f6f6f6}
-.lrow.done-row{border-left-color:var(--success);background:#fcfdfc}
+.lrow.done-row{border-left-color:var(--success)}
 .lrow.done-row .nm{color:var(--gray-600)}
+.lrow.done-row.desktop{background:#e8f2fb}
+.lrow.done-row.laptop{background:#f0eafb}
+.lrow.done-row.printer{background:#eaf8f6}
+.lrow.done-row.aio{background:#fef4f9}
+.lrow.done-row.misc{background:#fafafa}
 
 /* New/moved ticket dot — small red badge in the top-right corner of the row. */
 .lrow.alert::after{content:"";position:absolute;top:-3px;right:-3px;width:7px;height:7px;border-radius:50%;background:#e5372c;box-shadow:0 0 0 1.5px var(--paper);pointer-events:none;z-index:1}
@@ -502,10 +507,15 @@ button{font-family:inherit}
 .vault-head .t{font-family:var(--font-display);font-size:15px;font-weight:700;color:var(--ink-800)}
 .vault-head .c{font-family:var(--font-mono);font-size:11px;color:var(--gray-500);margin-left:auto}
 .vault-head .vault-note{font-family:var(--font-mono);font-size:10.5px;color:var(--gray-400);white-space:nowrap}
-.arow{border-bottom:1px solid var(--gray-150)}
-.arow:last-child{border-bottom:0}
+.arow{background:#fff;border:1px solid var(--border);border-radius:var(--radius-md);box-shadow:var(--shadow-xs)}
+.arow+.arow{margin-top:var(--gap-cards)}
+.arow:hover{box-shadow:var(--shadow-sm)}
+.arow.desktop{background:#cfe2f7}
+.arow.laptop{background:#e2d4f5}
+.arow.printer{background:#d4f0ed}
+.arow.aio{background:#fde8f2}
+.arow.misc{background:#f6f6f6}
 .arow-head{display:grid;grid-template-columns:26px minmax(0,1.7fr) 110px 116px 32px 120px 34px;align-items:center;gap:16px;padding:13px 20px;cursor:pointer}
-.arow-head:hover{background:var(--gray-100)}
 .arow .nm{font-weight:600;color:var(--ink-800);font-size:14px}
 .arow .ds{font-size:12.5px;color:var(--gray-500);margin-top:1px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .arow .archd{font-family:var(--font-mono);font-size:11px;color:var(--gray-500);text-align:right}

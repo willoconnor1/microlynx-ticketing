@@ -1086,7 +1086,7 @@ const ArchiveRow = React.memo(function ArchiveRow({ t, onStatus, onMenu }: {
   React.useEffect(() => { if (expanded) setBodyMounted(true); }, [expanded]);
   const toggle = () => { if (window.getSelection()?.toString()) return; setExpanded((p) => !p); };
   return (
-    <div className={`arow ${expanded ? "expanded" : ""}`}>
+    <div className={`arow ${t.deviceType ?? ""} ${expanded ? "expanded" : ""}`}>
       <div className="arow-head" onClick={toggle}>
         <UrgencyChip u={t.urgency} />
         <div style={{ minWidth: 0 }}>
