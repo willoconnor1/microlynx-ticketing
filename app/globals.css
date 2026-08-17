@@ -331,6 +331,12 @@ button{font-family:inherit}
 .nm-phone{display:none;align-items:center;gap:5px;margin-top:3px;font-family:var(--font-mono);font-size:11.5px;color:var(--gray-500)}
 .parts-eta{display:flex;align-items:center;gap:4px;margin-top:3px;font-family:var(--font-mono);font-size:11px;color:#ea580c;font-weight:600}
 .parts-eta svg,.parts-eta i{width:11px;height:11px}
+.source-row{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.src-btn{border:1px solid var(--border-strong);background:#fff;color:var(--gray-600);font-size:13.5px;font-weight:600;padding:8px 18px;border-radius:var(--radius-sm);cursor:pointer;transition:all .12s}
+.src-btn:hover{background:var(--gray-100)}
+.src-btn.on{background:#e5e7eb;color:#374151;border-color:#6b7280}
+.src-clear{background:none;border:none;cursor:pointer;color:var(--gray-400);display:flex;align-items:center;padding:4px}
+.src-clear:hover{color:var(--gray-600)}
 .eta-range{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
 .eta-range .pickbtn{flex:1;min-width:120px}
 .eta-dash{font-size:14px;color:var(--gray-400);flex:none}

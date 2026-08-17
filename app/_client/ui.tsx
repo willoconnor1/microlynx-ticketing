@@ -21,7 +21,7 @@ import {
 
 /* Field-level edits the expanded row can save. */
 export type InlinePatch = Partial<Pick<Ticket,
-  "name" | "phone" | "password" | "desc" | "notes" | "partsEta" | "urgency" | "charger" | "assignedTo" | "deviceType" |
+  "name" | "phone" | "password" | "desc" | "notes" | "partsEta" | "partsSource" | "urgency" | "charger" | "assignedTo" | "deviceType" |
   "serviceTag" | "dropoff" | "dropoffAmPm" | "dueAt">>;
 
 export type View = "list" | "parts" | "maybe" | "archive";
@@ -713,6 +713,9 @@ function RowPeek({ t, onEdit, onPrint }: { t: Ticket; onEdit?: () => void; onPri
    (and on unmount, so collapsing mid-edit never loses typing). */
 function RowExpansion({ t, onPatch }: { t: Ticket; onPatch: (id: string, p: InlinePatch) => void }) {
   const [draft, setDraft] = React.useState({ name: t.name, phone: t.phone, password: t.password ?? "", desc: t.desc, notes: t.notes ?? "" });
+  const srcMode = t.partsSource === "ebay" ? "ebay" : t.partsSource === "amazon" ? "amazon" : t.partsSource ? "other" : "";
+  const [otherOpen, setOtherOpen] = React.useState(srcMode === "other");
+  const [otherText, setOtherText] = React.useState(srcMode === "other" ? (t.partsSource ?? "") : "");
   const draftRef = React.useRef(draft); draftRef.current = draft;
   const tRef = React.useRef(t); tRef.current = t;
   const onPatchRef = React.useRef(onPatch); onPatchRef.current = onPatch;
@@ -796,6 +799,46 @@ function RowExpansion({ t, onPatch }: { t: Ticket; onPatch: (id: string, p: Inli
           </div>
         );
       })()}
+      {t.status === "parts" && (
+        <div className="exp-field full">
+          <label className="lbl">Ordered from</label>
+          <div className="source-row">
+            {(["ebay", "amazon", "other"] as const).map((key) => (
+              <button key={key} type="button"
+                className={`src-btn${(key === "other" ? (otherOpen || srcMode === "other") : srcMode === key) ? " on" : ""}`}
+                onClick={() => {
+                  if (key === "ebay" || key === "amazon") {
+                    onPatch(t.id, { partsSource: key });
+                    setOtherOpen(false);
+                    setOtherText("");
+                  } else {
+                    if (srcMode === "ebay" || srcMode === "amazon") onPatch(t.id, { partsSource: null });
+                    setOtherOpen(true);
+                  }
+                }}>
+                {key === "ebay" ? "eBay" : key === "amazon" ? "Amazon" : "Other"}
+              </button>
+            ))}
+            {(srcMode || otherOpen) && (
+              <button type="button" className="src-clear" title="Clear"
+                onClick={() => { onPatch(t.id, { partsSource: null }); setOtherOpen(false); setOtherText(""); }}>
+                <Icon name="x" size={14} />
+              </button>
+            )}
+          </div>
+          {(otherOpen || srcMode === "other") && (
+            <input className="inp" style={{ marginTop: 8 }} placeholder="Where from? (e.g. Newegg, B&H…)"
+              value={otherText}
+              onChange={(e) => setOtherText(e.target.value)}
+              onBlur={(e) => {
+                const val = e.target.value.trim();
+                const cur = val !== (t.partsSource !== "ebay" && t.partsSource !== "amazon" ? t.partsSource ?? "" : "");
+                if (cur) onPatch(t.id, { partsSource: val || null });
+                if (!val) setOtherOpen(false);
+              }} />
+          )}
+        </div>
+      )}
       <div className="exp-field">
         <label className="lbl">Urgency</label>
         <div className="uselect compact">

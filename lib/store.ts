@@ -36,6 +36,7 @@ export interface TicketPatch {
   desc?: string;
   notes?: string | null;
   partsEta?: string | null;
+  partsSource?: string | null;
   urgency?: number;
   charger?: boolean;
   assignedTo?: Person[];
