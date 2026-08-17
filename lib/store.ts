@@ -36,6 +36,7 @@ export interface TicketPatch {
   desc?: string;
   notes?: string | null;
   partsEta?: string | null;
+  partsSource?: string | null;
   urgency?: number;
   charger?: boolean;
   assignedTo?: Person[];
@@ -142,6 +143,7 @@ function rowToTicket(r: TicketRow): Ticket {
     desc: r.desc,
     notes: r.notes || null,
     partsEta: r.partsEta ?? null,
+    partsSource: r.partsSource ?? null,
     urgency: r.urgency,
     charger: r.charger,
     // Defensive: tolerate a legacy single-string value during the text -> text[] cutover.
@@ -312,6 +314,7 @@ export async function updateTicket(id: string, patch: TicketPatch): Promise<AppS
       if (patch.desc !== undefined) t.desc = patch.desc;
       if (patch.notes !== undefined) t.notes = patch.notes ?? null;
       if (patch.partsEta !== undefined) t.partsEta = patch.partsEta ?? null;
+      if (patch.partsSource !== undefined) t.partsSource = patch.partsSource ?? null;
       if (patch.urgency !== undefined) t.urgency = patch.urgency;
       if (patch.charger !== undefined) t.charger = patch.charger;
       if (patch.assignedTo !== undefined) t.assignedTo = patch.assignedTo.length ? [...patch.assignedTo] : ["keith"];
@@ -350,6 +353,7 @@ export async function updateTicket(id: string, patch: TicketPatch): Promise<AppS
   if (patch.desc !== undefined) set.desc = patch.desc;
   if (patch.notes !== undefined) set.notes = patch.notes ?? "";
   if (patch.partsEta !== undefined) set.partsEta = patch.partsEta ?? null;
+  if (patch.partsSource !== undefined) set.partsSource = patch.partsSource ?? null;
   if (patch.urgency !== undefined) set.urgency = patch.urgency;
   if (patch.charger !== undefined) set.charger = patch.charger;
   if (patch.assignedTo !== undefined) set.assignedTo = patch.assignedTo.length ? patch.assignedTo : ["keith"];

@@ -20,7 +20,8 @@ export const tickets = pgTable("tickets", {
   statusChangedAt: timestamp("status_changed_at", { withTimezone: true }).notNull().defaultNow(),
   reorderedAt: timestamp("reordered_at", { withTimezone: true }), // set when the queue position changes (manual drag, or urgency/due re-slot) — drives the "queue reordered" alert
   notes: text("notes").notNull().default(""),
-  partsEta: text("parts_eta"), // YYYY-MM-DD estimated delivery date for parts
+  partsEta: text("parts_eta"), // YYYY-MM-DD or YYYY-MM-DD/YYYY-MM-DD range
+  partsSource: text("parts_source"), // "ebay" | "amazon" | freetext
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   archived: boolean("archived").notNull().default(false),
   archivedAt: text("archived_at"), // YYYY-MM-DD, set when archived
