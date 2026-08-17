@@ -21,7 +21,7 @@ import {
 
 /* Field-level edits the expanded row can save. */
 export type InlinePatch = Partial<Pick<Ticket,
-  "name" | "phone" | "password" | "desc" | "notes" | "urgency" | "charger" | "assignedTo" | "deviceType" |
+  "name" | "phone" | "password" | "desc" | "notes" | "partsEta" | "urgency" | "charger" | "assignedTo" | "deviceType" |
   "serviceTag" | "dropoff" | "dropoffAmPm" | "dueAt">>;
 
 export type View = "list" | "parts" | "maybe" | "archive";
@@ -571,6 +571,9 @@ const QueueRow = React.memo(function QueueRow({ t, isNext, dragging, canReorder,
         <div style={{ minWidth: 0 }}>
           <div className="nm">{t.name}<SvcTag tag={t.serviceTag} /></div>
           <div className="ds">{t.desc}</div>
+          {t.status === "parts" && t.partsEta && (
+            <div className="parts-eta"><Icon name="truck" size={11} />ETA {fmtDate(t.partsEta)}</div>
+          )}
           {/* phone-layout only (CSS-shown ≤640): the narrow row has no phone column */}
           {t.phone && <div className="nm-phone"><Icon name="phone" size={12} />{t.phone}</div>}
         </div>
@@ -771,6 +774,13 @@ function RowExpansion({ t, onPatch }: { t: Ticket; onPatch: (id: string, p: Inli
             onChange={(v) => due && setDue(due.date, v)} />
         </div>
       </div>
+      {t.status === "parts" && (
+        <div className="exp-field">
+          <label className="lbl">Est. delivery</label>
+          <DateField value={t.partsEta ?? ""} clearable placeholder="No date set"
+            onChange={(v) => onPatch(t.id, { partsEta: v || null })} />
+        </div>
+      )}
       <div className="exp-field">
         <label className="lbl">Urgency</label>
         <div className="uselect compact">
