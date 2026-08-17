@@ -331,6 +331,9 @@ button{font-family:inherit}
 .nm-phone{display:none;align-items:center;gap:5px;margin-top:3px;font-family:var(--font-mono);font-size:11.5px;color:var(--gray-500)}
 .parts-eta{display:flex;align-items:center;gap:4px;margin-top:3px;font-family:var(--font-mono);font-size:11px;color:#ea580c;font-weight:600}
 .parts-eta svg,.parts-eta i{width:11px;height:11px}
+.eta-range{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.eta-range .pickbtn{flex:1;min-width:120px}
+.eta-dash{font-size:14px;color:var(--gray-400);flex:none}
 .nm-phone svg,.nm-phone i{width:12px;height:12px;color:var(--gray-400)}
 .lrow .acts{display:flex;gap:4px;justify-content:flex-end}
 .lrow.dragging{opacity:.10}

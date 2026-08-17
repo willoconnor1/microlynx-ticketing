@@ -166,15 +166,15 @@ function CalendarPop({ anchor, value, clearable, onPick, onClear, onClose }: {
   );
 }
 
-export function DateField({ value, onChange, placeholder, clearable }: {
-  value: string; onChange: (v: string) => void; placeholder?: string; clearable?: boolean;
+export function DateField({ value, onChange, placeholder, clearable, disabled }: {
+  value: string; onChange: (v: string) => void; placeholder?: string; clearable?: boolean; disabled?: boolean;
 }) {
   const [anchor, setAnchor] = React.useState<DOMRect | null>(null);
   return (
     <>
       {/* "blank", not "empty" — the global .empty empty-state class would balloon the button */}
-      <button type="button" className={`inp mono pickbtn ${value ? "" : "blank"}`}
-        onClick={(e) => setAnchor(e.currentTarget.getBoundingClientRect())}>
+      <button type="button" className={`inp mono pickbtn ${value ? "" : "blank"}`} disabled={disabled}
+        onClick={(e) => !disabled && setAnchor(e.currentTarget.getBoundingClientRect())}>
         <Icon name="calendar" />
         <span className="pv">{value ? fmtDateLong(value) : placeholder || "Pick a date"}</span>
         {clearable && value && (
@@ -571,9 +571,10 @@ const QueueRow = React.memo(function QueueRow({ t, isNext, dragging, canReorder,
         <div style={{ minWidth: 0 }}>
           <div className="nm">{t.name}<SvcTag tag={t.serviceTag} /></div>
           <div className="ds">{t.desc}</div>
-          {t.status === "parts" && t.partsEta && (
-            <div className="parts-eta"><Icon name="truck" size={11} />ETA {fmtDate(t.partsEta)}</div>
-          )}
+          {t.status === "parts" && t.partsEta && (() => {
+            const [s, e] = t.partsEta.split("/");
+            return <div className="parts-eta"><Icon name="truck" size={11} />ETA {fmtDate(s)}{e ? ` – ${fmtDate(e)}` : ""}</div>;
+          })()}
           {/* phone-layout only (CSS-shown ≤640): the narrow row has no phone column */}
           {t.phone && <div className="nm-phone"><Icon name="phone" size={12} />{t.phone}</div>}
         </div>
@@ -774,13 +775,27 @@ function RowExpansion({ t, onPatch }: { t: Ticket; onPatch: (id: string, p: Inli
             onChange={(v) => due && setDue(due.date, v)} />
         </div>
       </div>
-      {t.status === "parts" && (
-        <div className="exp-field">
-          <label className="lbl">Est. delivery</label>
-          <DateField value={t.partsEta ?? ""} clearable placeholder="No date set"
-            onChange={(v) => onPatch(t.id, { partsEta: v || null })} />
-        </div>
-      )}
+      {t.status === "parts" && (() => {
+        const parts = (t.partsEta ?? "").split("/");
+        const etaStart = parts[0] ?? "";
+        const etaEnd = parts[1] ?? "";
+        const save = (start: string, end: string) => {
+          const val = start && end ? `${start}/${end}` : start || null;
+          onPatch(t.id, { partsEta: val });
+        };
+        return (
+          <div className="exp-field full">
+            <label className="lbl">Est. delivery</label>
+            <div className="eta-range">
+              <DateField value={etaStart} clearable placeholder="Start date"
+                onChange={(v) => save(v, v ? etaEnd : "")} />
+              <span className="eta-dash">–</span>
+              <DateField value={etaEnd} clearable placeholder="End date (optional)" disabled={!etaStart}
+                onChange={(v) => save(etaStart, v)} />
+            </div>
+          </div>
+        );
+      })()}
       <div className="exp-field">
         <label className="lbl">Urgency</label>
         <div className="uselect compact">
