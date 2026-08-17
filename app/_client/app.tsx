@@ -31,7 +31,13 @@ type MenuCtx = { x: number; y: number; ticket: Ticket } | null;
 export default function App({ initialTickets, initialArchive }: { initialTickets: Ticket[]; initialArchive: Ticket[] }) {
   const [tickets, setTickets] = React.useState<Ticket[]>(initialTickets);
   const [archive, setArchive] = React.useState<Ticket[]>(initialArchive);
-  const [view, setView] = React.useState<View>("list");
+  const [view, setView] = React.useState<View>(() => {
+    try {
+      const s = typeof window !== "undefined" ? localStorage.getItem("mlx-view") : null;
+      return (s && ["list", "parts", "maybe", "archive"].includes(s) ? s : "list") as View;
+    } catch { return "list"; }
+  });
+  React.useEffect(() => { try { localStorage.setItem("mlx-view", view); } catch {} }, [view]);
   const [search, setSearch] = React.useState("");
   const [form, setForm] = React.useState<Partial<Ticket> | null>(null);
   const [menu, setMenu] = React.useState<MenuCtx>(null);
