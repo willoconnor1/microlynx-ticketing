@@ -35,6 +35,7 @@ export interface TicketPatch {
   password?: string;
   desc?: string;
   notes?: string | null;
+  partsEta?: string | null;
   urgency?: number;
   charger?: boolean;
   assignedTo?: Person[];
@@ -139,7 +140,8 @@ function rowToTicket(r: TicketRow): Ticket {
     phone: r.phone,
     password: r.password ?? "",
     desc: r.desc,
-    notes: null, // column not yet in DB — add via db:push then restore r.notes
+    notes: r.notes || null,
+    partsEta: r.partsEta ?? null,
     urgency: r.urgency,
     charger: r.charger,
     // Defensive: tolerate a legacy single-string value during the text -> text[] cutover.
@@ -229,6 +231,7 @@ export async function createTicket(input: NewTicketInput): Promise<{ state: AppS
       password: input.password ?? "",
       desc: input.desc,
       notes: input.notes ?? null,
+      partsEta: null,
       urgency: input.urgency,
       charger: input.charger,
       assignedTo: input.assignedTo?.length ? input.assignedTo : ["keith"],
@@ -277,6 +280,7 @@ export async function createTicket(input: NewTicketInput): Promise<{ state: AppS
     phone: input.phone,
     password: input.password ?? "",
     desc: input.desc,
+    notes: input.notes ?? "",
     urgency: input.urgency,
     charger: input.charger,
     assignedTo: input.assignedTo?.length ? input.assignedTo : ["keith"],
@@ -307,6 +311,7 @@ export async function updateTicket(id: string, patch: TicketPatch): Promise<AppS
       if (patch.password !== undefined) t.password = patch.password;
       if (patch.desc !== undefined) t.desc = patch.desc;
       if (patch.notes !== undefined) t.notes = patch.notes ?? null;
+      if (patch.partsEta !== undefined) t.partsEta = patch.partsEta ?? null;
       if (patch.urgency !== undefined) t.urgency = patch.urgency;
       if (patch.charger !== undefined) t.charger = patch.charger;
       if (patch.assignedTo !== undefined) t.assignedTo = patch.assignedTo.length ? [...patch.assignedTo] : ["keith"];
@@ -343,6 +348,8 @@ export async function updateTicket(id: string, patch: TicketPatch): Promise<AppS
   if (patch.phone !== undefined) set.phone = patch.phone;
   if (patch.password !== undefined) set.password = patch.password;
   if (patch.desc !== undefined) set.desc = patch.desc;
+  if (patch.notes !== undefined) set.notes = patch.notes ?? "";
+  if (patch.partsEta !== undefined) set.partsEta = patch.partsEta ?? null;
   if (patch.urgency !== undefined) set.urgency = patch.urgency;
   if (patch.charger !== undefined) set.charger = patch.charger;
   if (patch.assignedTo !== undefined) set.assignedTo = patch.assignedTo.length ? patch.assignedTo : ["keith"];
