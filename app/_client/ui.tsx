@@ -758,8 +758,8 @@ function RowExpansion({ t, onPatch }: { t: Ticket; onPatch: (id: string, p: Inli
           onChange={(e) => setDraft((p) => ({ ...p, desc: e.target.value }))} />
       </div>
       <div className="exp-field full">
-        <label className="lbl">Internal notes</label>
-        <input className="inp" placeholder="Internal notes…" value={draft.notes} onBlur={flush}
+        <label className="lbl">Quoted or Approved</label>
+        <input className="inp" placeholder="Amount quoted, approval status…" value={draft.notes} onBlur={flush}
           onChange={(e) => setDraft((p) => ({ ...p, notes: e.target.value }))} />
       </div>
       <div className="exp-field">
@@ -954,9 +954,12 @@ export function ConfirmMoveDialog({ move, onCancel, onConfirm }: {
    ticket to any other status and it returns to its old slot in the queue. */
 // Sort by sortPos (drag order) with statusChangedAt as tiebreaker for new arrivals.
 function sortPartsOrder(a: Ticket, b: Ticket): number {
-  const ap = a.sortPos ?? Infinity, bp = b.sortPos ?? Infinity;
-  if (ap !== bp) return ap - bp;
-  return sortEntryOrder(a, b);
+  const ae = a.partsEta?.split("/")[0] ?? "";
+  const be = b.partsEta?.split("/")[0] ?? "";
+  if (ae && be) return ae.localeCompare(be); // both have ETA: soonest first
+  if (ae) return -1; // only a has ETA: a first
+  if (be) return 1;  // only b has ETA: b first
+  return sortEntryOrder(a, b); // neither has ETA: entry order
 }
 export function PartsView({ tickets, onStatus, onMenu, onPatch, onPrint, expandedId, onToggleExpand, drag, setDrag, onMoveRequest, canReorder, statusFilter = "parts", groupLabel = "Waiting on parts", dragFrom = "parts", listClass = "parts-list", emptyTitle = "Nothing waiting on parts", emptyBody = "Set a ticket’s status to “Waiting on parts” and it will park here until the parts arrive." }: {
   tickets: Ticket[];
@@ -1808,7 +1811,7 @@ export function TicketForm({ editing, today, onSave, onClose }: {
             <textarea className="ta"
               placeholder="Device and the problem in plain words — e.g. &ldquo;MacBook Air, liquid spill, won't boot.&rdquo;"
               value={f.desc} onChange={(e) => set("desc", e.target.value)} />
-            <input className="inp notes-inp" placeholder="Internal notes…" value={f.notes} onChange={(e) => set("notes", e.target.value)} />
+            <input className="inp notes-inp" placeholder="Quoted or Approved…" value={f.notes} onChange={(e) => set("notes", e.target.value)} />
           </div>
 
           <div className="field" style={{ marginBottom: 0 }}>
