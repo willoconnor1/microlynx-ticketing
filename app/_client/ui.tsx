@@ -15,7 +15,7 @@ import type { FeedItem } from "./notifStore";
 import {
   URGENCY, STATUS, STATUS_ORDER, PEOPLE, DEVICE_TYPES, SERVICE_TAGS,
   fmtDate, fmtDateLong, fmtDueAt, fmtDueHalf,
-  buildDueAt, dueParts, sortQueue, sortEntryOrder, todayISO, daysBetween, assignees,
+  buildDueAt, dueParts, sortQueue, sortEntryOrder, todayISO, daysBetween, assignees, ARCHIVE_WINDOW_DAYS,
   type Ticket, type Status, type Person, type AmPm, type DeviceType, type ServiceTag,
 } from "@/lib/tickets";
 
@@ -1156,7 +1156,6 @@ export function MaybeView(props: Omit<Parameters<typeof PartsView>[0], "statusFi
 /* Picked-up tickets land here the moment they're marked picked up. The default
    view shows the last 7 days; searching looks across EVERY archived record, so
    history is never out of reach. */
-const ARCHIVE_WINDOW_DAYS = 7;
 
 const ArchiveRow = React.memo(function ArchiveRow({ t, onStatus, onMenu }: {
   t: Ticket; onStatus: (id: string, s: Status) => void;
