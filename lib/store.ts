@@ -1,15 +1,15 @@
 /* Data layer — the single source of truth for tickets.
    Uses Neon Postgres when DATABASE_URL is set; otherwise an in-memory
    fallback so the app runs locally before the database is provisioned. */
-import { eq, and } from "drizzle-orm";
+import { eq, and, or, gte, ilike, desc } from "drizzle-orm";
 import { db, hasDb } from "./db";
 import { tickets as ticketsTable, counters, type TicketRow } from "./schema";
 import { SEED_TICKETS, SEED_ARCHIVE, SEED_NEXT_ID } from "./seed";
-import { todayISO, cmpDue, sortQueue, POS_STEP, posBetween, type Ticket, type Status, type Person, type DeviceType, type ServiceTag } from "./tickets";
+import { todayISO, archiveCutoffISO, cmpDue, sortQueue, POS_STEP, posBetween, type Ticket, type Status, type Person, type DeviceType, type ServiceTag } from "./tickets";
 
 export interface AppState {
   tickets: Ticket[]; // active (non-archived)
-  archive: Ticket[]; // archived
+  archive: Ticket[]; // archived within the last ARCHIVE_WINDOW_DAYS; older records come from searchArchive
 }
 
 export interface NewTicketInput {
@@ -196,25 +196,56 @@ async function ensureSeeded() {
 /* ============================================================
    Public API
    ============================================================ */
+/* Every open screen calls this every 30 s and after every edit, so it must NOT ship
+   the whole archive: that grows forever and blew through Neon's data transfer quota
+   (Sept 2026). Only active tickets + the 7-day archive window go over the wire. */
 export async function getState(): Promise<AppState> {
-  // Auto-archive on every read so stale picked-up tickets leave the boards.
-  await sweepArchive();
+  const cutoff = archiveCutoffISO();
 
   if (!hasDb) {
     const m = mem();
     return {
       tickets: m.rows.filter((t) => !t.archivedAt),
-      archive: m.rows.filter((t) => t.archivedAt),
+      archive: m.rows.filter((t) => t.archivedAt && t.archivedAt >= cutoff),
     };
   }
 
   await ensureSeeded();
-  const rows = await db.select().from(ticketsTable);
+  const rows = await db
+    .select()
+    .from(ticketsTable)
+    .where(or(eq(ticketsTable.archived, false), gte(ticketsTable.archivedAt, cutoff)));
   const all = rows.map(rowToTicket);
   return {
     tickets: all.filter((t) => !t.archivedAt),
     archive: all.filter((t) => t.archivedAt),
   };
+}
+
+const ARCHIVE_SEARCH_LIMIT = 200;
+
+/* Archive search over ALL records, run on demand from the Archive tab. */
+export async function searchArchive(query: string): Promise<Ticket[]> {
+  const q = query.trim().toLowerCase();
+  if (!q) return [];
+
+  if (!hasDb) {
+    return mem().rows
+      .filter((t) => t.archivedAt && (t.name.toLowerCase().includes(q) || t.desc.toLowerCase().includes(q) || t.id.toLowerCase().includes(q)))
+      .slice(0, ARCHIVE_SEARCH_LIMIT);
+  }
+
+  const pattern = `%${q.replace(/[\\%_]/g, (c) => "\\" + c)}%`;
+  const rows = await db
+    .select()
+    .from(ticketsTable)
+    .where(and(
+      eq(ticketsTable.archived, true),
+      or(ilike(ticketsTable.name, pattern), ilike(ticketsTable.desc, pattern), ilike(ticketsTable.id, pattern)),
+    ))
+    .orderBy(desc(ticketsTable.archivedAt))
+    .limit(ARCHIVE_SEARCH_LIMIT);
+  return rows.map(rowToTicket);
 }
 
 export async function createTicket(input: NewTicketInput): Promise<{ state: AppState; id: string }> {

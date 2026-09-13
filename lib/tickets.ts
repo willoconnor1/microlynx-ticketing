@@ -96,6 +96,13 @@ export function todayISO(): string {
   for (const { type, value } of parts) p[type] = value;
   return `${p.year}-${p.month}-${p.day}`;
 }
+export const ARCHIVE_WINDOW_DAYS = 7;
+/* Oldest archivedAt (YYYY-MM-DD) still inside the Archive tab's default window. */
+export function archiveCutoffISO(): string {
+  const d = new Date(todayISO() + "T12:00:00Z");
+  d.setUTCDate(d.getUTCDate() - ARCHIVE_WINDOW_DAYS);
+  return d.toISOString().slice(0, 10);
+}
 export function daysBetween(isoA: string, isoB: string): number {
   const a = new Date(isoA + "T12:00:00").getTime();
   const b = new Date(isoB + "T12:00:00").getTime();

@@ -7,14 +7,20 @@ import {
   moveTicket,
   deleteTicket,
   sweepArchive,
+  searchArchive,
   type AppState,
   type NewTicketInput,
   type TicketPatch,
 } from "./store";
 import { broadcast } from "./broadcast";
+import type { Ticket } from "./tickets";
 
 export async function fetchState(): Promise<AppState> {
   return getState();
+}
+
+export async function searchArchiveAction(query: string): Promise<Ticket[]> {
+  return searchArchive(query);
 }
 
 export async function saveTicketAction(

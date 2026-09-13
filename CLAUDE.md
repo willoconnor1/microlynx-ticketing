@@ -36,6 +36,14 @@ to Completed.
 - Archive: `status = "picked"` sets `archived` immediately (store handles it); the daily
   cron sweep is just a backstop. Archive view = last 7 days; search = all records.
 
+## Database transfer budget (do not break this)
+Neon bills data transfer, and every open screen polls `getState()` every 30 s plus after
+every edit. In Sept 2026 the site went down for exceeding the free-tier transfer quota
+because `getState()` shipped the entire archive on every poll. So:
+- `getState()` returns active tickets + only the 7-day archive window. Never widen it.
+- Older archive records come from `searchArchiveAction` (server-side ILIKE, on demand).
+- Hidden browser tabs skip the poll. Nothing extra may run on every read.
+
 ## Ticket fields
 `date` (drop-off), `dropoffAmPm` (morning/afternoon drop-off), `dueAt` (optional half-day
 pickup window — stored as a timestamp where AM = 11:00 and PM = 17:00 Pacific; no exact
@@ -78,7 +86,7 @@ machine is Intel/x64 where Turbopack native bindings are unavailable).
   otherwise an in-memory fallback so it runs locally before the DB exists. Reads AND writes.
 - `lib/actions.ts` — `"use server"` actions the client calls (fetch/save/urgency/status/sweep).
 - `lib/schema.ts` — Drizzle table. `app/_client/*` — ported UI (client components).
-- `app/api/cron/archive` — daily archive sweep, now a backstop only (also runs on every read).
+- `app/api/cron/archive` — daily archive sweep, the only automatic sweep (backstop; status change archives immediately).
 
 ## Conventions
 - Changing a ticket's status MUST update `statusChangedAt` (store handles this).

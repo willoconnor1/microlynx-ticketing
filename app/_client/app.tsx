@@ -4,7 +4,7 @@ import React from "react";
 import { todayISO, posBetween, PEOPLE, DEVICE_TYPES, assignees, type Ticket, type Status, type Person } from "@/lib/tickets";
 import {
   fetchState, saveTicketAction, setUrgencyAction, setStatusAction, moveTicketAction,
-  deleteTicketAction, patchTicketAction,
+  deleteTicketAction, patchTicketAction, searchArchiveAction,
 } from "@/lib/actions";
 import {
   Icon, ListView, PartsView, MaybeView, ArchiveView, TopNav, QuickMenu,
@@ -172,15 +172,21 @@ export default function App({ initialTickets, initialArchive }: { initialTickets
   const ticketsRef = React.useRef(tickets); ticketsRef.current = tickets;
 
   /* Real-time sync: SSE push from the server on every mutation, with a 30 s poll
-     and a focus-refetch as fallback in case the SSE connection drops. */
+     and a focus-refetch as fallback in case the SSE connection drops. Hidden tabs
+     skip the poll (every fetch is billed database transfer) and catch up on return. */
   React.useEffect(() => {
-    const refresh = async () => { if (!busy.current) apply(await fetchState()); };
+    const refresh = async () => { if (!busy.current && !document.hidden) apply(await fetchState()); };
     const es = new EventSource("/api/updates");
     es.onmessage = refresh;
     es.onerror = () => es.close(); // poll fallback takes over if SSE fails
     const id = setInterval(refresh, 30000);
     window.addEventListener("focus", refresh);
-    return () => { es.close(); clearInterval(id); window.removeEventListener("focus", refresh); };
+    document.addEventListener("visibilitychange", refresh);
+    return () => {
+      es.close(); clearInterval(id);
+      window.removeEventListener("focus", refresh);
+      document.removeEventListener("visibilitychange", refresh);
+    };
   }, []);
 
   // On mount, treat the server-rendered initial tickets as the baseline so the
@@ -397,10 +403,20 @@ export default function App({ initialTickets, initialArchive }: { initialTickets
     if (!q) return byPerson;
     return byPerson.filter((x) => x.name.toLowerCase().includes(q) || x.desc.toLowerCase().includes(q) || x.id.toLowerCase().includes(q));
   }, [byPerson, search]);
-  const visibleArchive = React.useMemo(
-    () => (who === "all" ? archive : archive.filter((x) => assignees(x).includes(who))),
-    [archive, who]
-  );
+  // The server only sends the last 7 days of archive; searching the vault asks it for
+  // matches across every record. Re-runs when `archive` changes so a restore drops out.
+  const [vaultHits, setVaultHits] = React.useState<Ticket[] | null>(null);
+  React.useEffect(() => {
+    const q = search.trim();
+    if (view !== "archive" || !q) { setVaultHits(null); return; }
+    let stale = false;
+    const t = setTimeout(() => { searchArchiveAction(q).then((hits) => { if (!stale) setVaultHits(hits); }); }, 300);
+    return () => { stale = true; clearTimeout(t); };
+  }, [view, search, archive]);
+  const visibleArchive = React.useMemo(() => {
+    const src = vaultHits ?? archive;
+    return who === "all" ? src : src.filter((x) => assignees(x).includes(who));
+  }, [vaultHits, archive, who]);
   // Reordering needs the full list visible — hidden rows would get jumped silently.
   const canReorder = who === "all" && !search.trim();
 
