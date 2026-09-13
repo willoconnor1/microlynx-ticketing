@@ -31,7 +31,13 @@ type MenuCtx = { x: number; y: number; ticket: Ticket } | null;
 export default function App({ initialTickets, initialArchive }: { initialTickets: Ticket[]; initialArchive: Ticket[] }) {
   const [tickets, setTickets] = React.useState<Ticket[]>(initialTickets);
   const [archive, setArchive] = React.useState<Ticket[]>(initialArchive);
-  const [view, setView] = React.useState<View>("list");
+  const [view, setView] = React.useState<View>(() => {
+    try {
+      const s = typeof window !== "undefined" ? localStorage.getItem("mlx-view") : null;
+      return (s && ["list", "parts", "maybe", "archive"].includes(s) ? s : "list") as View;
+    } catch { return "list"; }
+  });
+  React.useEffect(() => { try { localStorage.setItem("mlx-view", view); } catch {} }, [view]);
   const [search, setSearch] = React.useState("");
   const [form, setForm] = React.useState<Partial<Ticket> | null>(null);
   const [menu, setMenu] = React.useState<MenuCtx>(null);
@@ -415,7 +421,7 @@ export default function App({ initialTickets, initialArchive }: { initialTickets
   const maybeCount = tickets.filter((t) => t.status === "maybe").length;
   // Parts count for the stats bar respects the person filter.
   const partsCountForStats = byPerson.filter((x) => x.status === "parts").length;
-  const showSearch = view === "list" || view === "archive";
+  const showSearch = true;
 
   const notif = {
     count: alertSet.size, feed, open: notifOpen, setOpen: setNotifOpen,
@@ -426,8 +432,8 @@ export default function App({ initialTickets, initialArchive }: { initialTickets
 
   let body: React.ReactNode;
   if (view === "list") body = <ListView tickets={listTickets} onMenu={openMenu} onStatus={setStatus} onMoveRequest={requestMove} onPatch={patchTicket} onPrint={onPrint} expandedId={expandedId} onToggleExpand={toggleExpand} drag={drag} setDrag={setDrag} canReorder={canReorder} getAlert={getAlert} />;
-  else if (view === "parts") body = <PartsView tickets={byPerson} onStatus={setStatus} onMenu={openMenu} onPatch={patchTicket} onPrint={onPrint} expandedId={expandedId} onToggleExpand={toggleExpand} drag={drag} setDrag={setDrag} onMoveRequest={requestMove} canReorder={canReorder} />;
-  else if (view === "maybe") body = <MaybeView tickets={byPerson} onStatus={setStatus} onMenu={openMenu} onPatch={patchTicket} onPrint={onPrint} expandedId={expandedId} onToggleExpand={toggleExpand} drag={drag} setDrag={setDrag} onMoveRequest={requestMove} canReorder={canReorder} />;
+  else if (view === "parts") body = <PartsView tickets={listTickets} onStatus={setStatus} onMenu={openMenu} onPatch={patchTicket} onPrint={onPrint} expandedId={expandedId} onToggleExpand={toggleExpand} drag={drag} setDrag={setDrag} onMoveRequest={requestMove} canReorder={canReorder} />;
+  else if (view === "maybe") body = <MaybeView tickets={listTickets} onStatus={setStatus} onMenu={openMenu} onPatch={patchTicket} onPrint={onPrint} expandedId={expandedId} onToggleExpand={toggleExpand} drag={drag} setDrag={setDrag} onMoveRequest={requestMove} canReorder={canReorder} />;
   else body = <ArchiveView archive={visibleArchive} search={search} onStatus={setStatus} onMenu={openMenu} />;
 
   return (
@@ -453,7 +459,7 @@ export default function App({ initialTickets, initialArchive }: { initialTickets
             {showSearch && (
               <div className="searchbox">
                 <Icon name="search" />
-                <input placeholder={view === "archive" ? "Search the vault…" : "Search tickets…"}
+                <input placeholder="Search tickets…"
                   value={search} onChange={(e) => setSearch(e.target.value)} />
               </div>
             )}

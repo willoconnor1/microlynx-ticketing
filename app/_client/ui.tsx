@@ -21,7 +21,7 @@ import {
 
 /* Field-level edits the expanded row can save. */
 export type InlinePatch = Partial<Pick<Ticket,
-  "name" | "phone" | "password" | "desc" | "notes" | "urgency" | "charger" | "assignedTo" | "deviceType" |
+  "name" | "phone" | "password" | "desc" | "notes" | "partsEta" | "partsSource" | "urgency" | "charger" | "assignedTo" | "deviceType" |
   "serviceTag" | "dropoff" | "dropoffAmPm" | "dueAt">>;
 
 export type View = "list" | "parts" | "maybe" | "archive";
@@ -166,15 +166,15 @@ function CalendarPop({ anchor, value, clearable, onPick, onClear, onClose }: {
   );
 }
 
-export function DateField({ value, onChange, placeholder, clearable }: {
-  value: string; onChange: (v: string) => void; placeholder?: string; clearable?: boolean;
+export function DateField({ value, onChange, placeholder, clearable, disabled }: {
+  value: string; onChange: (v: string) => void; placeholder?: string; clearable?: boolean; disabled?: boolean;
 }) {
   const [anchor, setAnchor] = React.useState<DOMRect | null>(null);
   return (
     <>
       {/* "blank", not "empty" — the global .empty empty-state class would balloon the button */}
-      <button type="button" className={`inp mono pickbtn ${value ? "" : "blank"}`}
-        onClick={(e) => setAnchor(e.currentTarget.getBoundingClientRect())}>
+      <button type="button" className={`inp mono pickbtn ${value ? "" : "blank"}`} disabled={disabled}
+        onClick={(e) => !disabled && setAnchor(e.currentTarget.getBoundingClientRect())}>
         <Icon name="calendar" />
         <span className="pv">{value ? fmtDateLong(value) : placeholder || "Pick a date"}</span>
         {clearable && value && (
@@ -571,6 +571,10 @@ const QueueRow = React.memo(function QueueRow({ t, isNext, dragging, canReorder,
         <div style={{ minWidth: 0 }}>
           <div className="nm">{t.name}<SvcTag tag={t.serviceTag} /></div>
           <div className="ds">{t.desc}</div>
+          {t.status === "parts" && t.partsEta && (() => {
+            const [s, e] = t.partsEta.split("/");
+            return <div className="parts-eta"><Icon name="truck" size={11} />ETA {fmtDate(s)}{e ? ` – ${fmtDate(e)}` : ""}</div>;
+          })()}
           {/* phone-layout only (CSS-shown ≤640): the narrow row has no phone column */}
           {t.phone && <div className="nm-phone"><Icon name="phone" size={12} />{t.phone}</div>}
         </div>
@@ -709,6 +713,9 @@ function RowPeek({ t, onEdit, onPrint }: { t: Ticket; onEdit?: () => void; onPri
    (and on unmount, so collapsing mid-edit never loses typing). */
 function RowExpansion({ t, onPatch }: { t: Ticket; onPatch: (id: string, p: InlinePatch) => void }) {
   const [draft, setDraft] = React.useState({ name: t.name, phone: t.phone, password: t.password ?? "", desc: t.desc, notes: t.notes ?? "" });
+  const srcMode = t.partsSource === "ebay" ? "ebay" : t.partsSource === "amazon" ? "amazon" : t.partsSource ? "other" : "";
+  const [otherOpen, setOtherOpen] = React.useState(srcMode === "other");
+  const [otherText, setOtherText] = React.useState(srcMode === "other" ? (t.partsSource ?? "") : "");
   const draftRef = React.useRef(draft); draftRef.current = draft;
   const tRef = React.useRef(t); tRef.current = t;
   const onPatchRef = React.useRef(onPatch); onPatchRef.current = onPatch;
@@ -751,8 +758,8 @@ function RowExpansion({ t, onPatch }: { t: Ticket; onPatch: (id: string, p: Inli
           onChange={(e) => setDraft((p) => ({ ...p, desc: e.target.value }))} />
       </div>
       <div className="exp-field full">
-        <label className="lbl">Internal notes</label>
-        <input className="inp" placeholder="Internal notes…" value={draft.notes} onBlur={flush}
+        <label className="lbl">Quoted or Approved</label>
+        <input className="inp" placeholder="Amount quoted, approval status…" value={draft.notes} onBlur={flush}
           onChange={(e) => setDraft((p) => ({ ...p, notes: e.target.value }))} />
       </div>
       <div className="exp-field">
@@ -771,6 +778,67 @@ function RowExpansion({ t, onPatch }: { t: Ticket; onPatch: (id: string, p: Inli
             onChange={(v) => due && setDue(due.date, v)} />
         </div>
       </div>
+      {t.status === "parts" && (() => {
+        const parts = (t.partsEta ?? "").split("/");
+        const etaStart = parts[0] ?? "";
+        const etaEnd = parts[1] ?? "";
+        const save = (start: string, end: string) => {
+          const val = start && end ? `${start}/${end}` : start || null;
+          onPatch(t.id, { partsEta: val });
+        };
+        return (
+          <div className="exp-field full">
+            <label className="lbl">Est. delivery</label>
+            <div className="eta-range">
+              <DateField value={etaStart} clearable placeholder="Start date"
+                onChange={(v) => save(v, v ? etaEnd : "")} />
+              <span className="eta-dash">–</span>
+              <DateField value={etaEnd} clearable placeholder="End date (optional)" disabled={!etaStart}
+                onChange={(v) => save(etaStart, v)} />
+            </div>
+          </div>
+        );
+      })()}
+      {t.status === "parts" && (
+        <div className="exp-field full">
+          <label className="lbl">Ordered from</label>
+          <div className="source-row">
+            {(["ebay", "amazon", "other"] as const).map((key) => (
+              <button key={key} type="button"
+                className={`src-btn${(key === "other" ? (otherOpen || srcMode === "other") : srcMode === key) ? " on" : ""}`}
+                onClick={() => {
+                  if (key === "ebay" || key === "amazon") {
+                    onPatch(t.id, { partsSource: key });
+                    setOtherOpen(false);
+                    setOtherText("");
+                  } else {
+                    if (srcMode === "ebay" || srcMode === "amazon") onPatch(t.id, { partsSource: null });
+                    setOtherOpen(true);
+                  }
+                }}>
+                {key === "ebay" ? "eBay" : key === "amazon" ? "Amazon" : "Other"}
+              </button>
+            ))}
+            {(srcMode || otherOpen) && (
+              <button type="button" className="src-clear" title="Clear"
+                onClick={() => { onPatch(t.id, { partsSource: null }); setOtherOpen(false); setOtherText(""); }}>
+                <Icon name="x" size={14} />
+              </button>
+            )}
+          </div>
+          {(otherOpen || srcMode === "other") && (
+            <input className="inp" style={{ marginTop: 8 }} placeholder="Where from? (e.g. Newegg, B&H…)"
+              value={otherText}
+              onChange={(e) => setOtherText(e.target.value)}
+              onBlur={(e) => {
+                const val = e.target.value.trim();
+                const cur = val !== (t.partsSource !== "ebay" && t.partsSource !== "amazon" ? t.partsSource ?? "" : "");
+                if (cur) onPatch(t.id, { partsSource: val || null });
+                if (!val) setOtherOpen(false);
+              }} />
+          )}
+        </div>
+      )}
       <div className="exp-field">
         <label className="lbl">Urgency</label>
         <div className="uselect compact">
@@ -886,9 +954,12 @@ export function ConfirmMoveDialog({ move, onCancel, onConfirm }: {
    ticket to any other status and it returns to its old slot in the queue. */
 // Sort by sortPos (drag order) with statusChangedAt as tiebreaker for new arrivals.
 function sortPartsOrder(a: Ticket, b: Ticket): number {
-  const ap = a.sortPos ?? Infinity, bp = b.sortPos ?? Infinity;
-  if (ap !== bp) return ap - bp;
-  return sortEntryOrder(a, b);
+  const ae = a.partsEta?.split("/")[0] ?? "";
+  const be = b.partsEta?.split("/")[0] ?? "";
+  if (ae && be) return ae.localeCompare(be); // both have ETA: soonest first
+  if (ae) return -1; // only a has ETA: a first
+  if (be) return 1;  // only b has ETA: b first
+  return sortEntryOrder(a, b); // neither has ETA: entry order
 }
 export function PartsView({ tickets, onStatus, onMenu, onPatch, onPrint, expandedId, onToggleExpand, drag, setDrag, onMoveRequest, canReorder, statusFilter = "parts", groupLabel = "Waiting on parts", dragFrom = "parts", listClass = "parts-list", emptyTitle = "Nothing waiting on parts", emptyBody = "Set a ticket’s status to “Waiting on parts” and it will park here until the parts arrive." }: {
   tickets: Ticket[];
@@ -1740,7 +1811,7 @@ export function TicketForm({ editing, today, onSave, onClose }: {
             <textarea className="ta"
               placeholder="Device and the problem in plain words — e.g. &ldquo;MacBook Air, liquid spill, won't boot.&rdquo;"
               value={f.desc} onChange={(e) => set("desc", e.target.value)} />
-            <input className="inp notes-inp" placeholder="Internal notes…" value={f.notes} onChange={(e) => set("notes", e.target.value)} />
+            <input className="inp notes-inp" placeholder="Quoted or Approved…" value={f.notes} onChange={(e) => set("notes", e.target.value)} />
           </div>
 
           <div className="field" style={{ marginBottom: 0 }}>

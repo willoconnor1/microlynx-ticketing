@@ -33,7 +33,8 @@ export interface Ticket {
   password?: string; // device login password so techs can get into the customer's computer
   desc: string;
   notes?: string | null; // internal shop notes — not customer-facing
-  partsEta?: string | null; // YYYY-MM-DD estimated delivery date for parts
+  partsEta?: string | null; // YYYY-MM-DD or YYYY-MM-DD/YYYY-MM-DD range
+  partsSource?: string | null; // "ebay" | "amazon" | freetext
   urgency: number; // 1-5, 1 = most urgent
   charger: boolean;
   assignedTo?: Person[]; // one or more; defaults to [keith]
