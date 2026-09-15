@@ -179,7 +179,7 @@ export default function App({ initialTickets, initialArchive }: { initialTickets
     const es = new EventSource("/api/updates");
     es.onmessage = refresh;
     es.onerror = () => es.close(); // poll fallback takes over if SSE fails
-    const id = setInterval(refresh, 30000);
+    const id = setInterval(refresh, 5000);
     window.addEventListener("focus", refresh);
     document.addEventListener("visibilitychange", refresh);
     return () => {
