@@ -44,14 +44,6 @@ to Completed.
 - Archive: `status = "picked"` sets `archived` immediately (store handles it); the daily
   cron sweep is just a backstop. Archive view = last 7 days; search = all records.
 
-## Database transfer budget (do not break this)
-Neon bills data transfer, and every open screen polls `getState()` every 30 s plus after
-every edit. In Sept 2026 the site went down for exceeding the free-tier transfer quota
-because `getState()` shipped the entire archive on every poll. So:
-- `getState()` returns active tickets + only the 7-day archive window. Never widen it.
-- Older archive records come from `searchArchiveAction` (server-side ILIKE, on demand).
-- Hidden browser tabs skip the poll. Nothing extra may run on every read.
-
 ## Ticket fields
 `date` (drop-off), `dropoffAmPm` (morning/afternoon drop-off), `dueAt` (optional half-day
 pickup window — stored as a timestamp where AM = 11:00 and PM = 17:00 Pacific; no exact
@@ -83,7 +75,7 @@ can't see them).
   `StatusPillMenu` in `app/_client/ui.tsx`) — never bare `<select>` or `<input type="date">`.
 
 ## Stack
-Next.js App Router + TypeScript, plain CSS design system (from Claude design, in
+Next.js App Router + TypeScript, plain CSS design system (from Codex design, in
 `app/globals.css`), lucide-react icons, native HTML5 drag & drop, Neon Postgres + Drizzle ORM,
 Next.js Server Actions, Vercel Cron, deployed on Vercel. Build uses `--webpack` (this dev
 machine is Intel/x64 where Turbopack native bindings are unavailable).
@@ -94,7 +86,7 @@ machine is Intel/x64 where Turbopack native bindings are unavailable).
   otherwise an in-memory fallback so it runs locally before the DB exists. Reads AND writes.
 - `lib/actions.ts` — `"use server"` actions the client calls (fetch/save/urgency/status/sweep).
 - `lib/schema.ts` — Drizzle table. `app/_client/*` — ported UI (client components).
-- `app/api/cron/archive` — daily archive sweep, the only automatic sweep (backstop; status change archives immediately).
+- `app/api/cron/archive` — daily archive sweep, now a backstop only (also runs on every read).
 
 ## Shipping safely — read this before touching the database
 `main` **is** production. Every push to `main` deploys to the live shop within about a minute, and
@@ -121,7 +113,7 @@ historically 83% of pushes land while the shop is open with customers at the cou
 - Run the DB setup with `npm run db:push` after `DATABASE_URL` is set.
 
 ## Workflow note
-The visual frontend is built in **Claude design** (claude.ai) and exported as a ZIP, then wired
+The visual frontend is built in **Codex design** (Codex.ai) and exported as a ZIP, then wired
 into this app. The design defines look & feel; the app provides data, drag-and-drop persistence,
 and deployment.
 
