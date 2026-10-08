@@ -424,8 +424,8 @@ export default function App({ initialTickets, initialArchive }: { initialTickets
   // Active = List-view statuses only (not parts/maybe), urgency 1–4 only (not Backlog).
   const isActive = (x: Ticket) => (x.status === "todo" || x.status === "prog" || x.status === "call" || x.status === "resp") && x.urgency <= 4;
   const activeCount = byPerson.filter(isActive).length;
-  // Device dot counts include "Call Customer" tickets (still physically in the shop).
-  const isInShop = (x: Ticket) => x.status === "todo" || x.status === "prog" || x.status === "resp" || x.status === "call";
+  // Device dot counts include "Call Customer" tickets (still physically in the shop), urgency 1–4 only.
+  const isInShop = (x: Ticket) => (x.status === "todo" || x.status === "prog" || x.status === "resp" || x.status === "call") && x.urgency <= 4;
   const deviceCounts = React.useMemo(() => {
     const inShop = byPerson.filter(isInShop);
     return DEVICE_TYPES
@@ -489,10 +489,13 @@ export default function App({ initialTickets, initialArchive }: { initialTickets
                   </span>
                 ))}
                 {partsCountForStats > 0 && (
-                  <span className="dev-count parts-count">
-                    <span className="dev-dot parts-dot" />
-                    {partsCountForStats} on parts
-                  </span>
+                  <>
+                    <span className="stat-sep">|</span>
+                    <span className="dev-count parts-count">
+                      <span className="dev-dot parts-dot" />
+                      {partsCountForStats} on parts
+                    </span>
+                  </>
                 )}
               </div>
             )}
