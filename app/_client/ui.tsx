@@ -258,7 +258,7 @@ type ListProps = {
 };
 export function ListView({ tickets, onMenu, onStatus, onMoveRequest, onPatch, onPrint, expandedId, onToggleExpand, drag, setDrag, canReorder, getAlert }: ListProps) {
   const sorted = React.useMemo(
-    () => tickets.filter((t) => t.status === "todo" || t.status === "prog" || t.status === "call" || t.status === "resp").sort(sortQueue),
+    () => tickets.filter((t) => t.status === "todo" || t.status === "prog" || t.status === "call" || t.status === "resp" || t.status === "order").sort(sortQueue),
     [tickets]
   );
   const done = React.useMemo(
