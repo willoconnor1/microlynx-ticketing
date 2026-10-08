@@ -1428,9 +1428,9 @@ export function TopNav({ view, setView, onNew, onMobileMenu, partsCount, maybeCo
 }
 
 /* ================= QUICK MENU ================= */
-const STATUS_ICON: Record<Status, string> = { todo: "circle", prog: "loader", call: "phone", resp: "message-circle", parts: "package-search", maybe: "bookmark", done: "circle-check", picked: "package-check" };
+const STATUS_ICON: Record<Status, string> = { todo: "circle", prog: "loader", call: "phone", resp: "message-circle", parts: "package-search", maybe: "bookmark", order: "shopping-cart", done: "circle-check", picked: "package-check" };
 /* Garrett wants "Waiting on parts" at the top of the 3-dots menu (the pill menu keeps flow order). */
-const QUICK_STATUS_ORDER: Status[] = ["parts", "maybe", "todo", "prog", "call", "resp", "done", "picked"];
+const QUICK_STATUS_ORDER: Status[] = ["parts", "maybe", "order", "todo", "prog", "call", "resp", "done", "picked"];
 export function QuickMenu({ ctx, onClose, onUrgency, onStatus, onEdit, onDelete }: {
   ctx: { x: number; y: number; ticket: Ticket };
   onClose: () => void;

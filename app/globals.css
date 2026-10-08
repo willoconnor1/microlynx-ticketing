@@ -231,6 +231,7 @@ button{font-family:inherit}
 .spill.picked{background:var(--gray-100);color:var(--gray-500)} .spill.picked .d{background:var(--gray-400)}
 .spill.parts{background:#ffedd5;color:#9a3412} .spill.parts .d{background:#ea580c}
 .spill.maybe{background:#e5e7eb;color:#374151} .spill.maybe .d{background:#6b7280}
+.spill.order{background:#fce7f3;color:#be185d} .spill.order .d{background:#ec4899}
 .spill.call{background:#cffafe;color:#0e7490} .spill.call .d{background:#0891b2}
 .spill.resp{background:#ede9fe;color:#6d28d9} .spill.resp .d{background:#7c3aed}
 .avchip{width:20px;height:20px;border-radius:50%;font-family:var(--font-mono);font-size:9.5px;font-weight:700;display:inline-flex;align-items:center;justify-content:center;flex:none}
@@ -369,7 +370,7 @@ button{font-family:inherit}
 .stat-opt .sdot{width:8px;height:8px;border-radius:50%;flex:none}
 .sdot.todo{background:var(--danger)} .sdot.prog{background:var(--blue-500)}
 .sdot.done{background:var(--success)} .sdot.picked{background:var(--gray-400)}
-.sdot.call{background:#0891b2} .sdot.parts{background:#ea580c} .sdot.resp{background:#7c3aed} .sdot.maybe{background:#6b7280}
+.sdot.call{background:#0891b2} .sdot.parts{background:#ea580c} .sdot.resp{background:#7c3aed} .sdot.maybe{background:#6b7280} .sdot.order{background:#ec4899}
 .stat-opt .chk{margin-left:auto;color:var(--acc)}
 .done-ic{color:var(--success);display:inline-flex;justify-content:center;width:16px}
 /* Waiting on Parts tab: identical rows to the List, with a wider pill column so
@@ -472,6 +473,7 @@ button{font-family:inherit}
 .toggle button+button{border-left:1px solid var(--border-strong)}
 .toggle button.on.yes,.toggle button.yes:hover{background:var(--blue-50);color:var(--blue-700)}
 .toggle button.on.maybe,.toggle button.maybe:hover{background:#e5e7eb;color:#374151}
+.toggle button.on.order,.toggle button.order:hover{background:#fce7f3;color:#be185d}
 .toggle button.on.no,.toggle button.no:hover{background:var(--gray-100);color:var(--ink-800)}
 .toggle button.on.am,.toggle button.on.pm,.toggle button.am:hover,.toggle button.pm:hover{background:var(--blue-50);color:var(--blue-700)}
 .toggle button:disabled{opacity:.45;cursor:default}
