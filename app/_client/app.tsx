@@ -421,8 +421,8 @@ export default function App({ initialTickets, initialArchive }: { initialTickets
   const canReorder = who === "all" && !search.trim();
 
   // "Active" = work still to be done: To Do + In Progress + Awaiting Response. Complete,
-  // Picked Up, and Waiting on Parts all drop out of these numbers (Garrett's request).
-  const isActive = (x: Ticket) => x.status === "todo" || x.status === "prog" || x.status === "resp" || x.status === "parts";
+  // Active = List-view statuses only (not parts/maybe), urgency 1–4 only (not Backlog).
+  const isActive = (x: Ticket) => (x.status === "todo" || x.status === "prog" || x.status === "call" || x.status === "resp") && x.urgency <= 4;
   const activeCount = byPerson.filter(isActive).length;
   // Device dot counts include "Call Customer" tickets (still physically in the shop).
   const isInShop = (x: Ticket) => x.status === "todo" || x.status === "prog" || x.status === "resp" || x.status === "call";
