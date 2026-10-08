@@ -417,8 +417,8 @@ export default function App({ initialTickets, initialArchive }: { initialTickets
     const src = vaultHits ?? archive;
     return who === "all" ? src : src.filter((x) => assignees(x).includes(who));
   }, [vaultHits, archive, who]);
-  // Reordering needs the full list visible — hidden rows would get jumped silently.
-  const canReorder = who === "all" && !search.trim();
+  // Reordering allowed in person views; search still disables it (too many hidden rows).
+  const canReorder = !search.trim();
 
   // "Active" = work still to be done: To Do + In Progress + Awaiting Response. Complete,
   // Active = List-view statuses only (not parts/maybe), urgency 1–4 only (not Backlog).
