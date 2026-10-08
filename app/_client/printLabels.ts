@@ -59,7 +59,8 @@ const SHARED_CSS = `
   body { font-family: Arial, "Helvetica Neue", sans-serif; color: #000; }
   .label { width: ${LABEL_W}; height: ${LABEL_H}; padding: 1.8mm 2.4mm;
     display: flex; flex-direction: column; justify-content: space-between;
-    page-break-after: always; break-after: page; overflow: hidden; }
+    overflow: hidden; }
+  .label + .label { page-break-before: always; break-before: page; }
   .top { text-align: center; min-height: 0; }
   .cust-name { font-weight: 800; line-height: 1.05; }
   .cust-name.wrap { word-break: break-word; }
@@ -176,11 +177,7 @@ export function printSelectedLabels(t: Ticket, sel: PrintSel): void {
   }
   if (sel.password && t.password?.trim()) bodies.push(passwordHtml(t));
   if (!bodies.length) return;
-  // Fire each label as its own isolated print job so the Dymo cuts cleanly.
-  bodies.forEach((body, i) => {
-    const hasDesc = body.includes('id="dv"');
-    window.setTimeout(() => firePrint(singleDoc(body, hasDesc ? DESC_SCRIPT : undefined)), i * 600);
-  });
+  firePrint(singleDoc(bodies.join("\n"), bodies.some((b) => b.includes("id=\"dv\"")) ? DESC_SCRIPT : undefined));
 }
 
 /* Kept for the save-and-print path — prints all applicable labels with no dialog. */
