@@ -176,7 +176,11 @@ export function printSelectedLabels(t: Ticket, sel: PrintSel): void {
   }
   if (sel.password && t.password?.trim()) bodies.push(passwordHtml(t));
   if (!bodies.length) return;
-  firePrint(singleDoc(bodies.join("\n"), bodies.some((b) => b.includes("id=\"dv\"")) ? DESC_SCRIPT : undefined));
+  // Fire each label as its own isolated print job so the Dymo cuts cleanly.
+  bodies.forEach((body, i) => {
+    const hasDesc = body.includes('id="dv"');
+    window.setTimeout(() => firePrint(singleDoc(body, hasDesc ? DESC_SCRIPT : undefined)), i * 600);
+  });
 }
 
 /* Kept for the save-and-print path — prints all applicable labels with no dialog. */
