@@ -294,10 +294,17 @@ export function ListView({ tickets, onMenu, onStatus, onMoveRequest, onPatch, on
   const pendingTarget = React.useRef<{ u: number; index: number } | null>(null);
   const targetRaf = React.useRef(0);
   React.useEffect(() => () => { if (targetRaf.current) cancelAnimationFrame(targetRaf.current); }, []);
+  // Hysteresis: track the Y position where the current urgency group was last
+  // confirmed. We require the pointer to move 12 px before switching groups,
+  // which prevents the oscillation caused by phantom-row re-renders near boundaries.
+  const urgencyLockedY = React.useRef<number>(0);
+  const urgencyLocked = React.useRef<number | null>(null);
 
   const clearDrag = React.useCallback(() => {
     pendingDrag.current = null;
     pendingTarget.current = null;
+    urgencyLocked.current = null;
+    urgencyLockedY.current = 0;
     setDrag(null);
     setTarget(null);
     pointerY.current = -1;
@@ -381,6 +388,21 @@ export function ListView({ tickets, onMenu, onStatus, onMoveRequest, onPatch, on
         found = { u, index: i + 1 };
       }
       if (found) {
+        // Hysteresis: if the urgency group would change, require the pointer to
+        // have moved 12 px from where the current group was first entered.
+        // This stops the oscillation caused by phantom-row re-renders near boundaries.
+        const DEADZONE = 12;
+        if (urgencyLocked.current !== null && found.u !== urgencyLocked.current) {
+          if (Math.abs(e.clientY - urgencyLockedY.current) < DEADZONE) {
+            found = { u: urgencyLocked.current, index: pendingTarget.current?.u === urgencyLocked.current ? pendingTarget.current.index : found.index };
+          } else {
+            urgencyLocked.current = found.u;
+            urgencyLockedY.current = e.clientY;
+          }
+        } else if (urgencyLocked.current !== found.u) {
+          urgencyLocked.current = found.u;
+          urgencyLockedY.current = e.clientY;
+        }
         pendingTarget.current = found;
         if (!targetRaf.current) {
           targetRaf.current = requestAnimationFrame(() => {
